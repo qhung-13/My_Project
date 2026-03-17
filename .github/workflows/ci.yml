@@ -1,0 +1,63 @@
+# Workflow name
+name: Test_Project 
+
+# When does CI/CD run ???
+on:
+  push:
+    branches: [ "main" ]
+
+# All jobs CI/CD is going to run.
+jobs:
+  backend:
+    # Run on Linux virtual machine
+    runs-on: ubuntu-latest
+    steps:
+      # Clone code from Github to CI machine
+      - name: Checkout code
+        uses: actions/checkout@v3
+      # Install Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      # Install Backend library
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm install
+      # Run test
+      - name: Run backend tests
+        run: |
+          cd backend
+          npm test
+  frontend:
+    # Run on Linux virtual machine
+    runs-on: ubuntu-latest
+    steps:
+      # Clone code from Github to CI machine
+      - name: Checkout code
+        uses: actions/checkout@v3
+      # Install Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      # Install Frontend library
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm install
+      # Run test
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+  deploy:
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to server
+        run: echo "Deploying..."
+
+
