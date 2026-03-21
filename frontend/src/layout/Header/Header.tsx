@@ -14,6 +14,8 @@
     const [activeMenu, setActiveMenu] = useState<string | null>(null);
     const [mobileMenu, setMobileMenu] = useState<boolean>(false);
 
+    // Taking current path
+    const currentPath = window.location.pathname; 
     return (
       <>
         <header className="header">
@@ -186,14 +188,19 @@
         <div className="mobile-nav">
           <ul className="mobile-nav__list">
             <li className="mobile-nav__item">
-              <a href="#" className="mobile-nav__link mobile-nav__link--active">
+              <a
+                href="#"
+                className={`mobile-nav__link ${currentPath === "/" ? "mobile-nav__link--active" : ""}`}
+              >
                 <span>
                   <House />
                 </span>
                 Home
               </a>
             </li>
-            <li className="mobile-nav__item mobile-nav__link--active">
+            <li
+              className={`mobile-nav__link ${currentPath === "/" ? "mobile-nav__link--active" : ""}`}
+            >
               <a href="#" className="mobile-nav__link">
                 <span>
                   <Video />
@@ -201,7 +208,8 @@
                 Live
               </a>
             </li>
-            <li className="mobile-nav__item mobile-nav__link--active">
+            <li
+              className={`mobile-nav__link ${currentPath === "/" ? "mobile-nav__link--active" : ""}`}>
               <a href="#" className="mobile-nav__link">
                 <Gamepad2 />
                 Games
