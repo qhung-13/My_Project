@@ -1,0 +1,239 @@
+/* Overlay */
+.register {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.register__overlay {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  top: 0;
+  left: 0;
+}
+
+/* Card */
+.register__card {
+  position: relative;
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 360px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: fadeIn 0.25s ease;
+}
+
+/* Close button */
+.register__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #555;
+  transition: color 0.2s;
+}
+
+.register__close:hover {
+  color: #000;
+}
+
+/* Titles */
+.register__title {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #222;
+}
+
+.register__subtitle {
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  color: #666;
+  text-align: center;
+}
+
+/* Form */
+.register__form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.register__input {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.95rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  outline: none;
+  transition:
+    border 0.2s,
+    box-shadow 0.2s;
+}
+
+.register__input:focus {
+  border-color: #28a745;
+  box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2);
+}
+
+/* Button */
+.register__button {
+  padding: 0.6rem 0.8rem;
+  background-color: #28a745;
+  border: none;
+  color: #fff;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.register__button:hover {
+  background-color: #1e7e34;
+}
+
+/* Footer */
+.register__footer {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.register__link {
+  background: none;
+  border: none;
+  color: #28a745;
+  cursor: pointer;
+  font-weight: 500;
+  padding: 0;
+  margin: 0;
+  text-decoration: underline;
+}
+
+.register__link:hover {
+  color: #1e7e34;
+}
+
+/* Social buttons */
+.register__social {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.register__social-btn {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.95rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* Google */
+.register__social-btn--google {
+  background-color: #fff;
+  border: 1px solid #ccc;
+  color: #333;
+}
+
+.register__social-btn--google:hover {
+  background-color: #f5f5f5;
+}
+
+/* Facebook */
+.register__social-btn--facebook {
+  background-color: #1877f2;
+  color: #fff;
+}
+
+.register__social-btn--facebook:hover {
+  background-color: #145dbf;
+}
+
+/* OTP input + button */
+.otp-btn {
+  width: 100%;
+  padding: 10px 0;
+  margin: 8px 0;
+  border: none;
+  border-radius: 6px;
+  background-color: #4f46e5;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.otp-btn:hover {
+  background-color: #4338ca;
+}
+
+.otp-input {
+  width: 100%;
+  padding: 10px 12px;
+  margin: 8px 0;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  font-size: 14px;
+  outline: none;
+}
+
+.otp-info {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .register__card {
+    padding: 1.2rem;
+  }
+
+  .register__title {
+    font-size: 1.4rem;
+  }
+
+  .register__input,
+  .register__button {
+    font-size: 0.9rem;
+  }
+}

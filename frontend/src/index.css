@@ -176,16 +176,29 @@
 }
 
 .mobile-menu__link {
-  display: block;
+  display: flex; 
+  align-items: center;
+  justify-content: flex-start; 
+  width: 100%;
   padding: 10px 16px;
   font-size: 14px;
+  font-weight: 500;
   color: #333;
-  text-decoration: none;
+  background: transparent; 
+  border: none; 
+  text-align: left; 
+  cursor: pointer;
   transition: background 0.2s ease;
+  border-radius: 4px; 
 }
 
 .mobile-menu__link:hover {
   background: #f5f5f5;
+}
+
+.mobile-menu__link:focus {
+  outline: none;
+  background: #eee; 
 }
 
 @media (min-width: 768px) {

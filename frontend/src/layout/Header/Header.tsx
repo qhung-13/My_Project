@@ -1,4 +1,7 @@
 import Logo from "../../assets/images/Logo.png";
+import Login from "../../components/Login/Login";
+import Register from "../../components/Register/Register";
+
 import {
   Search,
   TvMinimalPlay,
@@ -13,9 +16,13 @@ import { useState } from "react";
 const Header = () => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [mobileMenu, setMobileMenu] = useState<boolean>(false);
+  const [activePopup, setActivePopup] = useState<"Login" | "Register" | null>(
+    null,
+  );
 
   // Taking current path
   const currentPath = window.location.pathname;
+
   return (
     <>
       <header className="header">
@@ -151,34 +158,32 @@ const Header = () => {
         <div className="mobile-menu">
           <ul className="mobile-menu__list">
             <li className="mobile-menu__item">
-              <a href="#" className="mobile-menu__link">
-                Go Live
-              </a>
+              <button className="mobile-menu__link">Go live</button>
             </li>
             <li className="mobile--menu__item">
-              <a href="#" className="mobile-menu__link">
-                Language
-              </a>
+              <button className="mobile-menu__link">Language</button>
             </li>
             <li className="mobile-menu__item">
-              <a href="#" className="mobile-menu__link">
-                Country
-              </a>
+              <button className="mobile-menu__link">Country</button>
             </li>
             <li className="mobile-menu__item">
-              <a href="#" className="mobile-menu__link">
-                Dark Mode
-              </a>
+              <button className="mobile-menu__link">Dark Mode</button>
             </li>
             <li className="mobile-menu__item">
-              <a href="/" className="mobile-menu__link">
+              <button
+                className="mobile-menu__link"
+                onClick={() => setActivePopup("Login")}
+              >
                 Login
-              </a>
+              </button>
             </li>
             <li className="mobile-menu__item">
-              <a href="#" className="mobile-menu__link">
+              <button
+                className="mobile-menu__link"
+                onClick={() => setActivePopup("Register")}
+              >
                 Sign Up
-              </a>
+              </button>
             </li>
           </ul>
         </div>
@@ -198,7 +203,7 @@ const Header = () => {
               Home
             </a>
           </li>
-          <li className="mobile-nav__link">
+          <li className="mobile-nav__item">
             <a
               href="/live"
               className={`mobile-nav__link ${currentPath === "/live" ? "mobile-nav__link--active" : ""}`}
@@ -220,6 +225,22 @@ const Header = () => {
           </li>
         </ul>
       </div>
+
+      {/* Show Login */}
+      {activePopup === "Login" && (
+        <Login
+          onClose={() => setActivePopup(null)}
+          onSwitch={() => setActivePopup("Register")}
+        />
+      )}
+
+      {/* Show Register */}
+      {activePopup === "Register" && (
+        <Register
+          onClose={() => setActivePopup(null)}
+          onSwitch={() => setActivePopup("Login")}
+        />
+      )}
     </>
   );
 };

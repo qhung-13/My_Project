@@ -1,9 +1,7 @@
-import Header from "./layout/Header/Header"
+import Home from "./pages/Home";
 
 function App() {
-  return (
-    <Header />
-  )
+  return <Home />;
 }
 
-export default App
+export default App;
