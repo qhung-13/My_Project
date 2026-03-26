@@ -7,7 +7,6 @@ import {
   TvMinimalPlay,
   Ellipsis,
   House,
-  Video,
   Gamepad2,
   Menu,
 } from "lucide-react";
@@ -22,6 +21,12 @@ const Header = () => {
 
   // Taking current path
   const currentPath = window.location.pathname;
+
+  const navMobileItems = [
+    { label: "Home", path: "/home", icon: <House /> },
+    { label: "Live", path: "/live", icon: <TvMinimalPlay /> },
+    { label: "Game", path: "/game", icon: <Gamepad2 /> },
+  ];
 
   return (
     <>
@@ -192,37 +197,14 @@ const Header = () => {
       {/* Mobile Navigation */}
       <div className="mobile-nav">
         <ul className="mobile-nav__list">
-          <li className="mobile-nav__item">
-            <a
-              href="/home"
-              className={`mobile-nav__link ${currentPath === "/home" ? "mobile-nav__link--active" : ""}`}
-            >
-              <span>
-                <House />
-              </span>
-              Home
-            </a>
-          </li>
-          <li className="mobile-nav__item">
-            <a
-              href="/live"
-              className={`mobile-nav__link ${currentPath === "/live" ? "mobile-nav__link--active" : ""}`}
-            >
-              <span>
-                <Video />
-              </span>
-              Live
-            </a>
-          </li>
-          <li className="mobile-nav__item">
-            <a
-              href="/games"
-              className={`mobile-nav__link ${currentPath === "/games" ? "mobile-nav__link--active" : ""}`}
-            >
-              <Gamepad2 />
-              Games
-            </a>
-          </li>
+          {navMobileItems.map((item) => (
+            <li key={item.path} className="mobile-nav__item">
+              <a href={item.path} className={`mobile-nav__link ${currentPath === item.path ? "mobile-nav__link--active" : ""}`}>
+                <span>{item.icon}</span>
+                {item.label}
+              </a>
+            </li>
+          ))}
         </ul>
       </div>
 
