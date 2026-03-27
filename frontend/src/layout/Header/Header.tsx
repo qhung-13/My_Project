@@ -1,7 +1,4 @@
-import Logo from "../../assets/images/Logo.png";
-import Login from "../../components/Login/Login";
-import Register from "../../components/Register/Register";
-import "./Header.css";
+import { useEffect, useRef, useState } from "react";
 import {
   Search,
   TvMinimalPlay,
@@ -10,29 +7,139 @@ import {
   Gamepad2,
   Menu,
 } from "lucide-react";
-import { useState } from "react";
+import Logo from "../../assets/images/Logo.png";
+import Login from "../../components/Login/Login";
+import Register from "../../components/Register/Register";
+import "./Header.css";
 
-interface darkModeProps {
+// ============================================================
+// Types
+// ============================================================
+interface DarkModeProps {
   darkMode: boolean;
   setDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const Header = ({ darkMode, setDarkMode }: darkModeProps) => {
+interface Country {
+  name: string;
+  flag: string;
+  code: string;
+}
+
+// ============================================================
+// Constants
+// ============================================================
+const NAV_ITEMS = [
+  { label: "Home", path: "/home" },
+  { label: "Live", path: "/live" },
+];
+
+const GAMES = ["Valorant", "League of Legends", "PUBG"];
+
+const MORE_ITEMS = ["Dark Mode"];
+
+const MOBILE_NAV_ITEMS = [
+  { label: "Home", path: "/home", icon: <House /> },
+  { label: "Live", path: "/live", icon: <TvMinimalPlay /> },
+  { label: "Game", path: "/game", icon: <Gamepad2 /> },
+];
+
+// ============================================================
+// Component
+// ============================================================
+const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
-  const [mobileMenu, setMobileMenu] = useState<boolean>(false);
+  const [mobileMenu, setMobileMenu] = useState(false);
   const [activePopup, setActivePopup] = useState<"Login" | "Register" | null>(
     null,
   );
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
+  const [countryOpen, setCountryOpen] = useState(false);
+  const [searchCountry, setSearchCountry] = useState("");
 
-  // Taking current path
   const currentPath = window.location.pathname;
 
-  const navMobileItems = [
-    { label: "Home", path: "/home", icon: <House /> },
-    { label: "Live", path: "/live", icon: <TvMinimalPlay /> },
-    { label: "Game", path: "/game", icon: <Gamepad2 /> },
-  ];
+  // Fetch countries
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const res = await fetch(
+          "https://restcountries.com/v3.1/all?fields=name,flag,cca2",
+        );
+        if (!res.ok) throw Error("Failed to fetch countries");
+        const data = await res.json();
 
+        const formatted: Country[] = data
+          .map(
+            (c: { name: { common: string }; flag: string; cca2: string }) => ({
+              name: c.name.common,
+              flag: c.flag,
+              code: c.cca2,
+            }),
+          )
+          .sort((a: Country, b: Country) => a.name.localeCompare(b.name));
+
+        setCountries(formatted);
+        const vietnam = formatted.find((c: Country) => c.code === "VN");
+        setSelectedCountry(vietnam || formatted[0]);
+      } catch (error) {
+        console.log("Error fetching countries:", error);
+      }
+    };
+
+    fetchCountries();
+  }, []);
+
+  // Đóng country dropdown khi click ra ngoài
+  useEffect(() => {
+    const handleClick = () => setCountryOpen(false);
+    window.addEventListener("click", handleClick);
+    return () => window.removeEventListener("click", handleClick);
+  }, []);
+
+  // ============================================================
+  // Handlers
+  // ============================================================
+  const handleSelectCountry = (country: Country) => {
+    setSelectedCountry(country);
+    setCountryOpen(false);
+    setSearchCountry("");
+  };
+
+  const handleMoreAction = (item: string) => {
+    if (item === "Dark Mode") setDarkMode((prev) => !prev);
+  };
+
+  // ============================================================
+  // Filtered countries
+  // ============================================================
+  const filteredCountries = countries.filter((c) =>
+    c.name
+      .toLowerCase()
+      .replace(/\s/g, "")
+      .includes(searchCountry.toLowerCase().replace(/\s/g, "")),
+  );
+
+  // ============================================================
+  // Ref
+  // ============================================================
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (dropdownRef.current) {
+      dropdownRef.current.scrollTop = 0;
+    }
+  }, [searchCountry]);
+
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.scrollTop = 0;
+    }
+  }, [searchCountry]);
+  // ============================================================
+  // Render
+  // ============================================================
   return (
     <>
       <header className="header">
@@ -44,46 +151,34 @@ const Header = ({ darkMode, setDarkMode }: darkModeProps) => {
             </a>
           </div>
 
-          {/* Nav */}
+          {/* Desktop Nav */}
           <nav className="header__nav">
             <ul className="header__nav-list">
-              <li className="header__nav-item">
-                <a href="#" className="header__nav-link">
-                  Home
-                </a>
-              </li>
-              <li className="header__nav-item">
-                <a href="#" className="header__nav-link">
-                  Live
-                </a>
-              </li>
+              {NAV_ITEMS.map((item) => (
+                <li key={item.path} className="header__nav-item">
+                  <a href={item.path} className="header__nav-link">
+                    {item.label}
+                  </a>
+                </li>
+              ))}
 
-              {/* Games */}
+              {/* Games dropdown */}
               <li
                 className="header__nav-item header__nav-item--dropdown"
                 onMouseEnter={() => setActiveMenu("games")}
                 onMouseLeave={() => setActiveMenu(null)}
               >
                 <span className="header__nav-link">Games</span>
-
                 {activeMenu === "games" && (
                   <div className="header__dropdown">
                     <ul className="header__dropdown-list">
-                      <li className="header__dropdown-item">
-                        <a href="#" className="header__dropdown-link">
-                          Valorant
-                        </a>
-                      </li>
-                      <li className="header__dropdown-item">
-                        <a href="#" className="header__dropdown-link">
-                          League of Legends
-                        </a>
-                      </li>
-                      <li className="header__dropdown-item">
-                        <a href="#" className="header__dropdown-link">
-                          PUBG
-                        </a>
-                      </li>
+                      {GAMES.map((game) => (
+                        <li key={game} className="header__dropdown-item">
+                          <a href="#" className="header__dropdown-link">
+                            {game}
+                          </a>
+                        </li>
+                      ))}
                     </ul>
                   </div>
                 )}
@@ -103,40 +198,96 @@ const Header = ({ darkMode, setDarkMode }: darkModeProps) => {
             </button>
           </div>
 
-          {/* Actions */}
+          {/* Country */}
+          <div className="header__country">
+            <button
+              className="header__country-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setCountryOpen(!countryOpen);
+              }}
+            >
+              {selectedCountry ? (
+                <>
+                  <img
+                    src={`https://flagcdn.com/w20/${selectedCountry.code.toLowerCase()}.png`}
+                    alt={selectedCountry.name}
+                    width={20}
+                    height={14}
+                    style={{ borderRadius: "2px" }}
+                  />
+                  {selectedCountry.code}
+                </>
+              ) : (
+                "Loading..."
+              )}
+            </button>
+
+            {countryOpen && (
+              <div className="header__country-dropdown" ref={dropdownRef}>
+                <div className="header__country-search">
+                  <input
+                    type="text"
+                    placeholder="Search country..."
+                    className="header__country-search-input"
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => setSearchCountry(e.target.value)}
+                    value={searchCountry}
+                    autoFocus
+                  />
+                </div>
+                <div className="header__country-list" ref={listRef}>
+                  {filteredCountries.map((country) => (
+                    <div
+                      key={country.code}
+                      className="header__country-item"
+                      onClick={() => handleSelectCountry(country)}
+                    >
+                      <img
+                        src={`https://flagcdn.com/w20/${country.code.toLowerCase()}.png`}
+                        alt={country.name}
+                        width={20}
+                        height={15}
+                      />
+                      {country.name}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Desktop Actions */}
           <div className="header__actions">
-            {/* Go Live */}
             <button className="header__btn header__btn--live">
               <TvMinimalPlay className="header__icon" />
               Go Live
             </button>
 
-            {/* More */}
+            {/* More dropdown */}
             <div
               className="header__more"
               onMouseEnter={() => setActiveMenu("more")}
               onMouseLeave={() => setActiveMenu(null)}
             >
               <Ellipsis className="header__icon" />
-
               {activeMenu === "more" && (
                 <div className="header__dropdown header__dropdown--right">
                   <ul className="header__dropdown-list">
-                    <li className="header__dropdown-item">
-                      <a href="#" className="header__dropdown-link">
-                        Language
-                      </a>
-                    </li>
-                    <li className="header__dropdown-item">
-                      <a href="#" className="header__dropdown-link">
-                        Country
-                      </a>
-                    </li>
-                    <li className="header__dropdown-item">
-                      <a href="#" className="header__dropdown-link">
-                        Dark Mode
-                      </a>
-                    </li>
+                    {MORE_ITEMS.map((item) => (
+                      <li key={item} className="header__dropdown-item">
+                        <button
+                          className="header__dropdown-link"
+                          onClick={() => handleMoreAction(item)}
+                        >
+                          {item === "Dark Mode"
+                            ? darkMode
+                              ? "Light Mode"
+                              : "Dark Mode"
+                            : item}
+                        </button>
+                      </li>
+                    ))}
                   </ul>
                 </div>
               )}
@@ -144,15 +295,22 @@ const Header = ({ darkMode, setDarkMode }: darkModeProps) => {
 
             {/* Auth */}
             <div className="header__auth">
-              <button className="header__btn header__btn--outline">
+              <button
+                className="header__btn header__btn--outline"
+                onClick={() => setActivePopup("Login")}
+              >
                 Login
               </button>
-              <button className="header__btn header__btn--primary">
+              <button
+                className="header__btn header__btn--primary"
+                onClick={() => setActivePopup("Register")}
+              >
                 Sign Up
               </button>
             </div>
           </div>
 
+          {/* Hamburger */}
           <div className="header__menu">
             <button
               className="header__menu-btn"
@@ -163,18 +321,13 @@ const Header = ({ darkMode, setDarkMode }: darkModeProps) => {
           </div>
         </div>
       </header>
-      {/* Mobile dropdown menu */}
+
+      {/* Mobile Menu */}
       {mobileMenu && (
         <div className="mobile-menu">
           <ul className="mobile-menu__list">
             <li className="mobile-menu__item">
-              <button className="mobile-menu__link">Go live</button>
-            </li>
-            <li className="mobile--menu__item">
-              <button className="mobile-menu__link">Language</button>
-            </li>
-            <li className="mobile-menu__item">
-              <button className="mobile-menu__link">Country</button>
+              <button className="mobile-menu__link">Go Live</button>
             </li>
             <li className="mobile-menu__item">
               <button
@@ -204,10 +357,10 @@ const Header = ({ darkMode, setDarkMode }: darkModeProps) => {
         </div>
       )}
 
-      {/* Mobile Navigation */}
+      {/* Mobile Nav */}
       <div className="mobile-nav">
         <ul className="mobile-nav__list">
-          {navMobileItems.map((item) => (
+          {MOBILE_NAV_ITEMS.map((item) => (
             <li key={item.path} className="mobile-nav__item">
               <a
                 href={item.path}
@@ -221,15 +374,13 @@ const Header = ({ darkMode, setDarkMode }: darkModeProps) => {
         </ul>
       </div>
 
-      {/* Show Login */}
+      {/* Popups */}
       {activePopup === "Login" && (
         <Login
           onClose={() => setActivePopup(null)}
           onSwitch={() => setActivePopup("Register")}
         />
       )}
-
-      {/* Show Register */}
       {activePopup === "Register" && (
         <Register
           onClose={() => setActivePopup(null)}

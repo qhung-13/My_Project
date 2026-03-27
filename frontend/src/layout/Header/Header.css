@@ -1,6 +1,9 @@
+/* ============================================================
+   HEADER
+   ============================================================ */
 .header {
   width: 100%;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .header__container {
@@ -10,6 +13,7 @@
   height: 56px;
 }
 
+/* Logo */
 .header__logo {
   display: flex;
   align-items: center;
@@ -20,6 +24,25 @@
   height: auto;
 }
 
+/* Nav — ẩn trên mobile */
+.header__nav {
+  display: none;
+}
+
+/* Actions — ẩn trên mobile */
+.header__actions {
+  display: none;
+}
+
+/* Icon */
+.header__icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* ============================================================
+   SEARCH
+   ============================================================ */
 .header__search {
   position: relative;
   flex: 1;
@@ -48,11 +71,144 @@
   align-items: center;
 }
 
-.header__icon {
-  width: 20px;
-  height: 20px;
+/* ============================================================
+   COUNTRY
+   ============================================================ */
+.header__country {
+  position: relative;
+  margin-left: 12px;
+  display: flex;
+  align-items: center;
 }
 
+.header__country-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: transparent;
+  color: #333;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.header__country-btn:hover {
+  background: #f5f5f5;
+}
+
+/* Dropdown — mobile first */
+.header__country-dropdown {
+  position: fixed;
+  bottom: 60px;
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-height: calc(50vh - 60px);
+  /* overflow-y: auto; */
+  background: white;
+  border-top: 1px solid #eee;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+  z-index: 999;
+  animation: slideUp 0.25s ease;
+  scrollbar-width: thin;
+  scrollbar-color: #ddd transparent;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.header__country-dropdown::-webkit-scrollbar {
+  width: 4px;
+}
+
+.header__country-dropdown::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 4px;
+}
+
+/* Handle bar trên cùng */
+.header__country-dropdown::before {
+  content: "";
+  display: block;
+  width: 36px;
+  height: 4px;
+  background: #ddd;
+  border-radius: 2px;
+  margin: 10px auto 6px;
+}
+
+/* Search trong dropdown */
+.header__country-search {
+  padding: 10px 12px;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+.header__country-search-input {
+  width: 100%;
+  height: 36px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 14px;
+  outline: none;
+  background: #f5f5f5;
+}
+
+.header__country-search-input:focus {
+  border-color: #6366f1;
+  background: white;
+}
+
+/* Item */
+.header__country-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.header__country-item:last-child {
+  border-bottom: none;
+  margin-bottom: 16px;
+}
+
+.header__country-item:hover,
+.header__country-item:active {
+  background: #f5f5f5;
+}
+
+.header__country-item img {
+  width: 24px;
+  height: 16px;
+  object-fit: cover;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.header__country-list {
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ============================================================
+   MOBILE MENU (hamburger dropdown)
+   ============================================================ */
 .header__menu-btn {
   width: 36px;
   height: 36px;
@@ -63,26 +219,68 @@
   align-items: center;
   cursor: pointer;
 }
-.header__nav {
-  display: none;
-}
 
-.header__actions {
-  display: none;
-}
-
-/* Mobile Navigation */
-.mobile-nav {
+.mobile-menu {
+  position: absolute;
+  top: 56px;
+  right: 0;
+  width: 220px;
   background: white;
-  border-top: 1px solid #eee;
-  padding-bottom: env(safe-area-inset-bottom);
+  border: 1px solid #eee;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 8px 0;
+  z-index: 999;
+  animation: dropdown 0.2s ease;
+}
+
+.mobile-menu__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.mobile-menu__link {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  border-radius: 4px;
+}
+
+.mobile-menu__link:hover {
+  background: #f5f5f5;
+}
+
+.mobile-menu__link:focus {
+  outline: none;
+  background: #eee;
+}
+
+/* ============================================================
+   MOBILE NAV (bottom bar)
+   ============================================================ */
+.mobile-nav {
   position: fixed;
   bottom: 0;
   left: 0;
   width: 100%;
   height: 60px;
-  z-index: 1000;
+  background: white;
+  border-top: 1px solid #eee;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 1000;
 }
 
 .mobile-nav__list {
@@ -106,22 +304,18 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 2px;
   font-size: 12px;
   font-weight: 500;
   color: #aaa;
   text-decoration: none;
-  gap: 2px;
-  transition: 0.3s ease;
+  transition: color 0.3s ease;
 }
 
 .mobile-nav__link svg {
   width: 20px;
   height: 20px;
   pointer-events: none;
-}
-
-.mobile-nav__link:hover {
-  color: black;
 }
 
 .mobile-nav__link::after {
@@ -134,10 +328,15 @@
   height: 2px;
   border-radius: 2px;
   background-color: black;
-  transition: 0.3s ease;
+  transition: transform 0.3s ease;
 }
 
-.mobile-nav__link:hover::after {
+.mobile-nav__link:hover {
+  color: black;
+}
+
+.mobile-nav__link:hover::after,
+.mobile-nav__link--active::after {
   transform: translateX(-50%) scaleX(1);
 }
 
@@ -145,60 +344,9 @@
   color: black;
 }
 
-.mobile-nav__link--active::after {
-  transform: translateX(-50%) scaleX(1);
-}
-
-.mobile-menu {
-  position: absolute;
-  top: 56px;
-  right: 0;
-  width: 220px;
-  background: white;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  padding: 8px 0;
-  z-index: 999;
-  animation: dropdown 0.2s ease;
-}
-
-.mobile-menu__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.mobile-menu__list {
-  width: 100%;
-}
-
-.mobile-menu__link {
-  display: flex; 
-  align-items: center;
-  justify-content: flex-start; 
-  width: 100%;
-  padding: 10px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
-  background: transparent; 
-  border: none; 
-  text-align: left; 
-  cursor: pointer;
-  transition: background 0.2s ease;
-  border-radius: 4px; 
-}
-
-.mobile-menu__link:hover {
-  background: #f5f5f5;
-}
-
-.mobile-menu__link:focus {
-  outline: none;
-  background: #eee; 
-}
-
+/* ============================================================
+   DARK MODE
+   ============================================================ */
 .light-mode .header {
   background: #ffffff;
   border-bottom: 1px solid #e5e5e5;
@@ -209,9 +357,13 @@
   border-bottom: 1px solid #2a2a2e;
 }
 
+.dark-mode .header__icon {
+  color: #e4e4e7;
+}
+
 .dark-mode .header__search-input {
   background: #27272a;
-  border: 1px solid #3f3f46;
+  border-color: #3f3f46;
   color: #f4f4f5;
 }
 
@@ -219,9 +371,60 @@
   color: #9ca3af;
 }
 
+.dark-mode .header__country-btn {
+  color: #e4e4e7;
+  border-color: #3f3f46;
+}
+
+.dark-mode .header__country-btn:hover {
+  background: #3f3f46;
+}
+
+.dark-mode .header__country-dropdown {
+  background: #27272a;
+  border-top-color: #3f3f46;
+}
+
+.dark-mode .header__country-dropdown::before {
+  background: #52525b;
+}
+
+.dark-mode .header__country-dropdown::-webkit-scrollbar-thumb {
+  background: #52525b;
+}
+
+.dark-mode .header__country-search {
+  background: #27272a;
+  border-bottom-color: #3f3f46;
+}
+
+.dark-mode .header__country-search-input {
+  background: #3f3f46;
+  border-color: #52525b;
+  color: #e4e4e7;
+}
+
+.dark-mode .header__country-search-input::placeholder {
+  color: #9ca3af;
+}
+
+.dark-mode .header__country-search-input:focus {
+  border-color: #6366f1;
+  background: #27272a;
+}
+
+.dark-mode .header__country-item {
+  color: #e4e4e7;
+  border-bottom-color: #3f3f46;
+}
+
+.dark-mode .header__country-item:hover {
+  background: #3f3f46;
+}
+
 .dark-mode .mobile-menu {
   background: #27272a;
-  border: 1px solid #3f3f46;
+  border-color: #3f3f46;
 }
 
 .dark-mode .mobile-menu__link {
@@ -234,17 +437,14 @@
 
 .dark-mode .mobile-nav {
   background: #18181b;
-  border-top: 1px solid #2a2a2e;
+  border-top-color: #2a2a2e;
 }
 
 .dark-mode .mobile-nav__link {
   color: #9ca3af;
 }
 
-.dark-mode .mobile-nav__link:hover {
-  color: white;
-}
-
+.dark-mode .mobile-nav__link:hover,
 .dark-mode .mobile-nav__link--active {
   color: white;
 }
@@ -253,22 +453,69 @@
   background: #6366f1;
 }
 
-.dark-mode .header__icon {
-  color: #e4e4e7;
-}
-
+/* ============================================================
+   DESKTOP (min-width: 768px)
+   ============================================================ */
 @media (min-width: 768px) {
   .header__nav {
     display: flex;
   }
+
   .header__actions {
     display: flex;
   }
+
   .header__menu {
     display: none;
   }
+
   .mobile-nav {
     display: none;
+  }
+
+  .header__country-dropdown {
+    position: absolute;
+    bottom: unset;
+    top: calc(100% + 8px);
+    left: 0;
+    right: unset;
+    width: 200px;
+    max-height: 250px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    animation: dropdown 0.2s ease;
+  }
+
+  .header__country-dropdown::before {
+    display: none;
+  }
+
+  .header__country-item {
+    padding: 8px 12px;
+    border-bottom: none;
+  }
+
+  .header__country-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .header__country-list {
+    max-height: calc(250px - 56px);
+  }
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
   }
 }
 
@@ -276,7 +523,7 @@
   from {
     opacity: 0;
     transform: translateY(-8px);
-  } 
+  }
   to {
     opacity: 1;
     transform: translateY(0);
