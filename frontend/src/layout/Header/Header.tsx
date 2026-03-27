@@ -1,7 +1,7 @@
 import Logo from "../../assets/images/Logo.png";
 import Login from "../../components/Login/Login";
 import Register from "../../components/Register/Register";
-
+import "./Header.css";
 import {
   Search,
   TvMinimalPlay,
@@ -12,7 +12,12 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-const Header = () => {
+interface darkModeProps {
+  darkMode: boolean;
+  setDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+const Header = ({ darkMode, setDarkMode }: darkModeProps) => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [mobileMenu, setMobileMenu] = useState<boolean>(false);
   const [activePopup, setActivePopup] = useState<"Login" | "Register" | null>(
@@ -172,7 +177,12 @@ const Header = () => {
               <button className="mobile-menu__link">Country</button>
             </li>
             <li className="mobile-menu__item">
-              <button className="mobile-menu__link">Dark Mode</button>
+              <button
+                className="mobile-menu__link"
+                onClick={() => setDarkMode((prev) => !prev)}
+              >
+                {darkMode ? "Light Mode" : "Dark Mode"}
+              </button>
             </li>
             <li className="mobile-menu__item">
               <button
@@ -199,7 +209,10 @@ const Header = () => {
         <ul className="mobile-nav__list">
           {navMobileItems.map((item) => (
             <li key={item.path} className="mobile-nav__item">
-              <a href={item.path} className={`mobile-nav__link ${currentPath === item.path ? "mobile-nav__link--active" : ""}`}>
+              <a
+                href={item.path}
+                className={`mobile-nav__link ${currentPath === item.path ? "mobile-nav__link--active" : ""}`}
+              >
                 <span>{item.icon}</span>
                 {item.label}
               </a>

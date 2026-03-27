@@ -101,7 +101,7 @@ const Register = ({ onClose, onSwitch }: RegisterProps) => {
               required
             />
 
-            <p className="otp-info">OTP sent to your email</p>
+            <p className="otp-info">OTP sent to your {email}</p>
 
             <div className="otp-actions">
               <button

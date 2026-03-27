@@ -1,71 +1,101 @@
-/* Overlay */
+/* ===============================
+   REGISTER MODAL CONTAINER
+   =============================== */
+
 .register {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
 }
 
+
+/* Overlay phía sau popup */
+
 .register__overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
 }
 
-/* Card */
+
+/* ===============================
+   REGISTER CARD
+   =============================== */
+
 .register__card {
   position: relative;
-  background: #fff;
-  padding: 2rem;
-  border-radius: 14px;
-  width: 90%;
+
+  width: 92%;
   max-width: 380px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-  z-index: 1001;
+
+  padding: 1.9rem 1.6rem;
+
+  background: #ffffff;
+  border-radius: 14px;
+
+  box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+
   display: flex;
   flex-direction: column;
   align-items: center;
+
   animation: fadeIn 0.25s ease;
+  z-index: 1001;
 }
 
-/* Close button */
+
+/* ===============================
+   CLOSE BUTTON
+   =============================== */
+
 .register__close {
   position: absolute;
   top: 12px;
   right: 14px;
+
   background: none;
   border: none;
+
   font-size: 1.6rem;
   cursor: pointer;
-  color: #666;
-  transition: color 0.2s;
+
+  color: #777;
+  transition: 0.2s;
 }
 
 .register__close:hover {
-  color: #000;
+  color: #111;
 }
 
-/* Titles */
+
+/* ===============================
+   TITLE + SUBTITLE
+   =============================== */
+
 .register__title {
-  font-size: 1.6rem;
+  font-size: 1.55rem;
   font-weight: 600;
   margin-bottom: 0.4rem;
   color: #222;
+  text-align: center;
 }
 
 .register__subtitle {
-  font-size: 0.95rem;
-  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  margin-bottom: 1.4rem;
   color: #666;
   text-align: center;
 }
 
-/* Form */
+
+/* ===============================
+   FORM
+   =============================== */
+
 .register__form {
   width: 100%;
   display: flex;
@@ -73,16 +103,23 @@
   gap: 12px;
 }
 
-/* Inputs */
+
+/* ===============================
+   INPUT
+   =============================== */
+
 .register__input,
 .otp-input {
   width: 100%;
+
   padding: 0.7rem 0.9rem;
   font-size: 0.95rem;
-  border: 1px solid #d1d5db;
+
+  border: 1px solid #dcdcdc;
   border-radius: 8px;
+
   outline: none;
-  transition: border 0.2s, box-shadow 0.2s;
+  transition: 0.2s;
 }
 
 .register__input:focus,
@@ -91,15 +128,23 @@
   box-shadow: 0 0 0 3px rgba(40,167,69,0.2);
 }
 
-/* Main button */
+
+/* ===============================
+   REGISTER BUTTON
+   =============================== */
+
 .register__button {
-  padding: 0.7rem;
+  padding: 0.75rem;
+
   background: #28a745;
   border: none;
-  color: #fff;
+
+  color: white;
+
   border-radius: 8px;
   font-size: 0.95rem;
   font-weight: 500;
+
   cursor: pointer;
   transition: 0.2s;
 }
@@ -109,29 +154,43 @@
   transform: translateY(-1px);
 }
 
-/* Social buttons */
+
+/* ===============================
+   SOCIAL LOGIN
+   =============================== */
+
 .register__social {
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 10px;
+
   margin: 14px 0;
 }
 
 .register__social-btn {
   width: 100%;
+
   padding: 0.65rem;
+
   font-size: 0.95rem;
+
   border-radius: 8px;
+
   cursor: pointer;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   gap: 8px;
+
   transition: 0.2s;
 }
 
+
 /* Google */
+
 .register__social-btn--google {
   background: #fff;
   border: 1px solid #e5e7eb;
@@ -142,7 +201,9 @@
   background: #f9fafb;
 }
 
+
 /* Facebook */
+
 .register__social-btn--facebook {
   background: #1877f2;
   color: white;
@@ -153,14 +214,22 @@
   background: #166fe5;
 }
 
-/* OTP text */
+
+/* ===============================
+   OTP TEXT
+   =============================== */
+
 .otp-info {
-  font-size: 13px;
+  font-size: 0.8rem;
   color: #666;
   text-align: center;
 }
 
-/* Footer */
+
+/* ===============================
+   FOOTER
+   =============================== */
+
 .register__footer {
   margin-top: 1rem;
   font-size: 0.9rem;
@@ -170,9 +239,12 @@
 .register__link {
   background: none;
   border: none;
+
   color: #28a745;
+
   cursor: pointer;
   font-weight: 500;
+
   text-decoration: underline;
 }
 
@@ -180,7 +252,67 @@
   color: #1e7e34;
 }
 
-/* Animation */
+
+/* ===============================
+   DARK MODE
+   =============================== */
+
+.dark-mode .register__overlay {
+  background: rgba(0,0,0,0.75);
+}
+
+.dark-mode .register__card {
+  background: #27272a;
+  color: #e4e4e7;
+  border: 1px solid #3f3f46;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+}
+
+.dark-mode .register__title {
+  color: #ffffff;
+}
+
+.dark-mode .register__input,
+.dark-mode .otp-input {
+  background: #18181b;
+  border: 1px solid #3f3f46;
+  color: #f4f4f5;
+}
+
+.dark-mode .register__input::placeholder {
+  color: #9ca3af;
+}
+
+.dark-mode .register__social-btn--google {
+  background: #18181b;
+  border: 1px solid #3f3f46;
+}
+
+.dark-mode .register__social-btn--google:hover {
+  background: #3f3f46;
+}
+
+.dark-mode .register__button {
+  background: #6366f1;
+}
+
+.dark-mode .register__button:hover {
+  background: #4f46e5;
+}
+
+.dark-mode .register__close {
+  color: #a1a1aa;
+}
+
+.dark-mode .register__close:hover {
+  color: white;
+}
+
+
+/* ===============================
+   ANIMATION
+   =============================== */
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -192,13 +324,19 @@
   }
 }
 
-/* Responsive */
+
+/* ===============================
+   MOBILE
+   =============================== */
+
 @media (max-width: 480px) {
+
   .register__card {
     padding: 1.6rem;
   }
 
   .register__title {
-    font-size: 1.45rem;
+    font-size: 1.4rem;
   }
+
 }

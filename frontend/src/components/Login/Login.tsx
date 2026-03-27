@@ -23,7 +23,7 @@ const Login = ({ onClose, onSwitch }: LoginProps) => {
     e.preventDefault();
     if (!otp) return;
     console.log("Email: ", email, "Password: ", password);
-    onClose();
+    onClose(); 
   };
 
   const handleSocialLogin = (provider: string) => {

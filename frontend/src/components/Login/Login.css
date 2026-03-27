@@ -1,4 +1,7 @@
-/* Overlay */
+/* ===============================
+   LOGIN MODAL CONTAINER
+   =============================== */
+
 .login {
   position: fixed;
   inset: 0;
@@ -8,37 +11,55 @@
   z-index: 1000;
 }
 
+/* Overlay phía sau popup */
 .login__overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px); /* làm mờ background */
 }
 
-/* Card */
+
+/* ===============================
+   LOGIN CARD
+   =============================== */
+
 .login__card {
   position: relative;
   width: 92%;
   max-width: 380px;
   padding: 1.75rem 1.5rem;
-  background: #fff;
+
+  background: #ffffff;
   border-radius: 14px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+
+  /* shadow giúp popup nổi lên */
+  box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+
   display: flex;
   flex-direction: column;
   align-items: center;
+
   animation: fadeIn 0.25s ease;
   z-index: 1001;
 }
 
-/* Close button */
+
+/* ===============================
+   CLOSE BUTTON
+   =============================== */
+
 .login__close {
   position: absolute;
   top: 12px;
   right: 14px;
+
   border: none;
   background: transparent;
+
   font-size: 1.6rem;
   cursor: pointer;
+
   color: #777;
   transition: 0.2s;
 }
@@ -47,12 +68,17 @@
   color: #111;
 }
 
-/* Titles */
+
+/* ===============================
+   TITLE + SUBTITLE
+   =============================== */
+
 .login__title {
   font-size: 1.55rem;
   font-weight: 600;
   margin-bottom: 0.35rem;
   color: #222;
+  text-align: center;
 }
 
 .login__subtitle {
@@ -62,7 +88,11 @@
   text-align: center;
 }
 
-/* Form */
+
+/* ===============================
+   FORM
+   =============================== */
+
 .login__form {
   width: 100%;
   display: flex;
@@ -70,31 +100,46 @@
   gap: 12px;
 }
 
-/* Input */
+
+/* ===============================
+   INPUT
+   =============================== */
+
 .login__input {
   width: 100%;
   padding: 0.65rem 0.85rem;
+
   font-size: 0.95rem;
+
   border: 1px solid #dcdcdc;
   border-radius: 8px;
+
   outline: none;
   transition: 0.2s;
 }
 
 .login__input:focus {
   border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.18);
+  box-shadow: 0 0 0 3px rgba(79,70,229,0.18);
 }
 
-/* Main button */
+
+/* ===============================
+   LOGIN BUTTON
+   =============================== */
+
 .login__button {
   padding: 0.75rem;
+
   border: none;
   border-radius: 8px;
+
   background: #4f46e5;
-  color: #fff;
+  color: white;
+
   font-size: 0.95rem;
   font-weight: 500;
+
   cursor: pointer;
   transition: 0.2s;
 }
@@ -103,7 +148,11 @@
   background: #4338ca;
 }
 
-/* Social section */
+
+/* ===============================
+   SOCIAL LOGIN
+   =============================== */
+
 .login__social {
   width: 100%;
   display: flex;
@@ -114,67 +163,46 @@
 .login__social-btn {
   flex: 1;
   padding: 0.6rem;
+
   border-radius: 8px;
-  border: none;
+  border: 1px solid #ddd;
+
+  background: #fff;
+
   cursor: pointer;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   transition: 0.2s;
 }
 
-/* Google */
-.login__social--google {
-  background: #fff;
-  border: 1px solid #ddd;
-  transition: all 0.2s ease;
-}
-
-.login__social--google:hover {
+.login__social-btn:hover {
   background: #f7f7f7;
 }
 
-/* Facebook */
-.login__social--facebook {
-  background: #fff;
-  border: 1px solid #ddd;
-  transition: all 0.2s ease;
-}
 
-.login__social--facebook:hover {
-  background: #f7f7f7 ;
-}
+/* ===============================
+   OTP SECTION
+   =============================== */
 
-/* OTP */
 .otp-input {
   width: 100%;
   padding: 0.65rem 0.85rem;
+
   border-radius: 8px;
   border: 1px solid #dcdcdc;
+
   font-size: 0.95rem;
+
   outline: none;
   transition: 0.2s;
 }
 
 .otp-input:focus {
   border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.18);
-}
-
-.otp-btn {
-  width: 100%;
-  padding: 0.65rem;
-  border: none;
-  border-radius: 8px;
-  background: #4f46e5;
-  color: #fff;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.otp-btn:hover {
-  background: #4338ca;
+  box-shadow: 0 0 0 3px rgba(79,70,229,0.18);
 }
 
 .otp-info {
@@ -183,25 +211,8 @@
   text-align: center;
 }
 
-/* Footer */
-.login__footer {
-  margin-top: 12px;
-  font-size: 0.9rem;
-  color: #555;
-}
 
-.login__link {
-  border: none;
-  background: none;
-  color: #4f46e5;
-  cursor: pointer;
-  font-weight: 500;
-  text-decoration: underline;
-}
-
-.login__link:hover {
-  color: #4338ca;
-}
+/* OTP ACTION BUTTONS */
 
 .otp-actions {
   display: flex;
@@ -212,40 +223,16 @@
 .otp-actions button {
   flex: 1;
   padding: 10px 0;
+
   border-radius: 6px;
   border: none;
+
   font-weight: 500;
   cursor: pointer;
+
   transition: 0.2s;
 }
 
-.otp-actions {
-  display: flex;
-  gap: 10px;
-  width: 100%;
-}
-
-.otp-actions button {
-  flex: 1;
-  padding: 10px 0;
-  border-radius: 6px;
-  border: none;
-  font-weight: 500;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-/* Back button */
-.otp-back {
-  background: #f3f4f6;
-  color: #333;
-}
-
-.otp-back:hover {
-  background: #e5e7eb;
-}
-
-/* Confirm button */
 .otp-confirm {
   background: #4f46e5;
   color: white;
@@ -255,7 +242,103 @@
   background: #4338ca;
 }
 
-/* Animation */
+.otp-back {
+  background: #f3f4f6;
+  color: #333;
+}
+
+.otp-back:hover {
+  background: #e5e7eb;
+}
+
+
+/* ===============================
+   FOOTER
+   =============================== */
+
+.login__footer {
+  margin-top: 12px;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.login__link {
+  border: none;
+  background: none;
+
+  color: #4f46e5;
+
+  cursor: pointer;
+  font-weight: 500;
+
+  text-decoration: underline;
+}
+
+.login__link:hover {
+  color: #4338ca;
+}
+
+
+/* ===============================
+   DARK MODE
+   =============================== */
+
+.dark-mode .login__overlay {
+  background: rgba(0,0,0,0.75);
+}
+
+.dark-mode .login__card {
+  background: #27272a;
+  color: #e4e4e7;
+  border: 1px solid #3f3f46;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+}
+
+.dark-mode .login__title {
+  color: white;
+}
+
+.dark-mode .login__input,
+.dark-mode .otp-input {
+  background: #18181b;
+  border: 1px solid #3f3f46;
+  color: #f4f4f5;
+}
+
+.dark-mode .login__input::placeholder {
+  color: #9ca3af;
+}
+
+.dark-mode .login__button {
+  background: #6366f1;
+}
+
+.dark-mode .login__button:hover {
+  background: #4f46e5;
+}
+
+.dark-mode .login__social-btn {
+  background: #18181b;
+  border: 1px solid #3f3f46;
+}
+
+.dark-mode .login__social-btn:hover {
+  background: #3f3f46;
+}
+
+.dark-mode .login__close {
+  color: #a1a1aa;
+}
+
+.dark-mode .login__close:hover {
+  color: white;
+}
+
+
+/* ===============================
+   ANIMATION
+   =============================== */
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -267,8 +350,13 @@
   }
 }
 
-/* Mobile */
+
+/* ===============================
+   MOBILE
+   =============================== */
+
 @media (max-width: 480px) {
+
   .login__card {
     padding: 1.5rem 1.25rem;
   }
@@ -280,4 +368,5 @@
   .login__social {
     gap: 10px;
   }
+
 }
