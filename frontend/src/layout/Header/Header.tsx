@@ -11,6 +11,7 @@ import Logo from "../../assets/images/Logo.png";
 import Login from "../../components/Login/Login";
 import Register from "../../components/Register/Register";
 import "./Header.css";
+import { Link, useLocation } from "react-router-dom";
 
 // ============================================================
 // Types
@@ -58,7 +59,7 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
   const [countryOpen, setCountryOpen] = useState(false);
   const [searchCountry, setSearchCountry] = useState("");
 
-  const currentPath = window.location.pathname;
+  const { pathname } = useLocation();
 
   // Fetch countries
   useEffect(() => {
@@ -146,9 +147,9 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
         <div className="container mx-auto px-4 header__container">
           {/* Logo */}
           <div className="header__logo">
-            <a href="/">
+            <Link to="/">
               <img src={Logo} alt="OmexLive" className="header__logo-img" />
-            </a>
+            </Link>
           </div>
 
           {/* Desktop Nav */}
@@ -156,9 +157,9 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
             <ul className="header__nav-list">
               {NAV_ITEMS.map((item) => (
                 <li key={item.path} className="header__nav-item">
-                  <a href={item.path} className="header__nav-link">
+                  <Link to={item.path} className="header__nav-link">
                     {item.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
 
@@ -362,13 +363,13 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
         <ul className="mobile-nav__list">
           {MOBILE_NAV_ITEMS.map((item) => (
             <li key={item.path} className="mobile-nav__item">
-              <a
-                href={item.path}
-                className={`mobile-nav__link ${currentPath === item.path ? "mobile-nav__link--active" : ""}`}
+              <Link
+                to={item.path}
+                className={`mobile-nav__link ${pathname === item.path ? "mobile-nav__link--active" : ""}`}
               >
                 <span>{item.icon}</span>
                 {item.label}
-              </a>
+              </Link>
             </li>
           ))}
         </ul>

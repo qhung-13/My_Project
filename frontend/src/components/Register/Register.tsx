@@ -123,15 +123,15 @@ const Register = ({ onClose, onSwitch }: RegisterProps) => {
         )}
 
         {step === "credentials" && (
-          <div className="login__social">
+          <div className="register__social">
             <button
-              className="login__social-btn login__social--google"
+              className="register__social-btn register__social--google"
               onClick={() => handleSocialRegister("Google")}
             >
               <FcGoogle size={24} />
             </button>
             <button
-              className="login__social-btn login__social--facebook"
+              className="register__social-btn register__social--facebook"
               onClick={() => handleSocialRegister("Facebook")}
             >
               <FaFacebook size={24} color="#1877F2" />
