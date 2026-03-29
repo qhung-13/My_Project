@@ -1,0 +1,247 @@
+/* ============================================================
+   GAME DETAIL
+   ============================================================ */
+.game-detail {
+  padding-top: 50px;
+  padding-bottom: 10px;
+  min-height: 100vh;
+}
+
+/* Header */
+.game-detail__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border-bottom: 0.5px solid #222;
+}
+
+.game-detail__back {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 0.5px solid #333;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  color: white;
+}
+
+.game-detail__back:hover {
+  background: #1a1a1a;
+}
+
+.game-detail__title {
+  font-size: 16px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.game-detail__count {
+  font-size: 12px;
+  color: #888;
+}
+
+/* Grid 2 cột */
+.game-detail__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 16px;
+}
+
+/* ============================================================
+   GAME DETAIL CARD
+   ============================================================ */
+.gd-card {
+  background: #1a1a1a;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 0.5px solid #333;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.gd-card:hover {
+  border-color: #9147ff;
+}
+
+.gd-card__thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gd-card__play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.gd-card__badge {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  background: #e24b4a;
+  color: white;
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.gd-card__viewers {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  font-size: 9px;
+  color: white;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.gd-card__info {
+  padding: 6px 8px;
+}
+
+.gd-card__streamer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 3px;
+}
+
+.gd-card__avatar {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 6px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.gd-card__name {
+  font-size: 10px;
+  color: #aaa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gd-card__title {
+  font-size: 11px;
+  font-weight: 500;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Empty state */
+.game-detail__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 16px;
+  gap: 8px;
+}
+
+.game-detail__empty-icon {
+  font-size: 40px;
+}
+
+.game-detail__empty p {
+  font-size: 14px;
+  font-weight: 500;
+  color: #aaa;
+}
+
+.game-detail__empty span {
+  font-size: 12px;
+  color: #666;
+}
+
+/* ============================================================
+   DARK MODE
+   ============================================================ */
+.dark-mode .game-detail__header {
+  border-bottom-color: #2a2a2e;
+}
+
+.dark-mode .game-detail__title {
+  color: #e4e4e7;
+}
+
+.dark-mode .game-detail__back {
+  color: #e4e4e7;
+  border-color: #3f3f46;
+}
+
+.dark-mode .game-detail__back:hover {
+  background: #27272a;
+}
+
+.dark-mode .gd-card {
+  background: #1a1a1a;
+  border-color: #333;
+}
+
+.dark-mode .gd-card__title {
+  color: #e4e4e7;
+}
+
+/* ============================================================
+   LIGHT MODE
+   ============================================================ */
+.light-mode .game-detail__header {
+  border-bottom-color: #eee;
+}
+
+.light-mode .game-detail__title {
+  color: #111;
+}
+
+.light-mode .game-detail__back {
+  color: #111;
+  border-color: #ddd;
+}
+
+.light-mode .game-detail__back:hover {
+  background: #f5f5f5;
+}
+
+.light-mode .gd-card {
+  background: #f5f5f5;
+  border-color: #ddd;
+}
+
+.light-mode .gd-card__title {
+  color: #111;
+}
+
+.light-mode .gd-card__name {
+  color: #555;
+}

@@ -2,6 +2,7 @@ import { useState } from "react";
 import Home from "./pages/Home/Home";
 import Game from "./pages/Game/Game";
 import Live from "./pages/Live/Live";
+import GameDetail from "./pages/Game/GameDetail";
 import "./index.css";
 import Header from "./layout/Header/Header";
 import { Route, Routes, Navigate } from "react-router-dom";
@@ -16,8 +17,9 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/home" replace />} />
         <Route path="/home" element={<Home />} />
-        <Route path="/game" element={<Game />} />
         <Route path="/live" element={<Live />} />
+        <Route path="/game" element={<Game />} />
+        <Route path="/game/:gameId" element={<GameDetail />} />
       </Routes>
 
       <Footer />
