@@ -1,0 +1,221 @@
+/* ============================================================
+   LIVE NOW
+   ============================================================ */
+.live-now {
+  padding: 20px 0 0;
+  width: 100%;
+}
+
+.live-now__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  margin-bottom: 12px;
+}
+
+.live-now__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.live-now__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e24b4a;
+  display: inline-block;
+}
+
+.live-now__more {
+  font-size: 12px;
+  color: #9147ff;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* Scroll container */
+.live-now__scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 16px 12px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.live-now__scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* ============================================================
+   STREAM CARD
+   ============================================================ */
+.stream-card {
+  flex: 0 0 150px;
+  width: 150px;
+  background: #1a1a1a;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 0.5px solid #333;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.stream-card:hover {
+  border-color: #555;
+}
+
+.stream-card__thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #1a0a2e;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stream-card__play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.stream-card__badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: #e24b4a;
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+
+.stream-card__viewers {
+  position: absolute;
+  bottom: 5px;
+  left: 6px;
+  font-size: 10px;
+  color: white;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.stream-card__info {
+  padding: 8px 10px;
+}
+
+.stream-card__streamer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+
+.stream-card__avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.stream-card__name {
+  font-size: 11px;
+  font-weight: 500;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stream-card__title {
+  font-size: 11px;
+  color: #ccc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;
+}
+
+.stream-card__game {
+  font-size: 10px;
+  color: #888;
+}
+
+/* ============================================================
+   DARK MODE
+   ============================================================ */
+.dark-mode .live-now__title {
+  color: #e4e4e7;
+}
+
+.dark-mode .stream-card {
+  background: #1a1a1a;
+  border-color: #333;
+}
+
+.dark-mode .stream-card:hover {
+  border-color: #555;
+}
+
+.dark-mode .stream-card__name {
+  color: #e4e4e7;
+}
+
+.dark-mode .stream-card__title {
+  color: #aaa;
+}
+
+/* ============================================================
+   LIGHT MODE
+   ============================================================ */
+.light-mode .live-now__title {
+  color: #111;
+}
+
+.light-mode .stream-card {
+  background: #f5f5f5;
+  border-color: #ddd;
+}
+
+.light-mode .stream-card:hover {
+  border-color: #bbb;
+}
+
+.light-mode .stream-card__name {
+  color: #111;
+}
+
+.light-mode .stream-card__title {
+  color: #444;
+}
+
+.light-mode .stream-card__game {
+  color: #666;
+}

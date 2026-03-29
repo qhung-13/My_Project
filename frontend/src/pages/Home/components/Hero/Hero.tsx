@@ -1,4 +1,5 @@
 import { Play } from "lucide-react";
+import { formatViewers } from "../../../../utils/format";
 import "./Hero.css";
 
 const Hero = () => {
@@ -7,13 +8,6 @@ const Hero = () => {
     streamTitle: "Rank Challenger LOL - Đường đến Thách Đấu",
     game: "League of Legends",
     viewers: 8100,
-  };
-
-  const formatViewers = (value: number) => {
-    if (value > 1000) {
-      return value / 1000 + "k";
-    }
-    return value;
   };
 
   return (

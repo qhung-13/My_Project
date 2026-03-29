@@ -321,42 +321,42 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
             </button>
           </div>
         </div>
-      </header>
 
-      {/* Mobile Menu */}
-      {mobileMenu && (
-        <div className="mobile-menu">
-          <ul className="mobile-menu__list">
-            <li className="mobile-menu__item">
-              <button className="mobile-menu__link">Go Live</button>
-            </li>
-            <li className="mobile-menu__item">
-              <button
-                className="mobile-menu__link"
-                onClick={() => setDarkMode((prev) => !prev)}
-              >
-                {darkMode ? "Light Mode" : "Dark Mode"}
-              </button>
-            </li>
-            <li className="mobile-menu__item">
-              <button
-                className="mobile-menu__link"
-                onClick={() => setActivePopup("Login")}
-              >
-                Login
-              </button>
-            </li>
-            <li className="mobile-menu__item">
-              <button
-                className="mobile-menu__link"
-                onClick={() => setActivePopup("Register")}
-              >
-                Sign Up
-              </button>
-            </li>
-          </ul>
-        </div>
-      )}
+        {/* Mobile Menu */}
+        {mobileMenu && (
+          <div className="mobile-menu">
+            <ul className="mobile-menu__list">
+              <li className="mobile-menu__item">
+                <button className="mobile-menu__link">Go Live</button>
+              </li>
+              <li className="mobile-menu__item">
+                <button
+                  className="mobile-menu__link"
+                  onClick={() => setDarkMode((prev) => !prev)}
+                >
+                  {darkMode ? "Light Mode" : "Dark Mode"}
+                </button>
+              </li>
+              <li className="mobile-menu__item">
+                <button
+                  className="mobile-menu__link"
+                  onClick={() => setActivePopup("Login")}
+                >
+                  Login
+                </button>
+              </li>
+              <li className="mobile-menu__item">
+                <button
+                  className="mobile-menu__link"
+                  onClick={() => setActivePopup("Register")}
+                >
+                  Sign Up
+                </button>
+              </li>
+            </ul>
+          </div>
+        )}
+      </header>
 
       {/* Mobile Nav */}
       <div className="mobile-nav">

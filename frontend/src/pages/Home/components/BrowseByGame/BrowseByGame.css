@@ -1,0 +1,111 @@
+/* ============================================================
+   BROWSE BY GAME
+   ============================================================ */
+.browse {
+  padding: 20px 0 0;
+  width: 100%;
+}
+
+.browse__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  margin-bottom: 12px;
+}
+
+.browse__title {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.browse__more {
+  font-size: 12px;
+  color: #9147ff;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* Scroll ngang */
+.browse__scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: scroll;
+  padding: 0 16px 12px;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+
+.browse__scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Game card — poster dọc */
+.game-card {
+  flex-shrink: 0;
+  width: 90px;
+  cursor: pointer;
+}
+
+/* Poster 3:4 */
+.game-card__poster {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: start; 
+  padding: 8px;
+  border: 0.5px solid #333;
+}
+
+/* Wrap tên + viewers */
+.game-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+}
+
+.game-card__name {
+  font-size: 11px;
+  font-weight: 500;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.game-card__viewers {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6); 
+}
+
+/* ============================================================
+   DARK MODE
+   ============================================================ */
+.dark-mode .browse__title {
+  color: #e4e4e7;
+}
+
+.dark-mode .game-card__poster {
+  border-color: #333;
+}
+
+/* ============================================================
+   LIGHT MODE
+   ============================================================ */
+.light-mode .browse__title {
+  color: #111;
+}
+
+.light-mode .game-card__poster {
+  border-color: #ddd;
+}
+
+.light-mode .game-card__viewers {
+  color: #666;
+}

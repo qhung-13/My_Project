@@ -20,3 +20,7 @@
     color 0.25s ease,
     border 0.25s ease;
 }
+
+html, body {
+  overscroll-behavior-x: none; 
+}

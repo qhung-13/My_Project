@@ -1,0 +1,164 @@
+/* ============================= */
+/* LEADERBOARD CONTAINER */
+/* ============================= */
+
+.leaderboard {
+  padding: 20px;
+  border-radius: 16px;
+  width: 320px;
+  margin: auto;
+  /* margin-top: 40px; */
+  transition: all 0.3s ease;
+}
+
+/* theme */
+
+.light-mode .leaderboard {
+  background: #ffffff;
+  color: #111;
+}
+
+.dark-mode .leaderboard {
+  background: #1e1e1e;
+  color: #ffffff;
+}
+
+/* ============================= */
+/* HEADER */
+/* ============================= */
+
+.leaderboard__header {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* ============================= */
+/* TABS */
+/* ============================= */
+
+.leaderboard__tabs {
+  display: flex;
+  gap: 18px;
+  margin-top: 10px;
+}
+
+.leaderboard__tabs button {
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  color: gray;
+  padding-bottom: 4px;
+  transition: 0.2s;
+}
+
+.leaderboard__tabs button:hover {
+  color: #8b5cf6;
+}
+
+.leaderboard__tabs .active {
+  color: #8b5cf6;
+  border-bottom: 2px solid #8b5cf6;
+}
+
+/* ============================= */
+/* PODIUM */
+/* ============================= */
+
+.leaderboard__podium {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: 25px;
+}
+
+.podium-item {
+  text-align: center;
+}
+
+/* top1 cao hơn */
+
+.rank-1 {
+  transform: translateY(-12px);
+}
+
+/* avatar */
+
+.avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-weight: bold;
+  color: white;
+
+  margin: auto;
+}
+
+.rank-1 .avatar {
+  width: 62px;
+  height: 62px;
+}
+
+/* medal */
+
+.medal {
+  font-size: 22px;
+  margin-bottom: 6px;
+}
+
+/* name */
+
+.name {
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+/* value */
+
+.value {
+  font-size: 13px;
+  color: #8b5cf6;
+  margin-top: 2px;
+}
+
+/* ============================= */
+/* LIST (4-5) */
+/* ============================= */
+
+.leaderboard__list {
+  margin-top: 22px;
+}
+
+.list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 8px 0;
+}
+
+/* rank */
+
+.rank {
+  width: 20px;
+  color: gray;
+}
+
+/* small avatar */
+
+.avatar.small {
+  width: 30px;
+  height: 30px;
+  font-size: 12px;
+}
+
+/* value align right */
+
+.list-item .value {
+  margin-left: auto;
+}
