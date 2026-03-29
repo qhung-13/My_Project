@@ -1,164 +1,210 @@
-/* ============================= */
-/* LEADERBOARD CONTAINER */
-/* ============================= */
-
+/* ============================================================
+   LEADERBOARD
+   ============================================================ */
 .leaderboard {
-  padding: 20px;
-  border-radius: 16px;
-  width: 320px;
-  margin: auto;
-  /* margin-top: 40px; */
-  transition: all 0.3s ease;
+  padding: 20px 16px;
+  width: 100%;       
 }
-
-/* theme */
-
-.light-mode .leaderboard {
-  background: #ffffff;
-  color: #111;
-}
-
-.dark-mode .leaderboard {
-  background: #1e1e1e;
-  color: #ffffff;
-}
-
-/* ============================= */
-/* HEADER */
-/* ============================= */
 
 .leaderboard__header {
-  font-size: 18px;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
 }
 
-/* ============================= */
-/* TABS */
-/* ============================= */
+.leaderboard__title {
+  font-size: 14px;
+  font-weight: 500;
+}
 
 .leaderboard__tabs {
   display: flex;
-  gap: 18px;
-  margin-top: 10px;
+  border-bottom: 1px solid #222;
+  margin-bottom: 20px;
 }
 
 .leaderboard__tabs button {
+  flex: 1;
   background: none;
   border: none;
-  font-size: 14px;
+  border-bottom: 2px solid transparent;
+  font-size: 12px;
   cursor: pointer;
-  color: gray;
-  padding-bottom: 4px;
+  color: #888;
+  padding: 8px 0;
   transition: 0.2s;
 }
 
 .leaderboard__tabs button:hover {
-  color: #8b5cf6;
+  color: #9147ff;
 }
 
 .leaderboard__tabs .active {
-  color: #8b5cf6;
-  border-bottom: 2px solid #8b5cf6;
+  color: #9147ff;
+  border-bottom-color: #9147ff;
+  font-weight: 500;
 }
-
-/* ============================= */
-/* PODIUM */
-/* ============================= */
 
 .leaderboard__podium {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;   
   align-items: flex-end;
-  margin-top: 25px;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 0 8px;
 }
 
 .podium-item {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 90px;
+  flex-shrink: 0;
 }
-
-/* top1 cao hơn */
 
 .rank-1 {
   transform: translateY(-12px);
 }
 
-/* avatar */
-
 .avatar {
-  width: 50px;
-  height: 50px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
-  font-weight: bold;
+  font-size: 13px;
+  font-weight: 700;
   color: white;
-
-  margin: auto;
 }
 
 .rank-1 .avatar {
-  width: 62px;
-  height: 62px;
+  width: 56px;
+  height: 56px;
+  font-size: 16px;
 }
-
-/* medal */
 
 .medal {
-  font-size: 22px;
-  margin-bottom: 6px;
+  font-size: 18px;
 }
-
-/* name */
 
 .name {
-  font-size: 14px;
-  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+  max-width: 70px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-
-/* value */
 
 .value {
-  font-size: 13px;
-  color: #8b5cf6;
-  margin-top: 2px;
+  font-size: 11px;
+  color: #9147ff;
+  font-weight: 500;
 }
 
-/* ============================= */
-/* LIST (4-5) */
-/* ============================= */
+.leaderboard__divider {
+  height: 0.5px;
+  background: #222;
+  margin: 4px 0 12px;
+}
 
+/* ============================================================
+   LIST (#4 #5)
+   ============================================================ */
 .leaderboard__list {
-  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .list-item {
   display: flex;
   align-items: center;
   gap: 10px;
-
-  padding: 8px 0;
+  padding: 8px 10px;
+  background: #1a1a1a;
+  border-radius: 8px;
+  border: 0.5px solid #333;
 }
-
-/* rank */
 
 .rank {
-  width: 20px;
-  color: gray;
+  width: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #555;
+  text-align: center;
+  flex-shrink: 0;
 }
 
-/* small avatar */
-
 .avatar.small {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
+  font-size: 10px;
+}
+
+.list-item .name {
+  flex: 1;
+  text-align: left;
+  max-width: unset;
   font-size: 12px;
 }
 
-/* value align right */
-
 .list-item .value {
-  margin-left: auto;
+  font-size: 11px;
+}
+
+/* ============================================================
+   DARK MODE
+   ============================================================ */
+.dark-mode .leaderboard__title {
+  color: #e4e4e7;
+}
+
+.dark-mode .leaderboard__tabs {
+  border-bottom-color: #2a2a2e;
+}
+
+.dark-mode .leaderboard__divider {
+  background: #2a2a2e;
+}
+
+.dark-mode .name {
+  color: #e4e4e7;
+}
+
+.dark-mode .list-item {
+  background: #1a1a1a;
+  border-color: #333;
+}
+
+/* ============================================================
+   LIGHT MODE
+   ============================================================ */
+.light-mode .leaderboard__title {
+  color: #111;
+}
+
+.light-mode .leaderboard__tabs {
+  border-bottom-color: #eee;
+}
+
+.light-mode .leaderboard__divider {
+  background: #eee;
+}
+
+.light-mode .name {
+  color: #111;
+}
+
+.light-mode .list-item {
+  background: #f5f5f5;
+  border-color: #ddd;
+}
+
+.light-mode .rank {
+  color: #aaa;
 }

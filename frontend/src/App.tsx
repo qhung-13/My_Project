@@ -5,6 +5,7 @@ import Live from "./pages/Live/Live";
 import "./index.css";
 import Header from "./layout/Header/Header";
 import { Route, Routes, Navigate } from "react-router-dom";
+import Footer from "./layout/Footer/Footer";
 
 function App() {
   const [darkMode, setDarkMode] = useState<boolean>(false);
@@ -18,6 +19,8 @@ function App() {
         <Route path="/game" element={<Game />} />
         <Route path="/live" element={<Live />} />
       </Routes>
+
+      <Footer />
     </main>
   );
 }

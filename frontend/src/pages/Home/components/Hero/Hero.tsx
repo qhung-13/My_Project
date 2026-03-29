@@ -21,8 +21,8 @@ const Hero = () => {
             <div className="hero__avatar">TG</div>
             <span className="hero__name">{featuredStream.streamerName}</span>
             <span className="hero__badge-live">LIVE</span>
-            <div className="viewers">
-              {formatViewers(featuredStream.viewers)} đang xem
+            <div className="hero__viewers">
+              {formatViewers(featuredStream.viewers)} viewers
             </div>
           </div>
           <div className="hero__title">{featuredStream.streamTitle}</div>

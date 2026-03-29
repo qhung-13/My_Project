@@ -148,7 +148,9 @@ function Leaderboard() {
 
   return (
     <div className="leaderboard">
-      <h2 className="leaderboard__header">Top Streamers</h2>
+      <div className="leaderboard__header">
+        <h2 className="leaderboard__title">Top Streamers</h2>
+      </div>
 
       {/* Tabs */}
       <div className="leaderboard__tabs">
