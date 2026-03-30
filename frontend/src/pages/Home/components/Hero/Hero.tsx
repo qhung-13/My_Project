@@ -1,25 +1,31 @@
 import { Play } from "lucide-react";
 import { formatViewers } from "../../../../utils/format";
+import { STREAMS } from "../../../../data/stream";
 import "./Hero.css";
+import { useNavigate } from "react-router-dom";
 
 const Hero = () => {
-  const featuredStream = {
-    streamerName: "TigerGaming",
-    streamTitle: "Rank Challenger LOL - Đường đến Thách Đấu",
-    game: "League of Legends",
-    viewers: 8100,
-  };
+  const navigate = useNavigate();
+  const featuredStream = STREAMS[0];
 
   return (
     <div className="hero">
-      <div className="hero__video">
+      <div
+        className="hero__video"
+        onClick={() => navigate(`/stream/${featuredStream.id}`)}
+      >
         <button className="hero__play-btn">
           <Play size={20} fill="white" />
         </button>
+
         <div className="hero__overlay">
           <div className="hero__streamer">
-            <div className="hero__avatar">TG</div>
-            <span className="hero__name">{featuredStream.streamerName}</span>
+            <div className="hero__avatar">{featuredStream.initials}</div>{" "}
+            {/* ← dynamic */}
+            <span className="hero__name">
+              {featuredStream.streamerName}
+            </span>{" "}
+            {/* ← fix */}
             <span className="hero__badge-live">LIVE</span>
             <div className="hero__viewers">
               {formatViewers(featuredStream.viewers)} viewers

@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Play } from "lucide-react";
 import { formatViewers } from "../../utils/format";
+import { STREAMS } from "../../data/stream";
 import "./Live.css";
+import { useNavigate } from "react-router-dom";
 
 // ============================================================
 // Constants
@@ -17,97 +19,6 @@ const REGIONS = [
 
 const GAMES = ["All", "Valorant", "LOL", "PUBG", "CS2", "Dota 2", "FIFA"];
 
-const STREAMS = [
-  {
-    id: 1,
-    streamerName: "TigerGaming",
-    streamTitle: "Rank Challenger LOL",
-    game: "LOL",
-    viewers: 8100,
-    bg: "#0a1a2e",
-    initials: "TG",
-    avatarColor: "#1877F2",
-    region: "vn",
-  },
-  {
-    id: 2,
-    streamerName: "CSProVN",
-    streamTitle: "Major highlights CS2",
-    game: "CS2",
-    viewers: 5600,
-    bg: "#1a0a0a",
-    initials: "CS",
-    avatarColor: "#0F6E56",
-    region: "vn",
-  },
-  {
-    id: 3,
-    streamerName: "NhokKute",
-    streamTitle: "Cày rank Valorant",
-    game: "Valorant",
-    viewers: 2400,
-    bg: "#1a0a2e",
-    initials: "NK",
-    avatarColor: "#E24B4A",
-    region: "sea",
-  },
-  {
-    id: 4,
-    streamerName: "GalaxyX",
-    streamTitle: "Esport recap Dota 2",
-    game: "Dota 2",
-    viewers: 1900,
-    bg: "#0a2a1a",
-    initials: "GX",
-    avatarColor: "#534AB7",
-    region: "kr",
-  },
-  {
-    id: 5,
-    streamerName: "ProBattle",
-    streamTitle: "Squad mode PUBG",
-    game: "PUBG",
-    viewers: 1200,
-    bg: "#2a0a1a",
-    initials: "PB",
-    avatarColor: "#854F0B",
-    region: "sea",
-  },
-  {
-    id: 6,
-    streamerName: "MixGaming",
-    streamTitle: "Clutch moments FIFA",
-    game: "FIFA",
-    viewers: 890,
-    bg: "#1a1a0a",
-    initials: "MX",
-    avatarColor: "#993556",
-    region: "na",
-  },
-  {
-    id: 7,
-    streamerName: "ProBattle",
-    streamTitle: "Squad mode PUBG",
-    game: "PUBG",
-    viewers: 1200,
-    bg: "#2a0a1a",
-    initials: "PB",
-    avatarColor: "#854F0B",
-    region: "sea",
-  },
-  {
-    id: 8,
-    streamerName: "MixGaming",
-    streamTitle: "Clutch moments FIFA",
-    game: "FIFA",
-    viewers: 890,
-    bg: "#1a1a0a",
-    initials: "MX",
-    avatarColor: "#993556",
-    region: "na",
-  },
-];
-
 // ============================================================
 // Component
 // ============================================================
@@ -115,13 +26,14 @@ const Live = () => {
   const [activeRegion, setActiveRegion] = useState("all");
   const [activeGame, setActiveGame] = useState("All");
   const [sortBy, setSortBy] = useState<"viewers" | "newest">("viewers");
+  const navigate = useNavigate();
 
   const filteredStreams = STREAMS.filter(
     (s) => activeRegion === "all" || s.region === activeRegion,
   )
     .filter((s) => activeGame === "All" || s.game === activeGame)
     .sort((a, b) =>
-      sortBy === "viewers" ? b.viewers - a.viewers : b.id - a.id,
+      sortBy === "viewers" ? b.viewers - a.viewers : b.createdAt - a.createdAt,
     );
 
   return (
@@ -184,7 +96,7 @@ const Live = () => {
       {filteredStreams.length > 0 ? (
         <div className="live-page__grid">
           {filteredStreams.map((stream) => (
-            <div className="live-card" key={stream.id}>
+            <div className="live-card" key={stream.id} onClick={() => navigate(`/stream/${stream.id}`)}>
               {/* Thumbnail */}
               <div
                 className="live-card__thumb"
