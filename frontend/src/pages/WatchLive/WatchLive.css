@@ -2,9 +2,9 @@
    WATCH LIVE
    ============================================================ */
 .watch-live {
-    margin-top: 60px;
-  padding-bottom: 0;
+  margin-top: calc(100vw * 9 / 16);
   min-height: 100vh;
+  display: block;
 }
 
 /* Video */
@@ -12,7 +12,9 @@
   width: 100%;
   aspect-ratio: 16 / 9;
   background: #1a0a2e;
-  position: relative;
+  position: fixed;
+  top: 0;
+  z-index: 50;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -171,6 +173,13 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: calc(10 * 80px + 9 * 10px); 
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.suggested__list::-webkit-scrollbar {
+  display: none;
 }
 
 .suggested-card {
@@ -253,15 +262,52 @@
   flex-shrink: 0;
 }
 
+.watch-live.chat-is-open {
+  /* Khóa cứng chiều cao bằng đúng phần màn hình còn lại dưới Video */
+  height: calc(100svh - (100vw * 9 / 16) - 60px); 
+  overflow: hidden; /* Ngăn trang cuộn đi lung tung */
+  display: flex;
+  flex-direction: column;
+}
+
+.watch-live.chat-is-open .watch-live__interactive {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* Trick bắt buộc để nội dung con cuộn được */
+}
+
+.watch-live.chat-is-open .chat-panel {
+  position: static; /* Bỏ sticky đi khi đang mở full */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; 
+  border-radius: 0; /* Mở full thì góc vuông cho đẹp */
+}
+
 /* ============================================================
    CHAT PANEL — bottom sheet
    ============================================================ */
 .chat-panel {
-  position: sticky;
-  bottom: 0;
+  position: fixed; 
+  bottom: 60px;    
+  left: 0;
+  right: 0;
   background: #111;
   border-top: 0.5px solid #333;
-  border-radius: 16px 16px 0 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+  max-height: 44px;
+}
+
+.chat-panel--open {
+  /* Chiều cao = Toàn màn hình - (Chiều cao Video) - (Thanh mobile-nav) */
+  height: calc(100vh - (100vw * 9 / 16) - 60px); 
+  max-height: 100vh;
+  top: auto;
 }
 
 /* Tab bar — luôn hiện */
@@ -302,7 +348,7 @@
 
 /* Messages */
 .chat-panel__messages {
-  height: 420px;
+  flex: 1;
   overflow-y: auto;
   padding: 8px 16px;
   display: flex;

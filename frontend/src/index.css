@@ -24,3 +24,16 @@
 html, body {
   overscroll-behavior-x: none; 
 }
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.watch-live::-webkit-scrollbar {
+  display: none;
+}
+
+html,
+body,
+.watch-live {
+  scrollbar-width: none; 
+  -ms-overflow-style: none; 
+}
