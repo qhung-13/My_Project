@@ -1,5 +1,5 @@
 /* ============================================================
-   LIVE NOW
+   1. LIVE NOW BASE (Mobile First)
    ============================================================ */
 .live-now {
   padding: 20px 0 0;
@@ -19,15 +19,16 @@
   align-items: center;
   gap: 6px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600; 
 }
 
 .live-now__dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #e24b4a;
   display: inline-block;
+  animation: pulseLive 2s infinite; 
 }
 
 .live-now__more {
@@ -37,15 +38,21 @@
   border: none;
   cursor: pointer;
   padding: 0;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.live-now__more:hover {
+  color: #772ce8;
 }
 
 /* Scroll container */
 .live-now__scroll {
   display: flex;
-  gap: 10px;
+  gap: 12px; 
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 0 16px 12px;
+  padding: 0 16px 16px; 
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }
@@ -55,21 +62,17 @@
 }
 
 /* ============================================================
-   STREAM CARD
+   2. STREAM CARD
    ============================================================ */
 .stream-card {
   flex: 0 0 150px;
   width: 150px;
-  background: #1a1a1a;
+  background: transparent; 
   border-radius: 8px;
   overflow: hidden;
-  border: 0.5px solid #333;
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: border-color 0.15s ease;
-}
-
-.stream-card:hover {
-  border-color: #555;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .stream-card__thumb {
@@ -80,6 +83,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 8px; 
+  overflow: hidden;
 }
 
 .stream-card__play {
@@ -95,7 +100,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.stream-card:hover .stream-card__play {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.1);
 }
 
 .stream-card__badge {
@@ -107,81 +118,118 @@
   font-size: 9px;
   font-weight: 700;
   padding: 2px 5px;
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 .stream-card__viewers {
   position: absolute;
-  bottom: 5px;
+  bottom: 6px;
   left: 6px;
   font-size: 10px;
+  font-weight: 500;
   color: white;
   background: rgba(0, 0, 0, 0.65);
-  padding: 1px 5px;
-  border-radius: 3px;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 .stream-card__info {
-  padding: 8px 10px;
+  padding: 8px 4px 0; 
 }
 
 .stream-card__streamer {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 5px;
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
 .stream-card__avatar {
-  width: 20px;
-  height: 20px;
+  width: 24px; 
+  height: 24px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 700;
   color: white;
   flex-shrink: 0;
 }
 
 .stream-card__name {
-  font-size: 11px;
-  font-weight: 500;
-  color: white;
+  font-size: 12px;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .stream-card__title {
-  font-size: 11px;
-  color: #ccc;
+  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 
 .stream-card__game {
-  font-size: 10px;
-  color: #888;
+  font-size: 11px;
 }
 
 /* ============================================================
-   DARK MODE
+   3. THEMING (DARK / LIGHT)
    ============================================================ */
+/* --- Light Mode --- */
+.light-mode .live-now__title {
+  color: #111;
+}
+
+.light-mode .stream-card {
+  background: #ffffff;
+  border-color: #eaeaea;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.light-mode .stream-card:hover {
+  background: #fdfdfd;
+  border-color: #ddd;
+}
+
+.light-mode .stream-card__thumb {
+  background: #e0e0e0;
+}
+
+.light-mode .stream-card__name {
+  color: #111;
+}
+
+.light-mode .stream-card__title {
+  color: #555;
+}
+
+.light-mode .stream-card__game {
+  color: #777;
+}
+
+/* --- Dark Mode --- */
 .dark-mode .live-now__title {
   color: #e4e4e7;
 }
 
 .dark-mode .stream-card {
-  background: #1a1a1a;
-  border-color: #333;
+  background: #141418;
+  border-color: #2a2a2e;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .dark-mode .stream-card:hover {
-  border-color: #555;
+  background: #1f1f23;
+  border-color: #3f3f46;
+}
+
+.dark-mode .stream-card__thumb {
+  background: #1a0a2e;
 }
 
 .dark-mode .stream-card__name {
@@ -192,30 +240,119 @@
   color: #aaa;
 }
 
+.dark-mode .stream-card__game {
+  color: #888;
+}
+
 /* ============================================================
-   LIGHT MODE
+   4. MEDIA QUERIES (Responsive)
    ============================================================ */
-.light-mode .live-now__title {
-  color: #111;
+/* --- TABLET --- */
+@media (min-width: 768px) {
+  .live-now {
+    padding: 32px 16px 0; 
+  }
+
+  .live-now__header {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .live-now__scroll {
+    display: gird;
+    grid-template-columns: repeat(3, 1fr);
+    overflow-x: unset;
+    gap: 16px;
+  }
+
+  .live-now__title {
+    font-size: 16px;
+  }
+
+  .stream-card {
+    /* flex: 0 0 220px; 
+    width: 220px; */
+    flex: unset;
+    width: 100%;
+  }
+
+  .stream-card__name { font-size: 13px; }
+  .stream-card__title { font-size: 13px; margin-bottom: 4px; }
+  .stream-card__game { font-size: 12px; }
+  
+  .stream-card__avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 11px;
+  }
 }
 
-.light-mode .stream-card {
-  background: #f5f5f5;
-  border-color: #ddd;
+/* --- DESKTOP --- */
+@media (min-width: 1024px) {
+  .live-now {
+    max-width: 1248px; 
+    margin: 0 auto;
+    padding: 40px 0 0;
+  }
+
+  .live-now__title {
+    font-size: 20px; 
+  }
+
+  .live-now__more {
+    font-size: 14px;
+  }
+
+  .live-now__scroll {
+    /* gap: 20px; 
+    padding-bottom: 24px; */
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    overflow-x: unset;
+    gap: 20px;
+  }
+
+  .stream-card {
+    /* flex: 0 0 280px; 
+    width: 280px; */
+    flex: unset;
+    width: 100%;
+  }
+
+  .stream-card__name { font-size: 14px; }
+  .stream-card__title { font-size: 14px; }
+  .stream-card__game { font-size: 13px; }
+
+
+  .stream-card:hover {
+    transform: translateY(-6px);
+  }
+  
+  .light-mode .stream-card:hover {
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+  }
+  
+  .dark-mode .stream-card:hover {
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+  }
 }
 
-.light-mode .stream-card:hover {
-  border-color: #bbb;
+@media (min-width: 1440px) {
+  .live-now {
+    max-width: 1400px;
+  }
+
+  .stream-card {
+    flex: 0 0 300px;
+    width: 300px;
+  }
 }
 
-.light-mode .stream-card__name {
-  color: #111;
-}
-
-.light-mode .stream-card__title {
-  color: #444;
-}
-
-.light-mode .stream-card__game {
-  color: #666;
+/* ============================================================
+   5. ANIMATIONS
+   ============================================================ */
+@keyframes pulseLive {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.2); }
+  100% { opacity: 1; transform: scale(1); }
 }

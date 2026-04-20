@@ -90,13 +90,14 @@ const WatchLive = () => {
 
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [message, setMessage] = useState("");
+  const [isFollowing, setIsFollowing] = useState(false);
 
   const currentStream = STREAMS.find((s) => s.id === id) || STREAMS[0];
 
   const [prevId, setPrevId] = useState(id);
   if (id !== prevId) {
     setPrevId(id);
-    setIsChatOpen(false); 
+    setIsChatOpen(false);
   }
 
   useEffect(() => {
@@ -107,7 +108,6 @@ const WatchLive = () => {
     (stream) => stream.id !== currentStream.id,
   ).slice(0, 10);
 
-  console.log(currentStream)
   return (
     <div className="watch-live">
       {/* ── Video ── */}
@@ -126,10 +126,10 @@ const WatchLive = () => {
       {/* ── Streamer info ── */}
       <div className="watch-live__info">
         <div className="info-header">
-          {/* 2. THÊM MÀU AVATAR VÀO ĐÂY */}
           <div
             className="info-avatar"
             style={{ background: currentStream.avatarColor }}
+            onClick={() => navigate(`/profile/${currentStream.id}`)}
           >
             {currentStream.initials}
           </div>
@@ -142,7 +142,12 @@ const WatchLive = () => {
           </div>
         </div>
         <div className="info-actions">
-          <button className="btn-follow">+ Follow</button>
+          <button
+            className="btn-follow"
+            onClick={() => setIsFollowing(!isFollowing)}
+          >
+            {isFollowing ? "Following" : "Follow"}
+          </button>
           <button className="btn-share">Share</button>
           <button className="btn-more">
             <MoreHorizontal size={18} />
@@ -152,7 +157,7 @@ const WatchLive = () => {
 
       {/* ── Chat + Suggested ── */}
       <div className="watch-live__interactive">
-        {/* ── Chat panel — bottom sheet ── */}
+        {/* ── Chat panel ── */}
         <div className={`chat-panel ${isChatOpen ? "chat-panel--open" : ""}`}>
           <div
             className="chat-panel__tab"
@@ -172,87 +177,84 @@ const WatchLive = () => {
             </span>
           </div>
 
-          {isChatOpen && (
-            <>
-              <div className="chat-panel__messages">
-                {MESSAGES.map((msg) => (
-                  <div className="chat-msg" key={msg.id}>
-                    <div
-                      className="chat-msg__avatar"
-                      style={{ background: msg.color }}
-                    >
-                      {msg.initials}
-                    </div>
-                    <div>
-                      <span
-                        className="chat-msg__user"
-                        style={{ color: msg.color }}
-                      >
-                        {msg.user}{" "}
-                      </span>
-                      <span className="chat-msg__text">{msg.text}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="chat-panel__input">
-                <input
-                  type="text"
-                  placeholder="Hãy nói điều gì đó..."
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  autoFocus
-                />
-                <button className="chat-panel__send">
-                  <Send size={14} />
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* ── Stream Gợi Ý ── */}
-        {!isChatOpen && (
-          <div className="suggested">
-            <h3 className="suggested__title">Stream khác</h3>
-            <div className="suggested__list">
-              {/* 3. ĐỔI THÀNH suggestedStreams.map */}
-              {suggestedStreams.map((stream) => (
-                <div
-                  className="suggested-card"
-                  key={stream.id}
-                  onClick={() => navigate(`/stream/${stream.id}`)}
-                >
+          {/* Wrapper nội dung chat để CSS dễ ẩn hiện */}
+          <div className="chat-panel__content">
+            <div className="chat-panel__messages">
+              {MESSAGES.map((msg) => (
+                <div className="chat-msg" key={msg.id}>
                   <div
-                    className="suggested-card__thumb"
-                    style={{ background: stream.bg }}
+                    className="chat-msg__avatar"
+                    style={{ background: msg.color }}
                   >
-                    <span className="suggested-card__badge">LIVE</span>
-                    <span className="suggested-card__viewers">
-                      {formatViewers(stream.viewers)}
-                    </span>
-                    <Play size={12} fill="rgba(255,255,255,0.4)" />
+                    {msg.initials}
                   </div>
-                  <div className="suggested-card__info">
-                    <div className="suggested-card__title">
-                      {stream.streamTitle}
-                    </div>
-                    <div className="suggested-card__streamer">
-                      <div
-                        className="suggested-card__avatar"
-                        style={{ background: stream.avatarColor }}
-                      >
-                        {stream.initials}
-                      </div>
-                      <span>{stream.streamerName}</span>
-                    </div>
+                  <div>
+                    <span
+                      className="chat-msg__user"
+                      style={{ color: msg.color }}
+                    >
+                      {msg.user}{" "}
+                    </span>
+                    <span className="chat-msg__text">{msg.text}</span>
                   </div>
                 </div>
               ))}
             </div>
+
+            <div className="chat-panel__input">
+              <input
+                type="text"
+                placeholder="Hãy nói điều gì đó..."
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+              />
+              <button className="chat-panel__send">
+                <Send size={14} />
+              </button>
+            </div>
           </div>
-        )}
+        </div>
+
+        {/* ── Stream Gợi Ý ── */}
+        <div
+          className={`suggested ${isChatOpen ? "suggested--hidden-mobile" : ""}`}
+        >
+          <h3 className="suggested__title">Stream khác</h3>
+          <div className="suggested__list">
+            {suggestedStreams.map((stream) => (
+              <div
+                className="suggested-card"
+                key={stream.id}
+                onClick={() => navigate(`/stream/${stream.id}`)}
+              >
+                <div
+                  className="suggested-card__thumb"
+                  style={{ background: stream.bg }}
+                >
+                  <span className="suggested-card__badge">LIVE</span>
+                  <span className="suggested-card__viewers">
+                    {formatViewers(stream.viewers)}
+                  </span>
+                  <Play size={12} fill="rgba(255,255,255,0.4)" />
+                </div>
+                <div className="suggested-card__info">
+                  <div className="suggested-card__title">
+                    {stream.streamTitle}
+                  </div>
+                  <div className="suggested-card__streamer">
+                    <div
+                      className="suggested-card__avatar"
+                      style={{ background: stream.avatarColor }}
+                    >
+                      {stream.initials}
+                    </div>
+                    <span>{stream.streamerName}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

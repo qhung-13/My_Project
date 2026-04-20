@@ -1,12 +1,49 @@
-const express = require("express");
+/**
+ * @fileoverview Main entry point for the OmexLive backend API.
+ * Initializes the Express server, connects to MongoDB, configures global middlewares,
+ * and mounts the API routes.
+ */
+
+// Core & Third-party Packages
+import path from "path";
+import express from "express";
+import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
+import passport from "passport";
+
+// Configurations & Utilities
+import connectDB from "./src/config/db.config.js";
+import configurePassport from "./src/config/passport.config.js";
+
+// Routes
+import userRoute from "./src/routes/UserRoute.route.js";
+
+// ==========================================
+// Initialization & Database Connection
+// ==========================================
+dotenv.config(); // Load environment variables from .env file
+configurePassport(); // Initialize Passport OAuth strategies
+connectDB(); // Establish connection to MongoDB
+
 const app = express();
+const port = process.env.PORT || 5000;
 
-const PORT = process.env.PORT || 3000;
+// ==========================================
+// Global Middlewares
+// ==========================================
+app.use(express.json()); // Parse incoming JSON payloads
+app.use(express.urlencoded({ extended: true })); // Parse URL-encoded payloads
+app.use(cookieParser()); // Parse Cookie header and populate req.cookies
+app.use(passport.initialize()); // Initialize Passport for authentication
 
-app.get('/', (req, res) => {
-    res.send("Hello from Backend");
-});
+// ==========================================
+// API Routes
+// ==========================================
+app.use("/api/users", userRoute);
 
-app.listen(PORT, () => {
-    console.log(`Server running on PORT ${PORT}`);
+// ==========================================
+// Server Startup
+// ==========================================
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}...`);
 });

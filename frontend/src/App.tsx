@@ -8,6 +8,7 @@ import Header from "./layout/Header/Header";
 import { Route, Routes, Navigate } from "react-router-dom";
 import Footer from "./layout/Footer/Footer";
 import WatchLive from "./pages/WatchLive/WatchLive";
+import Profile from "./pages/Profile/Profile";
 
 function App() {
   const [darkMode, setDarkMode] = useState<boolean>(false);
@@ -22,6 +23,8 @@ function App() {
         <Route path="/game" element={<Game />} />
         <Route path="/game/:gameId" element={<GameDetail />} />
         <Route path="/stream/:streamerId" element={<WatchLive />} />
+        <Route path="/profile/me" element={<Profile />} />
+        <Route path="/profile/:userId" element={<Profile />} />
       </Routes>
 
       <Footer />

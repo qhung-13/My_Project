@@ -1,5 +1,5 @@
 /* ============================================================
-   HEADER
+   1. HEADER & BASE STYLES
    ============================================================ */
 .header {
   width: 100%;
@@ -8,16 +8,19 @@
   left: 0;
   z-index: 1000;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: #ffffff;
+  border-bottom: 1px solid #e5e5e5;
+  transition: background-color 0.3s, border-color 0.3s;
 }
 
 .header__container {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 16px;
   height: 56px;
+  padding: 0 16px;
 }
 
-/* Logo */
 .header__logo {
   display: flex;
   align-items: center;
@@ -28,24 +31,47 @@
   height: auto;
 }
 
-/* Nav — ẩn trên mobile */
-.header__nav {
-  display: none;
-}
-
-/* Actions — ẩn trên mobile */
-.header__actions {
-  display: none;
-}
-
-/* Icon */
 .header__icon {
   width: 20px;
   height: 20px;
 }
 
+/* Nav — mặc định ẩn trên mobile */
+.header__nav {
+  display: none;
+}
+
+.header__nav-list {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.header__nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 56px;
+}
+
+.header__nav-link {
+  text-decoration: none;
+  color: #333;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.header__nav-link:hover {
+  color: #6366f1;
+}
+
 /* ============================================================
-   SEARCH
+   2. SEARCH
    ============================================================ */
 .header__search {
   position: relative;
@@ -63,6 +89,7 @@
   padding: 0 40px 0 12px;
   font-size: 14px;
   outline: none;
+  transition: all 0.3s ease;
 }
 
 .header__search-btn {
@@ -76,11 +103,11 @@
 }
 
 /* ============================================================
-   COUNTRY
+   3. COUNTRY DROPDOWN
    ============================================================ */
 .header__country {
   position: relative;
-  margin-left: 12px;
+  margin-left: auto;
   display: flex;
   align-items: center;
 }
@@ -105,7 +132,6 @@
   background: #f5f5f5;
 }
 
-/* Dropdown — mobile first */
 .header__country-dropdown {
   position: fixed;
   bottom: 60px;
@@ -113,7 +139,6 @@
   right: 0;
   width: 100%;
   max-height: calc(50vh - 60px);
-  /* overflow-y: auto; */
   background: white;
   border-top: 1px solid #eee;
   border-radius: 16px 16px 0 0;
@@ -136,7 +161,6 @@
   border-radius: 4px;
 }
 
-/* Handle bar trên cùng */
 .header__country-dropdown::before {
   content: "";
   display: block;
@@ -147,7 +171,6 @@
   margin: 10px auto 6px;
 }
 
-/* Search trong dropdown */
 .header__country-search {
   padding: 10px 12px;
   position: sticky;
@@ -174,7 +197,6 @@
   background: white;
 }
 
-/* Item */
 .header__country-item {
   display: flex;
   align-items: center;
@@ -211,7 +233,143 @@
 }
 
 /* ============================================================
-   MOBILE MENU (hamburger dropdown)
+   4. ACTIONS, BUTTONS & DROPDOWNS
+   ============================================================ */
+/* Mặc định ẩn trên mobile */
+.header__actions {
+  display: none;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.header__more {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 56px;
+  cursor: pointer;
+}
+
+.header__auth {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  box-sizing: border-box;
+}
+
+.header__btn--live {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #fee2e2;
+  color: #ef4444;
+  border: 1px solid #fecaca;
+}
+
+.header__btn--live:hover {
+  background: #fecaca;
+}
+
+.header__btn--outline {
+  background: transparent;
+  border-color: #ddd;
+  color: #333;
+}
+
+.header__btn--outline:hover {
+  background: #f5f5f5;
+}
+
+.header__btn--primary {
+  background: #6366f1;
+  color: white;
+}
+
+.header__btn--primary:hover {
+  background: #4f46e5;
+}
+
+.header__dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  min-width: 160px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border: 1px solid #eee;
+  padding: 8px 0;
+  z-index: 1000;
+  animation: dropdown 0.2s ease;
+}
+
+.header__dropdown--right {
+  left: auto;
+  right: 0;
+}
+
+.header__dropdown-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.header__dropdown-link {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 16px;
+  color: #333;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.header__dropdown-link:hover {
+  background: #f5f5f5;
+  color: #6366f1;
+}
+
+.header__btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px; 
+  height: 36px;
+  border-radius: 8px; 
+  border: 1px solid #ddd;
+  background: transparent;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.header__btn-icon:hover {
+  background: #f5f5f5;
+}
+
+/* ============================================================
+   5. MOBILE MENUS (Hamburger & Bottom Nav)
    ============================================================ */
 .header__menu-btn {
   width: 36px;
@@ -271,9 +429,6 @@
   background: #eee;
 }
 
-/* ============================================================
-   MOBILE NAV (bottom bar)
-   ============================================================ */
 .mobile-nav {
   position: fixed;
   bottom: 0;
@@ -349,20 +504,23 @@
 }
 
 /* ============================================================
-   DARK MODE
+   6. DARK MODE (Gom toàn bộ vào đây)
    ============================================================ */
-.light-mode .header {
-  background: #ffffff;
-  border-bottom: 1px solid #e5e5e5;
-}
-
 .dark-mode .header {
   background: #18181b;
-  border-bottom: 1px solid #2a2a2e;
+  border-bottom-color: #2a2a2e;
 }
 
 .dark-mode .header__icon {
   color: #e4e4e7;
+}
+
+.dark-mode .header__nav-link {
+  color: #e4e4e7;
+}
+
+.dark-mode .header__nav-link:hover {
+  color: #818cf8;
 }
 
 .dark-mode .header__search-input {
@@ -426,6 +584,38 @@
   background: #3f3f46;
 }
 
+.dark-mode .header__dropdown {
+  background: #27272a;
+  border-color: #3f3f46;
+}
+
+.dark-mode .header__dropdown-link {
+  color: #e4e4e7;
+}
+
+.dark-mode .header__dropdown-link:hover {
+  background: #3f3f46;
+  color: #818cf8;
+}
+
+.dark-mode .header__btn--outline {
+  border-color: #3f3f46;
+  color: #e4e4e7;
+}
+
+.dark-mode .header__btn--outline:hover {
+  background: #3f3f46;
+}
+
+.dark-mode .header__btn--live {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.dark-mode .header__btn--live:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
 .dark-mode .mobile-menu {
   background: #27272a;
   border-color: #3f3f46;
@@ -457,12 +647,23 @@
   background: #6366f1;
 }
 
+.dark-mode .header__btn-icon {
+  border-color: #3f3f46;
+  color: #e4e4e7;
+}
+
+.dark-mode .header__btn-icon:hover {
+  background: #3f3f46;
+}
+
 /* ============================================================
-   DESKTOP (min-width: 768px)
+   7. MEDIA QUERIES (Responsive)
    ============================================================ */
+/* --- TABLET --- */
 @media (min-width: 768px) {
   .header__nav {
     display: flex;
+    margin-left: 24px;
   }
 
   .header__actions {
@@ -477,14 +678,20 @@
     display: none;
   }
 
+  .header__search {
+    max-width: 250px;
+    margin: 0 16px;
+    flex: 1;
+  }
+
   .header__country-dropdown {
     position: absolute;
     bottom: unset;
     top: calc(100% + 8px);
-    left: 0;
-    right: unset;
-    width: 200px;
-    max-height: 250px;
+    left: auto;
+    right: 0;
+    width: 220px;
+    max-height: 300px;
     border-radius: 8px;
     border: 1px solid #eee;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -500,17 +707,44 @@
     border-bottom: none;
   }
 
-  .header__country-item:last-child {
-    margin-bottom: 0;
+  .header__country-list {
+    max-height: 200px;
+  }
+}
+
+/* --- DESKTOP --- */
+@media (min-width: 1024px) {
+  .header__container {
+    max-width: 1280px;
+    margin: 0 auto;
   }
 
-  .header__country-list {
-    max-height: calc(250px - 56px);
+  .header__search {
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .header__nav-list {
+    gap: 32px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .header__container {
+    max-width: 1600px;
+  }
+
+  .header__search {
+    max-width: 560px;
+  }
+
+  .header__logo-img {
+    width: 120px;
   }
 }
 
 /* ============================================================
-   ANIMATIONS
+   8. ANIMATIONS
    ============================================================ */
 @keyframes slideUp {
   from {

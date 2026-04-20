@@ -3,10 +3,11 @@ import Hero from "./components/Hero/Hero";
 import Leaderboard from "./components/Leaderboard/Leaderboard";
 import LiveNow from "./components/LiveNow/LiveNow";
 import Recommended from "./components/Recommended/Recommended";
+import "./Home.css"
 
 const Home = () => {
   return (
-    <div style={{ overflowX: "hidden" }}>
+    <div className="home-page">
       <Hero />
       <LiveNow />
       <BrowseByGame />

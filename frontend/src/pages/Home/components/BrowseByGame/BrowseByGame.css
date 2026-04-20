@@ -1,5 +1,5 @@
 /* ============================================================
-   BROWSE BY GAME
+   1. BROWSE BY GAME (Mobile First)
    ============================================================ */
 .browse {
   padding: 20px 0 0;
@@ -16,7 +16,7 @@
 
 .browse__title {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600; 
 }
 
 .browse__more {
@@ -26,30 +26,38 @@
   border: none;
   cursor: pointer;
   padding: 0;
+  font-weight: 500;
+  transition: color 0.2s ease;
 }
 
-/* Scroll ngang */
+.browse__more:hover {
+  color: #772ce8;
+}
+
 .browse__scroll {
   display: flex;
-  gap: 10px;
-  overflow-x: scroll;
-  padding: 0 16px 12px;
+  gap: 12px; 
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 16px 16px; 
   scrollbar-width: none;
-  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .browse__scroll::-webkit-scrollbar {
   display: none;
 }
 
-/* Game card — poster dọc */
+/* ============================================================
+   2. GAME CARD (Poster dọc)
+   ============================================================ */
 .game-card {
   flex-shrink: 0;
-  width: 90px;
+  width: 100px; 
   cursor: pointer;
+  transition: transform 0.2s ease;
 }
 
-/* Poster 3:4 */
 .game-card__poster {
   width: 100%;
   aspect-ratio: 3 / 4;
@@ -57,55 +65,153 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  align-items: start; 
-  padding: 8px;
-  border: 0.5px solid #333;
+  align-items: flex-start; 
+  padding: 10px;
+  border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Wrap tên + viewers */
-.game-card__info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.game-card__poster::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60%;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
+  z-index: 1;
+}
+
+.game-card__name, 
+.game-card__viewers {
+  position: relative;
+  z-index: 2; 
   width: 100%;
 }
 
 .game-card__name {
-  font-size: 11px;
-  font-weight: 500;
-  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  color: white; 
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-bottom: 2px;
 }
 
 .game-card__viewers {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.6); 
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 /* ============================================================
-   DARK MODE
+   3. THEMING (DARK / LIGHT)
    ============================================================ */
-.dark-mode .browse__title {
-  color: #e4e4e7;
-}
-
-.dark-mode .game-card__poster {
-  border-color: #333;
-}
-
-/* ============================================================
-   LIGHT MODE
-   ============================================================ */
+/* --- Light Mode --- */
 .light-mode .browse__title {
   color: #111;
 }
 
 .light-mode .game-card__poster {
-  border-color: #ddd;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.05);
 }
 
-.light-mode .game-card__viewers {
-  color: #666;
+.light-mode .game-card:hover .game-card__poster {
+  border-color: #ccc;
+}
+
+/* --- Dark Mode --- */
+.dark-mode .browse__title {
+  color: #e4e4e7;
+}
+
+.dark-mode .game-card__poster {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.dark-mode .game-card:hover .game-card__poster {
+  border-color: #555;
+}
+
+/* ============================================================
+   4. MEDIA QUERIES (Responsive)
+   ============================================================ */
+/* --- TABLET --- */
+@media (min-width: 768px) {
+  .browse {
+    padding: 32px 16px 0;
+  }
+
+  .browse__header,
+  .browse__scroll {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .browse__title {
+    font-size: 16px;
+  }
+
+  .game-card {
+    width: 140px;
+  }
+
+  .game-card__name {
+    font-size: 14px;
+  }
+
+  .game-card__viewers {
+    font-size: 12px;
+  }
+}
+
+/* --- DESKTOP --- */
+@media (min-width: 1024px) {
+  .browse {
+    max-width: 1248px; 
+    margin: 0 auto;
+    padding: 40px 0 0;
+  }
+
+  .browse__title {
+    font-size: 20px;
+  }
+
+  .browse__more {
+    font-size: 14px;
+  }
+
+  .browse__scroll {
+    gap: 20px;
+    padding-bottom: 24px;
+  }
+
+  .game-card {
+    width: 180px;
+  }
+
+  .game-card__name {
+    font-size: 16px;
+  }
+
+  .game-card__viewers {
+    font-size: 13px;
+  }
+
+  .game-card:hover {
+    transform: translateY(-6px);
+  }
+  
+  .light-mode .game-card:hover .game-card__poster {
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+  }
+  
+  .dark-mode .game-card:hover .game-card__poster {
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+  }
 }

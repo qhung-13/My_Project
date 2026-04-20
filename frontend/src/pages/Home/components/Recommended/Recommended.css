@@ -1,8 +1,9 @@
 /* ============================================================
-   RECOMMENDED
+   1. RECOMMENDED BASE (Mobile First)
    ============================================================ */
 .recommended {
-  padding: 20px 0;
+  padding: 20px 0 0;
+  width: 100%;
 }
 
 .recommended__header {
@@ -15,7 +16,7 @@
 
 .recommended__title {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600; 
 }
 
 .recommended__more {
@@ -25,38 +26,51 @@
   border: none;
   cursor: pointer;
   padding: 0;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.recommended__more:hover {
+  color: #772ce8;
 }
 
 .recommended__list {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 0 16px;
-  max-height: 395px;
+  padding: 0 16px 16px;
+  max-height: 395px; 
   overflow-y: auto;
   scrollbar-width: none;
   overscroll-behavior: contain;
 }
 
 .recommended__list::-webkit-scrollbar {
-    display: none;
+  display: none;
 }
 
+/* ============================================================
+   2. REC CARD 
+   ============================================================ */
 .rec-card {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.2s ease;
 }
 
 .rec-card__thumb {
-  width: 120px;
+  width: 140px; 
   flex-shrink: 0;
   aspect-ratio: 16 / 9;
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 0.5px solid #333;
+  border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
 }
 
 .rec-card__info {
@@ -70,11 +84,10 @@
 
 .rec-card__title {
   font-size: 13px;
-  font-weight: 500;
-  color: white;
+  font-weight: 600;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .rec-card__streamer {
@@ -98,17 +111,45 @@
 
 .rec-card__streamer span {
   font-size: 11px;
-  color: #aaa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .rec-card__meta {
   font-size: 11px;
-  color: #888;
 }
 
 /* ============================================================
-   DARK MODE
+   3. THEMING (DARK / LIGHT)
    ============================================================ */
+/* --- Light Mode --- */
+.light-mode .recommended__title {
+  color: #111;
+}
+
+.light-mode .rec-card__title {
+  color: #111;
+}
+
+.light-mode .rec-card__thumb {
+  border-color: #e5e5e5;
+  background: #f0f0f0;
+}
+
+.light-mode .rec-card__streamer span {
+  color: #555;
+}
+
+.light-mode .rec-card__meta {
+  color: #777;
+}
+
+.light-mode .rec-card:hover {
+  background: #f5f5f5; 
+}
+
+/* --- Dark Mode --- */
 .dark-mode .recommended__title {
   color: #e4e4e7;
 }
@@ -119,27 +160,97 @@
 
 .dark-mode .rec-card__thumb {
   border-color: #333;
+  background: #1a0a2e;
+}
+
+.dark-mode .rec-card__streamer span {
+  color: #aaa;
+}
+
+.dark-mode .rec-card__meta {
+  color: #888;
+}
+
+.dark-mode .rec-card:hover {
+  background: #1a1a1a; 
 }
 
 /* ============================================================
-   LIGHT MODE
+   4. MEDIA QUERIES (Responsive)
    ============================================================ */
-.light-mode .recommended__title {
-  color: #111;
+/* --- TABLET --- */
+@media (min-width: 768px) {
+  .recommended {
+    padding: 32px 16px 0;
+  }
+
+  .recommended__header,
+  .recommended__list {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .recommended__title {
+    font-size: 16px;
+  }
+
+  .recommended__list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 2 cột */
+    gap: 16px 20px;
+    max-height: none; 
+    overflow-y: visible; 
+  }
 }
 
-.light-mode .rec-card__title {
-  color: #111;
+/* --- DESKTOP --- */
+@media (min-width: 1024px) {
+  .recommended {
+    max-width: 1248px;
+    margin: 0 auto;
+    padding: 40px 0 0;
+  }
+
+  .recommended__title {
+    font-size: 20px;
+  }
+
+  .recommended__more {
+    font-size: 14px;
+  }
+
+  .recommended__list {
+    grid-template-columns: repeat(3, 1fr); 
+    gap: 20px 24px;
+    padding-bottom: 24px;
+  }
+
+  .rec-card__thumb {
+    width: 45%; 
+  }
+
+  .rec-card__title {
+    font-size: 14px;
+  }
+
+  .rec-card__streamer span,
+  .rec-card__meta {
+    font-size: 12px;
+  }
+
+  .rec-card__avatar {
+    width: 20px;
+    height: 20px;
+    font-size: 8px;
+  }
 }
 
-.light-mode .rec-card__thumb {
-  border-color: #ddd;
-}
+@media (min-width: 1440px) {
+  .recommended {
+    max-width: 1400px;
+  }
 
-.light-mode .rec-card__streamer span {
-  color: #555;
-}
-
-.light-mode .rec-card__meta {
-  color: #777;
+  .recommended__list {
+    grid-template-columns: repeat(4, 1fr); /* 4 cột */
+  }
 }

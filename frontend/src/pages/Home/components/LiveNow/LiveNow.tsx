@@ -19,7 +19,11 @@ const LiveNow = () => {
 
       <div className="live-now__scroll">
         {STREAMS.map((stream) => (
-          <div className="stream-card" key={stream.id} onClick={() => navigate(`/stream/${stream.id}`)}>
+          <div
+            className="stream-card"
+            key={stream.id}
+            onClick={() => navigate(`/stream/${stream.id}`)}
+          >
             {/* Thumbnail */}
             <div className="stream-card__thumb">
               <button className="stream-card__play">
@@ -36,6 +40,7 @@ const LiveNow = () => {
                 <div
                   className="stream-card__avatar"
                   style={{ background: stream.avatarColor }}
+                  onClick={() => navigate(`/profile/${stream.id}`)}
                 >
                   {stream.initials}
                 </div>

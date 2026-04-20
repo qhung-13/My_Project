@@ -2,16 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import {
   Search,
   TvMinimalPlay,
-  Ellipsis,
   House,
   Gamepad2,
   Menu,
+  Moon,
+  Sun,
 } from "lucide-react";
 import Logo from "../../assets/images/Logo.png";
 import Login from "../../components/Login/Login";
 import Register from "../../components/Register/Register";
 import "./Header.css";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 // ============================================================
 // Types
@@ -37,8 +38,6 @@ const NAV_ITEMS = [
 
 const GAMES = ["Valorant", "League of Legends", "PUBG"];
 
-const MORE_ITEMS = ["Dark Mode"];
-
 const MOBILE_NAV_ITEMS = [
   { label: "Home", path: "/home", icon: <House /> },
   { label: "Live", path: "/live", icon: <TvMinimalPlay /> },
@@ -58,7 +57,7 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const [countryOpen, setCountryOpen] = useState(false);
   const [searchCountry, setSearchCountry] = useState("");
-
+  const navigate = useNavigate();
   const { pathname } = useLocation();
 
   // Fetch countries
@@ -106,10 +105,6 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
     setSelectedCountry(country);
     setCountryOpen(false);
     setSearchCountry("");
-  };
-
-  const handleMoreAction = (item: string) => {
-    if (item === "Dark Mode") setDarkMode((prev) => !prev);
   };
 
   // ============================================================
@@ -169,7 +164,12 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
                 onMouseEnter={() => setActiveMenu("games")}
                 onMouseLeave={() => setActiveMenu(null)}
               >
-                <span className="header__nav-link">Games</span>
+                <span
+                  className="header__nav-link"
+                  onClick={() => navigate(`/game`)}
+                >
+                  Games
+                </span>
                 {activeMenu === "games" && (
                   <div className="header__dropdown">
                     <ul className="header__dropdown-list">
@@ -265,34 +265,17 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
               Go Live
             </button>
 
-            {/* More dropdown */}
-            <div
-              className="header__more"
-              onMouseEnter={() => setActiveMenu("more")}
-              onMouseLeave={() => setActiveMenu(null)}
+            <button
+              className="header__btn-icon"
+              onClick={() => setDarkMode(!darkMode)}
+              title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
             >
-              <Ellipsis className="header__icon" />
-              {activeMenu === "more" && (
-                <div className="header__dropdown header__dropdown--right">
-                  <ul className="header__dropdown-list">
-                    {MORE_ITEMS.map((item) => (
-                      <li key={item} className="header__dropdown-item">
-                        <button
-                          className="header__dropdown-link"
-                          onClick={() => handleMoreAction(item)}
-                        >
-                          {item === "Dark Mode"
-                            ? darkMode
-                              ? "Light Mode"
-                              : "Dark Mode"
-                            : item}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              {darkMode ? (
+                <Sun className="header__icon" />
+              ) : (
+                <Moon className="header__icon" />
               )}
-            </div>
+            </button>
 
             {/* Auth */}
             <div className="header__auth">

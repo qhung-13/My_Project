@@ -1,0 +1,15 @@
+/* ============================================================
+   HOME PAGE 
+   ============================================================ */
+.home-page {
+  padding-top: 56px; 
+  min-height: 100vh; 
+  overflow-x: hidden;
+}
+
+/* --- TABLET & DESKTOP --- */
+@media (min-width: 768px) {
+  .home-page {
+    padding-bottom: 40px; 
+  }
+}
