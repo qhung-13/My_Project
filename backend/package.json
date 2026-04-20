@@ -5,8 +5,10 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "backend": "nodemon backend/index.js",
-    "dev": "npm run backend"
+    "start": "node index.js",
+    "backend": "nodemon index.js",
+    "dev": "npm run backend",
+    "test": "echo \"Info: No tests implemented yet.\" && exit 0"
   },
   "keywords": [],
   "author": "",
