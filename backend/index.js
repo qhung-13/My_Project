@@ -39,7 +39,7 @@ app.use(
   cors({
     origin:
       process.env.NODE_ENV === "production"
-        ? "my-project-omega-roan.vercel.app" 
+        ? "https://my-project-omega-roan.vercel.app"
         : "http://localhost:5173",
     credentials: true,
   }),
