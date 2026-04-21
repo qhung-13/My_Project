@@ -37,10 +37,13 @@ app.use(express.urlencoded({ extended: true })); // Parse URL-encoded payloads
 app.use(cookieParser()); // Parse Cookie header and populate req.cookies
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin:
+      process.env.NODE_ENV === "production"
+        ? "my-project-omega-roan.vercel.app" 
+        : "http://localhost:5173",
     credentials: true,
   }),
-);
+);;
 app.use(passport.initialize()); // Initialize Passport for authentication
 
 // ==========================================
