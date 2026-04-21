@@ -37,10 +37,7 @@ app.use(express.urlencoded({ extended: true })); // Parse URL-encoded payloads
 app.use(cookieParser()); // Parse Cookie header and populate req.cookies
 app.use(
   cors({
-    origin:
-      process.env.NODE_ENV === "production"
-        ? "https://my-project-omega-roan.vercel.app"
-        : "http://localhost:5173",
+    origin: ["https://my-project-omega-roan.vercel.app", "http://localhost:5173"],
     credentials: true,
   }),
 );;
