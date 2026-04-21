@@ -141,8 +141,6 @@ const verifyOtp = asyncHandler(async (req, res) => {
     email: user.email,
     avatar: user.avatar,
   });
-
-  res.status(200).json({ message: "Email verified successfully" });
 });
 
 // ─────────────────────────────────────────────

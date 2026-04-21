@@ -508,14 +508,23 @@
 .header__user {
   display: flex;
   align-items: center;
-  gap: 10px;
+  /* gap: 10px; */
 }
 
 .header__avatar {
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   cursor: pointer;
   object-fit: cover;
+  border: 2px solid #e5e5e5;
+  transition: border-color 0.2s ease;
 }
+
+.header__avatar:hover {
+  border-color: #6366f1;
+}
+
 /* ============================================================
    6. DARK MODE (Gom toàn bộ vào đây)
    ============================================================ */
@@ -667,6 +676,14 @@
 
 .dark-mode .header__btn-icon:hover {
   background: #3f3f46;
+}
+
+.dark-mode .header__avatar {
+  border-color: #3f3f46;
+}
+
+.dark-mode .header__avatar:hover {
+  border-color: #818cf8;
 }
 
 /* ============================================================
