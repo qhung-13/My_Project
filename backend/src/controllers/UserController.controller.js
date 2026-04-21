@@ -61,12 +61,12 @@ const userLogin = asyncHandler(async (req, res) => {
     throw new Error("Invalid password");
   }
 
-  createToken(res, existingUser._id);
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  await Otp.deleteMany({ email: existingUser.email, type: "login" });
+  await Otp.create({ email: existingUser.email, otp, type: "login" });
+  await sendOtpEmail(existingUser.email, otp, "login");
 
-  res.status(200).json({
-    _id: existingUser._id,
-    username: existingUser.username,
-  });
+  res.status(200).json({ message: "OTP has been sent to your email" });
 });
 
 // ─────────────────────────────────────────────
@@ -218,6 +218,43 @@ const logout = asyncHandler(async (req, res) => {
   res.status(200).json({ message: "Logged out successfully" });
 });
 
+const verifyLoginOtp = asyncHandler(async (req, res) => {
+  const { email, otp } = req.body;
+
+  // Step 1: Find OTP in DB
+  const otpExist = await Otp.findOne({ email, type: "login" });
+  if (!otpExist) {
+    res.status(404);
+    throw new Error("Invalid OTP");
+  }
+
+  // Step 2: Check expired
+  if (otpExist.expiresAt < new Date()) {
+    res.status(400);
+    throw new Error("OTP has expired");
+  }
+
+  // Step 3: Compare OTP
+  if (otp !== otpExist.otp) {
+    res.status(400);
+    throw new Error("Invalid OTP");
+  }
+
+  // Step 4: Find user by email
+  const user = await User.findOne({ email });
+
+  // Step 5: Clean up OTP
+  await Otp.deleteMany({ email, type: "login" });
+
+  // Step 6: Create token and return user info
+  createToken(res, user._id);
+  res.status(200).json({
+    _id: user._id,
+    username: user.username,
+    email: user.email,
+  });
+});
+
 const getProfile = asyncHandler(async (req, res) => {});
 
 export {
@@ -229,4 +266,5 @@ export {
   resetPassword,
   logout,
   getProfile,
+  verifyLoginOtp
 };

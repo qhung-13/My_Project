@@ -7,7 +7,8 @@ import {
   forgotPassword,
   resetPassword,
   logout,
-  getProfile
+  getProfile,
+  verifyLoginOtp
 } from "../controllers/UserController.controller.js";
 import passport from "passport";
 import createToken from "../utils/createToken.js";
@@ -37,5 +38,6 @@ router.get(
 );
 router.post("/logout", logout);
 router.get("/profile", protect, getProfile);
+router.post("/verify-login-otp", verifyLoginOtp);
 
 export default router;
