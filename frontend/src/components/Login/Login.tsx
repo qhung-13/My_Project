@@ -2,6 +2,7 @@ import { useState } from "react";
 import "./Login.css";
 import { FcGoogle } from "react-icons/fc";
 import { FaFacebook } from "react-icons/fa";
+import axios from "../../utils/axios";
 
 interface LoginProps {
   onClose: () => void;
@@ -9,25 +10,51 @@ interface LoginProps {
 }
 
 const Login = ({ onClose, onSwitch }: LoginProps) => {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState<"credentials" | "otp">("credentials");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleLoginClick = (e: React.FormEvent<HTMLFormElement>) => {
+  // Step 1: Verify username + password → gửi OTP
+  const handleLoginClick = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setStep("otp");
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await axios.post("/users/login", { username, password });
+      // Lưu email để dùng ở bước verify OTP
+      setEmail(res.data.email);
+      setStep("otp");
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleOtpSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  // Step 2: Verify OTP → tạo token
+  const handleOtpSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!otp) return;
-    console.log("Email: ", email, "Password: ", password);
-    onClose(); 
+    setError("");
+    setLoading(true);
+
+    try {
+      await axios.post("/users/verify-login-otp", { email, otp });
+      onClose();
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Invalid OTP");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSocialLogin = (provider: string) => {
-    alert(`Login with ${provider} clicked! `);
+  const handleGoogleLogin = () => {
+    window.location.href = "http://localhost:5000/api/users/auth/google";
   };
 
   return (
@@ -42,14 +69,17 @@ const Login = ({ onClose, onSwitch }: LoginProps) => {
         <h2 className="login__title">Welcome Back</h2>
         <p className="login__subtitle">Login to continue</p>
 
+        {/* Error message */}
+        {error && <p className="login__error">{error}</p>}
+
         {step === "credentials" ? (
           <form className="login__form" onSubmit={handleLoginClick}>
             <input
-              type="email"
-              placeholder="Email"
+              type="text"
+              placeholder="Username"
               className="login__input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               required
             />
             <input
@@ -60,8 +90,8 @@ const Login = ({ onClose, onSwitch }: LoginProps) => {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
-            <button type="submit" className="login__button">
-              Login
+            <button type="submit" className="login__button" disabled={loading}>
+              {loading ? "Loading..." : "Login"}
             </button>
           </form>
         ) : (
@@ -78,10 +108,9 @@ const Login = ({ onClose, onSwitch }: LoginProps) => {
               required
             />
             <div className="otp-actions">
-              <button type="submit" className="otp-confirm">
-                Confirm
+              <button type="submit" className="otp-confirm" disabled={loading}>
+                {loading ? "Verifying..." : "Confirm"}
               </button>
-
               <button
                 type="button"
                 className="otp-back"
@@ -97,13 +126,14 @@ const Login = ({ onClose, onSwitch }: LoginProps) => {
           <div className="login__social">
             <button
               className="login__social-btn login__social--google"
-              onClick={() => handleSocialLogin("Google")}
+              onClick={handleGoogleLogin}
             >
               <FcGoogle size={24} />
             </button>
             <button
               className="login__social-btn login__social--facebook"
-              onClick={() => handleSocialLogin("Facebook")}
+              onClick={() => {}}
+              disabled // Facebook chưa làm
             >
               <FaFacebook size={24} color="#1877F2" />
             </button>

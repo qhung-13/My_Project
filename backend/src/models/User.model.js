@@ -1,77 +1,125 @@
-import express from "express";
-import passport from "passport";
-import {
-  userRegister,
-  userLogin,
-  sendOtp,
-  verifyOtp,
-  forgotPassword,
-  resetPassword,
-  logout,
-  getProfile, 
-} from "../controllers/UserController.controller.js";
-import createToken from "../utils/createToken.js";
-import protect from "../middlewares/Auth.middleware.js";
-
-const router = express.Router();
+import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
 
 /**
- * @module routes/UserRoutes
- * @description Defines all API routes related to user authentication, authorization, and profile management.
+ * Mongoose schema and model for Users
+ * Represents a user in the system, handling standard authentication, OAuth, profile data, and roles.
+ *
+ * @typedef {Object} User
+ * @property {string} username - Unique username, strictly alphanumeric and underscores (3-30 chars)
+ * @property {string} email - Unique, validated email address
+ * @property {string} [password] - Hashed password (excluded from default queries)
+ * @property {string} [googleId] - OAuth Google ID
+ * @property {string} [facebookId] - OAuth Facebook ID
+ * @property {string} [displayName] - User's display name (max 50 chars)
+ * @property {string} [avatar] - URL to the user's avatar image
+ * @property {string} [bio] - Short biography (max 200 chars)
+ * @property {string} [refreshToken] - JWT refresh token (excluded from default queries)
+ * @property {string} role - User role (enum: "user", "stream", "admin")
+ * @property {boolean} isVerified - Indicates if the user's email is verified
+ * @property {boolean} isActive - Indicates if the account is active/unbanned
+ * @property {Date} createdAt - Automatically generated creation timestamp
+ * @property {Date} updatedAt - Automatically generated update timestamp
  */
+const userSchema = new mongoose.Schema(
+  {
+    // -------- Normal Information -----------------------------------
+    username: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      minlength: 3,
+      maxlength: 30,
+      match: [/^[a-zA-Z0-9_]+$/, "Username chỉ được chứa chữ, số và dấu _"],
+    },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      match: [/^\S+@\S+\.\S+$/, "Email không hợp lệ"],
+    },
+    password: {
+      type: String,
+      minlength: 6,
+      select: false,
+    },
 
-// ==========================================
-// 1. Local Authentication & Management
-// ==========================================
-router.post("/register", userRegister);
-router.post("/login", userLogin);
-router.post("/logout", logout);
+    // -------- OAuth -----------------------------------
+    googleId: {
+      type: String,
+      default: null,
+    },
+    facebookId: {
+      type: String,
+      default: null,
+    },
 
-// ==========================================
-// 2. OTP & Password Recovery
-// ==========================================
-router.post("/send-otp", sendOtp);
-router.post("/verify-otp", verifyOtp);
-router.post("/forgot-password", forgotPassword);
-router.post("/reset-password", resetPassword);
+    // -------- Profile -----------------------------------
+    displayName: {
+      type: String,
+      trim: true,
+      maxlength: 50,
+    },
+    avatar: {
+      type: String,
+      default: null,
+    },
+    bio: {
+      type: String,
+      maxlength: 200,
+      default: "",
+    },
 
-// ==========================================
-// 3. Google OAuth 2.0 Integration
-// ==========================================
-/**
- * Initiates the Google OAuth flow, requesting profile and email scopes.
- */
-router.get(
-  "/auth/google",
-  passport.authenticate("google", { scope: ["profile", "email"] }),
-);
-
-/**
- * Handles the callback from Google after successful or failed authentication.
- * On success, generates a JWT token and redirects back to the React frontend.
- */
-router.get(
-  "/auth/google/callback",
-  passport.authenticate("google", {
-    session: false,
-    failureRedirect: "/login",
-  }),
-  (req, res) => {
-    // Generate JWT token and set it in cookies via utility function
-    createToken(res, req.user._id);
-
-    // Redirect to the frontend application
-    res.redirect("http://localhost:5173");
+    // -------- Auth & Security -----------------------------------
+    refreshToken: {
+      type: String,
+      select: false,
+    },
+    role: {
+      type: String,
+      enum: ["user", "stream", "admin"],
+      default: "user",
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  {
+    timestamps: true, // auto create createdAt & updatedAt
   },
 );
 
-// ==========================================
-// 4. Protected Routes
-// ==========================================
 /**
- * Retrieves the profile of the currently authenticated user.
- * Requires a valid JWT token via the 'protect' middleware.
+ * Pre-save middleware to hash the user's password before saving to the database.
+ * Only runs if the password field has been modified.
  */
-router.get("/profile", protect, getProfile);
+userSchema.pre("save", async function () {
+  if (!this.isModified("password") || !this.password) return;
+  this.password = await bcrypt.hash(this.password, 12);
+});
 
-export default router;
+/**
+ * Compares a plain text password with the user's hashed password in the database.
+ *
+ * @param {string} candidatePassword - The plain text password to verify
+ * @returns {Promise<boolean>} True if passwords match, false otherwise
+ */
+userSchema.methods.comparePassword = async function (candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
+// Indexes for faster OAuth lookups
+userSchema.index({ googleId: 1 });
+userSchema.index({ facebookId: 1 });
+
+const User = mongoose.model("User", userSchema);
+
+export default User;

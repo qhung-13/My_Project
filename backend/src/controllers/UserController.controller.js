@@ -66,7 +66,10 @@ const userLogin = asyncHandler(async (req, res) => {
   await Otp.create({ email: existingUser.email, otp, type: "login" });
   await sendOtpEmail(existingUser.email, otp, "login");
 
-  res.status(200).json({ message: "OTP has been sent to your email" });
+  res.status(200).json({
+    message: "OTP has been sent to your email",
+    email: existingUser.email,
+  });
 });
 
 // ─────────────────────────────────────────────
@@ -266,5 +269,5 @@ export {
   resetPassword,
   logout,
   getProfile,
-  verifyLoginOtp
+  verifyLoginOtp,
 };

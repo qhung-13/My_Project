@@ -1,27 +1,15 @@
 import nodemailer from "nodemailer";
 
-/**
- * Reusable Nodemailer transporter instance.
- * Uses Gmail service with App Passwords for authentication.
- */
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // App password, không phải password Gmail thật
-  },
-});
-
-/**
- * Sends an email containing a One-Time Password (OTP) to the user.
- * Dynamically switches subject and HTML template based on the OTP type.
- *
- * @param {string} email - The recipient's email address
- * @param {string} otp - The generated OTP string (usually 6 digits)
- * @param {string} type - The purpose of the OTP (enum: "verify_email", "reset_password")
- * @returns {Promise<void>} Resolves when the email is successfully sent
- */
 const sendOtpEmail = async (email, otp, type) => {
+  // Move transporter inside function — dotenv đã load rồi khi function chạy
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
   const subject =
     type === "verify_email"
       ? "Xác minh tài khoản OmexLive"
