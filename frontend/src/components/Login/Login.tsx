@@ -3,6 +3,10 @@ import "./Login.css";
 import { FcGoogle } from "react-icons/fc";
 import { FaFacebook } from "react-icons/fa";
 import axios from "../../utils/axios";
+import { useDispatch } from "react-redux";
+import type { AppDispatch } from "../../store/store";
+import { setUser } from "../../store/slices/authSlice";
+import type { AxiosError } from "axios";
 
 interface LoginProps {
   onClose: () => void;
@@ -29,8 +33,9 @@ const Login = ({ onClose, onSwitch }: LoginProps) => {
       // Lưu email để dùng ở bước verify OTP
       setEmail(res.data.email);
       setStep("otp");
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Login failed");
+    } catch (err) {
+      const error = err as AxiosError<{ message: string }>;
+      setError(error.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -44,10 +49,19 @@ const Login = ({ onClose, onSwitch }: LoginProps) => {
     setLoading(true);
 
     try {
-      await axios.post("/users/verify-login-otp", { email, otp });
+      const res = await axios.post("/users/verify-login-otp", { email, otp });
+      dispatch(
+        setUser({
+          _id: res.data._id,
+          username: res.data.username,
+          email: res.data.email,
+          avatar: res.data.avatar || null,
+        }),
+      );
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Invalid OTP");
+    } catch (err) {
+      const error = err as AxiosError<{ message: string }>;
+      setError(error.response?.data?.message || "Invalid OTP");
     } finally {
       setLoading(false);
     }
@@ -56,6 +70,8 @@ const Login = ({ onClose, onSwitch }: LoginProps) => {
   const handleGoogleLogin = () => {
     window.location.href = "http://localhost:5000/api/users/auth/google";
   };
+
+  const dispatch = useDispatch<AppDispatch>();
 
   return (
     <div className="login">

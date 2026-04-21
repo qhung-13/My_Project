@@ -10,7 +10,9 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   background: #ffffff;
   border-bottom: 1px solid #e5e5e5;
-  transition: background-color 0.3s, border-color 0.3s;
+  transition:
+    background-color 0.3s,
+    border-color 0.3s;
 }
 
 .header__container {
@@ -353,9 +355,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px; 
+  width: 36px;
   height: 36px;
-  border-radius: 8px; 
+  border-radius: 8px;
   border: 1px solid #ddd;
   background: transparent;
   color: #333;
@@ -503,6 +505,17 @@
   color: black;
 }
 
+.header__user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header__avatar {
+  border-radius: 50%;
+  cursor: pointer;
+  object-fit: cover;
+}
 /* ============================================================
    6. DARK MODE (Gom toàn bộ vào đây)
    ============================================================ */

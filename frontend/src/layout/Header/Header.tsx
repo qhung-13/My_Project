@@ -14,6 +14,8 @@ import Register from "../../components/Register/Register";
 import CountrySelector from "./CountrySelector";
 import NavMenu from "./NavMenu";
 import MobileMenu from "./MobileMenu";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../store/store";
 import "./Header.css";
 import { Link, useLocation } from "react-router-dom";
 
@@ -82,6 +84,17 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
 
     fetchCountries();
   }, []);
+
+  // const dispatch = useDispatch<AppDispatch>();
+  const { user, isAuthenticated } = useSelector(
+    (state: RootState) => state.auth,
+  );
+
+  // const handleLogout = async () => {
+  //   await instance.post("/users/logout");
+  //   dispatch(clearUser());
+  // };
+
   // ============================================================
   // Render
   // ============================================================
@@ -139,18 +152,36 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
 
             {/* Auth */}
             <div className="header__auth">
-              <button
-                className="header__btn header__btn--outline"
-                onClick={() => setActivePopup("Login")}
-              >
-                Login
-              </button>
-              <button
-                className="header__btn header__btn--primary"
-                onClick={() => setActivePopup("Register")}
-              >
-                Sign Up
-              </button>
+              {isAuthenticated ? (
+                <div className="header__user">
+                  <img
+                    src={
+                      user?.avatar ||
+                      "https://api.dicebear.com/7.x/initials/svg?seed=" +
+                        user?.username
+                    }
+                    alt={user?.username}
+                    className="header__avatar"
+                    width={36}
+                    height={36}
+                  />
+                </div>
+              ) : (
+                <>
+                  <button
+                    className="header__btn header__btn--outline"
+                    onClick={() => setActivePopup("Login")}
+                  >
+                    Login
+                  </button>
+                  <button
+                    className="header__btn header__btn--primary"
+                    onClick={() => setActivePopup("Register")}
+                  >
+                    Sign Up
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
