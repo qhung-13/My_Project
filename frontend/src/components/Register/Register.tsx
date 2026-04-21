@@ -4,6 +4,9 @@ import { FcGoogle } from "react-icons/fc";
 import { FaFacebook } from "react-icons/fa";
 import instance from "../../utils/axios";
 import type { AxiosError } from "axios";
+import { useDispatch } from "react-redux";
+import type { AppDispatch } from "../../store/store";
+import { setUser } from "../../store/slices/authSlice";
 
 interface RegisterProps {
   onClose: () => void;
@@ -19,6 +22,7 @@ const Register = ({ onClose, onSwitch }: RegisterProps) => {
   const [step, setStep] = useState<"credentials" | "otp">("credentials");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const dispatch = useDispatch<AppDispatch>();
 
   const handleRegisterClick = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,6 +58,14 @@ const Register = ({ onClose, onSwitch }: RegisterProps) => {
     try {
       // Step 3: Verify OTP → isVerified = true
       await instance.post("/users/verify-otp", { email, otp });
+      dispatch(
+        setUser({
+          _id: "",
+          username,
+          email,
+          avatar: null,
+        }),
+      );
       onClose();
     } catch (err) {
       const error = err as AxiosError<{ message: string }>;

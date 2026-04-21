@@ -133,6 +133,15 @@ const verifyOtp = asyncHandler(async (req, res) => {
   await User.findOneAndUpdate({ email }, { isVerified: true });
   await Otp.deleteMany({ email, type: "verify_email" });
 
+  const user = await User.findOne({ email });
+  res.status(200).json({
+    message: "Email verified successfully",
+    _id: user._id,
+    username: user.username,
+    email: user.email,
+    avatar: user.avatar,
+  });
+
   res.status(200).json({ message: "Email verified successfully" });
 });
 
