@@ -9,7 +9,8 @@ import {
   resetPassword,
   logout,
   getProfile,
-  verifyLoginOtp
+  verifyLoginOtp,
+  updateProfile
 } from "../controllers/UserController.controller.js";
 import createToken from "../utils/createToken.js";
 import protect from "../middlewares/Auth.middleware.js";
@@ -74,5 +75,7 @@ router.get(
  * Requires a valid JWT token via the 'protect' middleware.
  */
 router.get("/profile", protect, getProfile);
+router.put("/profile", protect, updateProfile);
 router.post("/verify-login-otp", verifyLoginOtp);
+// Route — cần protect middleware
 export default router;

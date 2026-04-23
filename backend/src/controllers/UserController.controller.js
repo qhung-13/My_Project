@@ -3,6 +3,7 @@ import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
 import createToken from "../utils/createToken.js";
 import Otp from "../models/Otp.model.js";
 import sendOtpEmail from "../utils/sendEmail.js";
+import bcrypt from "bcryptjs";
 
 // Note: Removed unused import { compare } from "bcryptjs"
 // comparePassword is already handled by the User model method
@@ -265,7 +266,44 @@ const verifyLoginOtp = asyncHandler(async (req, res) => {
   });
 });
 
-const getProfile = asyncHandler(async (req, res) => {});
+const getProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (user) {
+    res.json({
+      _id: user._id,
+      username: user.username,
+      email: user.email,
+      displayName: user.displayName,
+      avatar: user.avatar,
+      bio: user.bio,
+      role: user.role,
+      isVerified: user.isVerified,
+    });
+  } else {
+    res.status(404);
+    throw new Error("User not found");
+  }
+});
+
+const updateProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (user) {
+    user.displayName = req.body.displayName || user.displayName;
+    user.bio = req.body.bio || user.bio;
+    user.avatar = req.body.avatar || user.avatar;
+
+    user.password = req.body.password;
+
+    const updatedUser = await user.save();
+    res.json({
+      username: user.username,
+      email: user.email,
+    });
+  } else {
+    res.status(404);
+    throw new Error("User not found");
+  }
+});
 
 export {
   userRegister,
@@ -277,4 +315,5 @@ export {
   logout,
   getProfile,
   verifyLoginOtp,
+  updateProfile,  
 };
