@@ -2,11 +2,14 @@ import { useState } from "react";
 import "./Register.css";
 import { FcGoogle } from "react-icons/fc";
 import { FaFacebook } from "react-icons/fa";
-import instance from "../../utils/axios";
-import type { AxiosError } from "axios";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../../store/store";
 import { setUser } from "../../store/slices/authSlice";
+import {
+  useRegisterMutation,
+  useSendOtpMutation,
+  useVerifyOtpMutation,
+} from "../../store/api/userApi";
 
 interface RegisterProps {
   onClose: () => void;
@@ -20,9 +23,14 @@ const Register = ({ onClose, onSwitch }: RegisterProps) => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState<"credentials" | "otp">("credentials");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
   const dispatch = useDispatch<AppDispatch>();
+  const [register, { isLoading: isRegisterLoading }] = useRegisterMutation();
+  const [sendOtp, { isLoading: isSendOtpLoading }] = useSendOtpMutation();
+  const [verifyOtp, { isLoading: isVerifyLoading }] = useVerifyOtpMutation();
+
+  const isLoading = isRegisterLoading || isSendOtpLoading;
 
   const handleRegisterClick = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,45 +41,40 @@ const Register = ({ onClose, onSwitch }: RegisterProps) => {
       return;
     }
 
-    setLoading(true);
     try {
       // Step 1: Register account
-      await instance.post("/users/register", { username, email, password });
+      await register({ username, email, password }).unwrap();
 
       // Step 2: Send OTP to email
-      await instance.post("/users/send-otp", { email });
+      await sendOtp({ email }).unwrap();
 
       setStep("otp");
     } catch (err) {
-      const error = err as AxiosError<{ message: string }>;
-      setError(error.response?.data?.message || "Registration failed");
-    } finally {
-      setLoading(false);
+      const error = err as { data?: { message?: string } };
+      setError(error.data?.message || "Registration failed");
     }
   };
 
   const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
 
     try {
       // Step 3: Verify OTP → isVerified = true
-      await instance.post("/users/verify-otp", { email, otp });
+      const res = await verifyOtp({ email, otp }).unwrap();
+
       dispatch(
         setUser({
-          _id: "",
-          username,
-          email,
-          avatar: null,
+          _id: res._id,
+          username: res.username,
+          email: res.email,
+          avatar: res.avatar || null,
         }),
       );
       onClose();
     } catch (err) {
-      const error = err as AxiosError<{ message: string }>;
-      setError(error.response?.data?.message || "Invalid OTP");
-    } finally {
-      setLoading(false);
+      const error = err as { data?: { message?: string } };
+      setError(error.data?.message || "Invalid OTP");
     }
   };
 
@@ -126,9 +129,9 @@ const Register = ({ onClose, onSwitch }: RegisterProps) => {
             <button
               type="submit"
               className="register__button"
-              disabled={loading}
+              disabled={isLoading}
             >
-              {loading ? "Loading..." : "Register"}
+              {isLoading ? "Loading..." : "Register"}
             </button>
           </form>
         ) : (
@@ -155,8 +158,12 @@ const Register = ({ onClose, onSwitch }: RegisterProps) => {
               >
                 Back
               </button>
-              <button type="submit" className="otp-confirm" disabled={loading}>
-                {loading ? "Verifying..." : "Confirm"}
+              <button
+                type="submit"
+                className="otp-confirm"
+                disabled={isVerifyLoading}
+              >
+                {isVerifyLoading ? "Verifying..." : "Confirm"}
               </button>
             </div>
           </form>
@@ -167,8 +174,7 @@ const Register = ({ onClose, onSwitch }: RegisterProps) => {
             <button
               className="register__social-btn register__social--google"
               onClick={() =>
-                (window.location.href =
-                  "http://localhost:5000/api/users/auth/google")
+                (window.location.href = `${import.meta.env.VITE_API_URL?.replace("/api", "")}/api/users/auth/google`)
               }
             >
               <FcGoogle size={24} />
