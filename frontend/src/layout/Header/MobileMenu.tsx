@@ -1,3 +1,6 @@
+import { useSelector } from "react-redux";
+import type { RootState } from "../../store/store";
+
 interface Props {
   darkMode: boolean;
   setDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
@@ -6,6 +9,8 @@ interface Props {
 }
 
 const MobileMenu = ({ darkMode, setDarkMode, onLogin, onRegister }: Props) => {
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+
   return (
     <div className="mobile-menu">
       <ul className="mobile-menu__list">
@@ -20,16 +25,21 @@ const MobileMenu = ({ darkMode, setDarkMode, onLogin, onRegister }: Props) => {
             {darkMode ? "Light Mode" : "Dark Mode"}
           </button>
         </li>
-        <li className="mobile-menu__item">
-          <button className="mobile-menu__link" onClick={onLogin}>
-            Login
-          </button>
-        </li>
-        <li className="mobile-menu__item">
-          <button className="mobile-menu__link" onClick={onRegister}>
-            Sign Up
-          </button>
-        </li>
+
+        {!isAuthenticated && (
+          <>
+            <li className="mobile-menu__item">
+              <button className="mobile-menu__link" onClick={onLogin}>
+                Login
+              </button>
+            </li>
+            <li className="mobile-menu__item">
+              <button className="mobile-menu__link" onClick={onRegister}>
+                Sign Up
+              </button>
+            </li>
+          </>
+        )}
       </ul>
     </div>
   );
