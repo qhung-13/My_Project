@@ -286,18 +286,36 @@ const getProfile = asyncHandler(async (req, res) => {
 });
 
 const updateProfile = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id);
+  const user = await User.findById(req.user._id).select("+password");
   if (user) {
     user.displayName = req.body.displayName || user.displayName;
     user.bio = req.body.bio || user.bio;
     user.avatar = req.body.avatar || user.avatar;
 
-    user.password = req.body.password;
+    if (req.body.password) {
+      if (!req.body.currentPassword) {
+        res.status(400);
+        throw new Error("Please provide current password");
+      }
+
+      const isMatch = await user.comparePassword(req.body.currentPassword);
+      if (!isMatch) {
+        res.status(401);
+        throw new Error("Current password is incorrect");
+      }
+
+      user.password = req.body.password;
+    }
 
     const updatedUser = await user.save();
     res.json({
-      username: user.username,
-      email: user.email,
+      _id: updatedUser._id,
+      username: updatedUser.username,
+      email: updatedUser.email,
+      displayName: updatedUser.displayName,
+      bio: updatedUser.bio,
+      avatar: updatedUser.avatar,
+      role: updatedUser.role,
     });
   } else {
     res.status(404);
@@ -315,5 +333,5 @@ export {
   logout,
   getProfile,
   verifyLoginOtp,
-  updateProfile,  
+  updateProfile,
 };

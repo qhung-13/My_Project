@@ -4,6 +4,7 @@ import "./EditProfile.css";
 
 interface Profile {
   username?: string;
+  email?: string;
   displayName?: string;
   bio?: string;
   avatar?: string | null;
@@ -18,6 +19,9 @@ const EditProfile = ({ profile, onClose }: EditProfileProps) => {
   const [displayName, setDisplayName] = useState(profile?.displayName || "");
   const [bio, setBio] = useState(profile?.bio || "");
   const [avatar, setAvatar] = useState(profile?.avatar || "");
+  const [email, setEmail] = useState(profile?.email || "");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState("");
 
   const [updateProfile, { isLoading }] = useUpdateProfileMutation();
@@ -27,7 +31,13 @@ const EditProfile = ({ profile, onClose }: EditProfileProps) => {
     setError("");
 
     try {
-      await updateProfile({ displayName, bio, avatar }).unwrap();
+      await updateProfile({
+        displayName,
+        bio,
+        avatar,
+        email,
+        ...(newPassword && { currentPassword, password: newPassword }),
+      }).unwrap();
       onClose();
     } catch (err) {
       const error = err as { data?: { message?: string } };
@@ -99,6 +109,41 @@ const EditProfile = ({ profile, onClose }: EditProfileProps) => {
               onChange={(e) => setBio(e.target.value)}
               maxLength={200}
               rows={4}
+            />
+          </div>
+
+          {/* Email */}
+          <div className="edit-profile__field">
+            <label className="edit-profile__label">Email</label>
+            <input
+              type="email"
+              placeholder="Email..."
+              className="edit-profile__input"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+
+          {/* Password */}
+          <div className="edit-profile__field">
+            <label className="edit-profile__label">Mật khẩu hiện tại</label>
+            <input
+              type="password"
+              placeholder="Nhập mật khẩu hiện tại..."
+              className="edit-profile__input"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+            />
+          </div>
+
+          <div className="edit-profile__field">
+            <label className="edit-profile__label">Mật khẩu mới</label>
+            <input
+              type="password"
+              placeholder="Nhập mật khẩu mới..."
+              className="edit-profile__input"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
             />
           </div>
 
