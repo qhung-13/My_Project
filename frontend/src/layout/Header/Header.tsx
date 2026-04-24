@@ -17,7 +17,7 @@ import MobileMenu from "./MobileMenu";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
 import "./Header.css";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 // ============================================================
 // Types
@@ -53,6 +53,7 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
   const [countries, setCountries] = useState<Country[]>([]);
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const { pathname } = useLocation();
+  const navigate = useNavigate();
 
   // Fetch countries
   useEffect(() => {
@@ -153,7 +154,10 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
             {/* Auth */}
             <div className="header__auth">
               {isAuthenticated ? (
-                <div className="header__user">
+                <div
+                  className="header__user"
+                  onClick={() => navigate("/profile/me")}
+                >
                   <img
                     src={
                       user?.avatar ||

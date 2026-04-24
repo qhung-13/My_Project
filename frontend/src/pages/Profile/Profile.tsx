@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { MY_PROFILE, USERS } from "../../data/users";
-import { Play } from "lucide-react";
-import { formatViewers } from "../../utils/format";
+import { useGetProfileQuery } from "../../store/api/userApi";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../store/store";
+import EditProfile from "../../components/EditProfile/EditProfile";
 import "./Profile.css";
 
 type TabType = "VODs" | "Clips" | "About";
@@ -11,38 +12,50 @@ const Profile = () => {
   const { userId } = useParams<{ userId: string }>();
   const [activeTab, setActiveTab] = useState<TabType>("VODs");
   const [isFollowing, setIsFollowing] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
+  const { user: authUser } = useSelector((state: RootState) => state.auth);
   const isMyProfile = !userId || userId === "me";
-  const user = isMyProfile
-    ? MY_PROFILE
-    : (USERS.find((u) => u.id === userId) ?? MY_PROFILE);
+
+  const { data: profile, isLoading } = useGetProfileQuery(undefined, {
+    skip: !authUser || !isMyProfile,
+  });
+
+  if (isLoading) return <div className="profile__loading">Loading...</div>;
+
+  // Dùng profile từ API nếu là my profile, sau này thêm API get by id
+  const displayName =
+    profile?.displayName || profile?.username || authUser?.username || "";
+  const avatar = profile?.avatar || authUser?.avatar || null;
+  const bio = profile?.bio || "";
 
   return (
     <div className="profile">
       {/* Banner */}
       <div className="profile__banner">
-        <div
-          className="profile__avatar"
-          style={{ background: user.avatarColor }}
-        >
-          {user.initials}
+        <div className="profile__avatar">
+          {avatar ? (
+            <img src={avatar} alt={displayName} />
+          ) : (
+            <span>{displayName.slice(0, 2).toUpperCase()}</span>
+          )}
         </div>
         {isMyProfile && (
-          <button className="profile__edit-btn">Chỉnh sửa</button>
+          <button
+            className="profile__edit-btn"
+            onClick={() => setShowEdit(true)}
+          >
+            Chỉnh sửa
+          </button>
         )}
       </div>
 
       {/* Info */}
       <div className="profile__info">
-        {/* Tên + button */}
         <div className="profile__header">
           <div>
             <div className="profile__name-row">
-              <span className="profile__username">{user.username}</span>
-              {user.isLive && <span className="profile__live-badge">LIVE</span>}
-            </div>
-            <div className="profile__sub">
-              {user.games.slice(0, 2).join(" · ")} · {user.region.toUpperCase()}
+              <span className="profile__username">{displayName}</span>
             </div>
           </div>
 
@@ -60,15 +73,15 @@ const Profile = () => {
 
         {/* Bio */}
         <p className="profile__bio">
-          {user.bio || (isMyProfile ? "Thêm bio của bạn..." : "")}
+          {bio || (isMyProfile ? "Thêm bio của bạn..." : "")}
         </p>
 
-        {/* Stats */}
+        {/* Stats — sau này connect API */}
         <div className="profile__stats">
           {[
-            { label: "Followers", value: formatViewers(user.followers) },
-            { label: "Following", value: user.following },
-            { label: "Streams", value: user.streams },
+            { label: "Followers", value: 0 },
+            { label: "Following", value: 0 },
+            { label: "Streams", value: 0 },
           ].map((stat) => (
             <div className="profile__stat" key={stat.label}>
               <span className="profile__stat-value">{stat.value}</span>
@@ -77,19 +90,10 @@ const Profile = () => {
           ))}
         </div>
 
-        {/* Games hoặc Settings */}
-        {isMyProfile ? (
+        {isMyProfile && (
           <div className="profile__actions">
             <button className="profile__action-btn">⚙️ Cài đặt</button>
             <button className="profile__action-btn">📊 Dashboard</button>
-          </div>
-        ) : (
-          <div className="profile__games">
-            {user.games.map((game) => (
-              <span className="profile__game-tag" key={game}>
-                {game}
-              </span>
-            ))}
           </div>
         )}
       </div>
@@ -109,35 +113,13 @@ const Profile = () => {
 
       {/* Tab content */}
       <div className="profile__content">
-        {activeTab === "VODs" &&
-          (user.vods.length > 0 ? (
-            <ul className="profile__vod-list">
-              {user.vods.map((vod) => (
-                <li className="vod-card" key={vod.id}>
-                  <div
-                    className="vod-card__thumb"
-                    style={{ background: vod.bg }}
-                  >
-                    <Play size={14} fill="rgba(255,255,255,0.4)" />
-                    <span className="vod-card__duration">{vod.duration}</span>
-                  </div>
-                  <div className="vod-card__info">
-                    <div className="vod-card__title">{vod.title}</div>
-                    <div className="vod-card__meta">
-                      {formatViewers(vod.views)} views · {vod.daysAgo} ngày
-                      trước
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="profile__empty">
-              <span>📹</span>
-              <p>Chưa có VOD nào</p>
-              {isMyProfile && <span>Bắt đầu stream để tạo VOD đầu tiên!</span>}
-            </div>
-          ))}
+        {activeTab === "VODs" && (
+          <div className="profile__empty">
+            <span>📹</span>
+            <p>Chưa có VOD nào</p>
+            {isMyProfile && <span>Bắt đầu stream để tạo VOD đầu tiên!</span>}
+          </div>
+        )}
 
         {activeTab === "Clips" && (
           <div className="profile__empty">
@@ -148,26 +130,14 @@ const Profile = () => {
 
         {activeTab === "About" && (
           <div className="profile__about">
-            <p>{user.bio || "Chưa có thông tin"}</p>
-            <div className="profile__about-games">
-              <span className="profile__about-label">Game hay chơi</span>
-              <div className="profile__games">
-                {user.games.length > 0 ? (
-                  user.games.map((game) => (
-                    <span className="profile__game-tag" key={game}>
-                      {game}
-                    </span>
-                  ))
-                ) : (
-                  <span style={{ color: "#666", fontSize: "12px" }}>
-                    Chưa có
-                  </span>
-                )}
-              </div>
-            </div>
+            <p>{bio || "Chưa có thông tin"}</p>
           </div>
         )}
       </div>
+
+      {showEdit && (
+        <EditProfile profile={profile} onClose={() => setShowEdit(false)} />
+      )}
     </div>
   );
 };

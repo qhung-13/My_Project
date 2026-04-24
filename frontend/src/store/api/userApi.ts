@@ -4,8 +4,9 @@ export const userApi = createApi({
   reducerPath: "userApi",
   baseQuery: fetchBaseQuery({
     baseUrl: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
-    credentials: "include", 
+    credentials: "include",
   }),
+  tagTypes: ["Profile"],
   endpoints: (builder) => ({
     // Login
     login: builder.mutation({
@@ -55,6 +56,7 @@ export const userApi = createApi({
     // Get profile
     getProfile: builder.query({
       query: () => "/users/profile",
+      providesTags: ["Profile"],
     }),
 
     // Update profile
@@ -64,6 +66,7 @@ export const userApi = createApi({
         method: "PUT",
         body: data,
       }),
+      invalidatesTags: ["Profile"],
     }),
 
     // Logout
