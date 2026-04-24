@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { useUpdateProfileMutation } from "../../store/api/userApi";
+import { useDispatch } from "react-redux";
+import type { AppDispatch } from "../../store/store";
+import { setUser } from "../../store/slices/authSlice";
 import "./EditProfile.css";
 
 interface Profile {
@@ -24,6 +27,7 @@ const EditProfile = ({ profile, onClose }: EditProfileProps) => {
   const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState("");
 
+  const dispatch = useDispatch<AppDispatch>();
   const [updateProfile, { isLoading }] = useUpdateProfileMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,13 +35,23 @@ const EditProfile = ({ profile, onClose }: EditProfileProps) => {
     setError("");
 
     try {
-      await updateProfile({
+      const res = await updateProfile({
         displayName,
         bio,
         avatar,
         email,
         ...(newPassword && { currentPassword, password: newPassword }),
       }).unwrap();
+
+      dispatch(
+        setUser({
+          _id: res._id,
+          username: res.username,
+          email: res.email,
+          avatar: res.avatar || null,
+        }),
+      );
+
       onClose();
     } catch (err) {
       const error = err as { data?: { message?: string } };
@@ -124,7 +138,7 @@ const EditProfile = ({ profile, onClose }: EditProfileProps) => {
             />
           </div>
 
-          {/* Password */}
+          {/* Current Password */}
           <div className="edit-profile__field">
             <label className="edit-profile__label">Mật khẩu hiện tại</label>
             <input
@@ -136,6 +150,7 @@ const EditProfile = ({ profile, onClose }: EditProfileProps) => {
             />
           </div>
 
+          {/* New Password */}
           <div className="edit-profile__field">
             <label className="edit-profile__label">Mật khẩu mới</label>
             <input
