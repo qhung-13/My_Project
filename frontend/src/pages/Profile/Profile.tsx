@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { useGetProfileQuery } from "../../store/api/userApi";
+import {
+  useGetProfileQuery,
+  useGetUserByIdQuery,
+} from "../../store/api/userApi";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
 import EditProfile from "../../components/EditProfile/EditProfile";
@@ -15,19 +18,36 @@ const Profile = () => {
   const [showEdit, setShowEdit] = useState(false);
 
   const { user: authUser } = useSelector((state: RootState) => state.auth);
-  const isMyProfile = !userId || userId === "me";
+  const isMyProfile = !userId || userId === "me" || userId === authUser?._id;
 
-  const { data: profile, isLoading } = useGetProfileQuery(undefined, {
-    skip: !authUser || !isMyProfile,
-  });
+  // Fetch my profile
+  const { data: myProfile, isLoading: isMyLoading } = useGetProfileQuery(
+    undefined,
+    {
+      skip: !authUser || !isMyProfile,
+    },
+  );
 
+  // Fetch other user profile
+  const { data: otherProfile, isLoading: isOtherLoading } = useGetUserByIdQuery(
+    userId!,
+    {
+      skip: isMyProfile || !userId,
+    },
+  );
+
+  const isLoading = isMyLoading || isOtherLoading;
   if (isLoading) return <div className="profile__loading">Loading...</div>;
 
-  // Dùng profile từ API nếu là my profile, sau này thêm API get by id
+  const currentProfile = isMyProfile ? myProfile : otherProfile;
+
   const displayName =
-    profile?.displayName || profile?.username || authUser?.username || "";
-  const avatar = profile?.avatar || authUser?.avatar || null;
-  const bio = profile?.bio || "";
+    currentProfile?.displayName ||
+    currentProfile?.username ||
+    authUser?.username ||
+    "";
+  const avatar = currentProfile?.avatar || null;
+  const bio = currentProfile?.bio || "";
 
   return (
     <div className="profile">
@@ -71,12 +91,10 @@ const Profile = () => {
           )}
         </div>
 
-        {/* Bio */}
         <p className="profile__bio">
           {bio || (isMyProfile ? "Thêm bio của bạn..." : "")}
         </p>
 
-        {/* Stats — sau này connect API */}
         <div className="profile__stats">
           {[
             { label: "Followers", value: 0 },
@@ -120,14 +138,12 @@ const Profile = () => {
             {isMyProfile && <span>Bắt đầu stream để tạo VOD đầu tiên!</span>}
           </div>
         )}
-
         {activeTab === "Clips" && (
           <div className="profile__empty">
             <span>🎬</span>
             <p>Chưa có Clip nào</p>
           </div>
         )}
-
         {activeTab === "About" && (
           <div className="profile__about">
             <p>{bio || "Chưa có thông tin"}</p>
@@ -136,7 +152,7 @@ const Profile = () => {
       </div>
 
       {showEdit && (
-        <EditProfile profile={profile} onClose={() => setShowEdit(false)} />
+        <EditProfile profile={myProfile} onClose={() => setShowEdit(false)} />
       )}
     </div>
   );

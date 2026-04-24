@@ -76,6 +76,10 @@ export const userApi = createApi({
         method: "POST",
       }),
     }),
+
+    getUserById: builder.query({
+      query: (userId) => `/users/${userId}`,
+    }),
   }),
 });
 
@@ -88,4 +92,5 @@ export const {
   useGetProfileQuery,
   useUpdateProfileMutation,
   useLogoutMutation,
+  useGetUserByIdQuery,
 } = userApi;

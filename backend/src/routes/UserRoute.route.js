@@ -10,7 +10,8 @@ import {
   logout,
   getProfile,
   verifyLoginOtp,
-  updateProfile
+  updateProfile,
+  getUserById
 } from "../controllers/UserController.controller.js";
 import createToken from "../utils/createToken.js";
 import protect from "../middlewares/Auth.middleware.js";
@@ -77,5 +78,6 @@ router.get(
 router.get("/profile", protect, getProfile);
 router.put("/profile", protect, updateProfile);
 router.post("/verify-login-otp", verifyLoginOtp);
+router.get("/:id", getUserById);
 // Route — cần protect middleware
 export default router;

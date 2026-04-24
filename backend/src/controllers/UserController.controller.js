@@ -323,6 +323,22 @@ const updateProfile = asyncHandler(async (req, res) => {
   }
 });
 
+const getUserById = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+  res.json({
+    _id: user._id,
+    username: user.username,
+    displayName: user.displayName,
+    avatar: user.avatar,
+    bio: user.bio,
+    role: user.role,
+  });
+});
+
 export {
   userRegister,
   userLogin,
@@ -334,4 +350,5 @@ export {
   getProfile,
   verifyLoginOtp,
   updateProfile,
+  getUserById,
 };
