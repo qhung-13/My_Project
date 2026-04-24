@@ -508,6 +508,7 @@
 .header__user {
   display: flex;
   align-items: center;
+  position: relative;
   /* gap: 10px; */
 }
 
@@ -771,6 +772,70 @@
   .header__logo-img {
     width: 120px;
   }
+}
+
+.header__user-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  min-width: 150px;
+  z-index: 1000;
+  animation: dropdown 0.2s ease;
+  overflow: hidden;
+}
+
+.header__user-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.header__user-menu-item:hover {
+  background: #f5f5f5;
+}
+
+.header__user-menu-item--logout {
+  color: #ef4444;
+}
+
+.header__user-menu-item--logout:hover {
+  background: #fee2e2;
+}
+
+/* Dark mode */
+.dark-mode .header__user-menu {
+  background: #27272a;
+  border-color: #3f3f46;
+}
+
+.dark-mode .header__user-menu-item {
+  color: #e4e4e7;
+}
+
+.dark-mode .header__user-menu-item:hover {
+  background: #3f3f46;
+}
+
+.dark-mode .header__user-menu-item--logout {
+  color: #f87171;
+}
+
+.dark-mode .header__user-menu-item--logout:hover {
+  background: rgba(239, 68, 68, 0.2);
 }
 
 /* ============================================================

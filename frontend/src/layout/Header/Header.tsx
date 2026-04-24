@@ -14,8 +14,10 @@ import Register from "../../components/Register/Register";
 import CountrySelector from "./CountrySelector";
 import NavMenu from "./NavMenu";
 import MobileMenu from "./MobileMenu";
-import { useSelector } from "react-redux";
-import type { RootState } from "../../store/store";
+import { useSelector, useDispatch } from "react-redux";
+import type { RootState, AppDispatch } from "../../store/store";
+import { clearUser } from "../../store/slices/authSlice";
+import { useLogoutMutation } from "../../store/api/userApi";
 import "./Header.css";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
@@ -52,8 +54,22 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
   );
   const [countries, setCountries] = useState<Country[]>([]);
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
+  const { user, isAuthenticated } = useSelector(
+    (state: RootState) => state.auth,
+  );
+  const [logout] = useLogoutMutation();
+
+  const handleLogout = async () => {
+    await logout(undefined).unwrap();
+    dispatch(clearUser());
+    setShowUserMenu(false);
+    navigate("/home");
+  };
 
   // Fetch countries
   useEffect(() => {
@@ -85,16 +101,6 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
 
     fetchCountries();
   }, []);
-
-  // const dispatch = useDispatch<AppDispatch>();
-  const { user, isAuthenticated } = useSelector(
-    (state: RootState) => state.auth,
-  );
-
-  // const handleLogout = async () => {
-  //   await instance.post("/users/logout");
-  //   dispatch(clearUser());
-  // };
 
   // ============================================================
   // Render
@@ -154,21 +160,37 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
             {/* Auth */}
             <div className="header__auth">
               {isAuthenticated ? (
-                <div
-                  className="header__user"
-                  onClick={() => navigate("/profile/me")}
-                >
+                <div className="header__user">
                   <img
                     src={
                       user?.avatar ||
-                      "https://api.dicebear.com/7.x/initials/svg?seed=" +
-                        user?.username
+                      `https://api.dicebear.com/7.x/initials/svg?seed=${user?.username}`
                     }
                     alt={user?.username}
                     className="header__avatar"
                     width={36}
                     height={36}
+                    onClick={() => setShowUserMenu(!showUserMenu)}
                   />
+                  {showUserMenu && (
+                    <div className="header__user-menu">
+                      <button
+                        className="header__user-menu-item"
+                        onClick={() => {
+                          navigate("/profile/me");
+                          setShowUserMenu(false);
+                        }}
+                      >
+                        👤 Profile
+                      </button>
+                      <button
+                        className="header__user-menu-item header__user-menu-item--logout"
+                        onClick={handleLogout}
+                      >
+                        🚪 Logout
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <>
