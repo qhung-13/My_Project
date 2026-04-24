@@ -1,5 +1,7 @@
-import { useSelector } from "react-redux";
-import type { RootState } from "../../store/store";
+import { useSelector, useDispatch } from "react-redux";
+import type { RootState, AppDispatch } from "../../store/store";
+import { clearUser } from "../../store/slices/authSlice";
+import { useLogoutMutation } from "../../store/api/userApi";
 
 interface Props {
   darkMode: boolean;
@@ -10,6 +12,13 @@ interface Props {
 
 const MobileMenu = ({ darkMode, setDarkMode, onLogin, onRegister }: Props) => {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const dispatch = useDispatch<AppDispatch>();
+  const [logout] = useLogoutMutation();
+
+  const handleLogout = async () => {
+    await logout(undefined).unwrap();
+    dispatch(clearUser());
+  };
 
   return (
     <div className="mobile-menu">
@@ -26,7 +35,13 @@ const MobileMenu = ({ darkMode, setDarkMode, onLogin, onRegister }: Props) => {
           </button>
         </li>
 
-        {!isAuthenticated && (
+        {isAuthenticated ? (
+          <li className="mobile-menu__item">
+            <button className="mobile-menu__link" onClick={handleLogout}>
+              Logout
+            </button>
+          </li>
+        ) : (
           <>
             <li className="mobile-menu__item">
               <button className="mobile-menu__link" onClick={onLogin}>
