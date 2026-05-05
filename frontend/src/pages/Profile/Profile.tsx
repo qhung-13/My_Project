@@ -39,15 +39,14 @@ const Profile = () => {
   const isLoading = isMyLoading || isOtherLoading;
   if (isLoading) return <div className="profile__loading">Loading...</div>;
 
-  const currentProfile = isMyProfile ? myProfile : otherProfile;
+  const displayName = isMyProfile
+    ? myProfile?.displayName || myProfile?.username || authUser?.username || ""
+    : otherProfile?.displayName || otherProfile?.username || "Unknown User";
 
-  const displayName =
-    currentProfile?.displayName ||
-    currentProfile?.username ||
-    authUser?.username ||
-    "";
-  const avatar = currentProfile?.avatar || null;
-  const bio = currentProfile?.bio || "";
+  const avatar = isMyProfile
+    ? myProfile?.avatar || null
+    : otherProfile?.avatar || null;
+  const bio = isMyProfile ? myProfile?.bio || "" : otherProfile?.bio || "";
 
   return (
     <div className="profile">
