@@ -129,7 +129,7 @@ const WatchLive = () => {
           <div
             className="info-avatar"
             style={{ background: currentStream.avatarColor }}
-            onClick={() => navigate(`/profile/${currentStream.id}`)}
+            onClick={() => navigate(`/profile/${currentStream.userId}`)}
           >
             {currentStream.initials}
           </div>
