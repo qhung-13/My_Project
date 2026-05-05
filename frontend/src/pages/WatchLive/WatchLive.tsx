@@ -4,9 +4,16 @@ import { formatViewers } from "../../utils/format";
 import "./WatchLive.css";
 import { useNavigate, useParams } from "react-router-dom";
 import { STREAMS } from "../../data/stream";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../store/store";
+import {
+  useFollowUserMutation,
+  useUnfollowUserMutation,
+  useGetUserByIdQuery,
+} from "../../store/api/userApi";
 
 // ============================================================
-// Mock data
+// Mock chat data
 // ============================================================
 const MESSAGES = [
   {
@@ -90,11 +97,15 @@ const WatchLive = () => {
 
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [message, setMessage] = useState("");
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [prevId, setPrevId] = useState(id);
+
+  const { user: authUser } = useSelector((state: RootState) => state.auth);
+  const [followUser] = useFollowUserMutation();
+  const [unfollowUser] = useUnfollowUserMutation();
 
   const currentStream = STREAMS.find((s) => s.id === id) || STREAMS[0];
 
-  const [prevId, setPrevId] = useState(id);
+  // Reset chat when stream changes
   if (id !== prevId) {
     setPrevId(id);
     setIsChatOpen(false);
@@ -103,6 +114,29 @@ const WatchLive = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [id]);
+
+  // Fetch streamer data to check follow status
+  const { data: streamerData } = useGetUserByIdQuery(currentStream.userId, {
+    skip: !currentStream.userId,
+  });
+
+  const isFollowing =
+    streamerData?.followers?.some(
+      (followerId: string) => followerId.toString() === authUser?._id,
+    ) ?? false;
+
+  const handleFollow = async () => {
+    if (!currentStream.userId) return;
+    try {
+      if (isFollowing) {
+        await unfollowUser(currentStream.userId).unwrap();
+      } else {
+        await followUser(currentStream.userId).unwrap();
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
 
   const suggestedStreams = STREAMS.filter(
     (stream) => stream.id !== currentStream.id,
@@ -129,7 +163,11 @@ const WatchLive = () => {
           <div
             className="info-avatar"
             style={{ background: currentStream.avatarColor }}
-            onClick={() => navigate(`/profile/${currentStream.userId}`)}
+            onClick={() => {
+              if (currentStream.userId) {
+                navigate(`/profile/${currentStream.userId}`);
+              }
+            }}
           >
             {currentStream.initials}
           </div>
@@ -142,10 +180,7 @@ const WatchLive = () => {
           </div>
         </div>
         <div className="info-actions">
-          <button
-            className="btn-follow"
-            onClick={() => setIsFollowing(!isFollowing)}
-          >
+          <button className="btn-follow" onClick={handleFollow}>
             {isFollowing ? "Following" : "Follow"}
           </button>
           <button className="btn-share">Share</button>
@@ -177,7 +212,6 @@ const WatchLive = () => {
             </span>
           </div>
 
-          {/* Wrapper nội dung chat để CSS dễ ẩn hiện */}
           <div className="chat-panel__content">
             <div className="chat-panel__messages">
               {MESSAGES.map((msg) => (
