@@ -278,6 +278,8 @@ const getProfile = asyncHandler(async (req, res) => {
       bio: user.bio,
       role: user.role,
       isVerified: user.isVerified,
+      followersCount: user.followersCount, 
+      followingCount: user.followingCount, 
     });
   } else {
     res.status(404);
