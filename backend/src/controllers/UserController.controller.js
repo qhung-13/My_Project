@@ -324,11 +324,20 @@ const updateProfile = asyncHandler(async (req, res) => {
 });
 
 const getUserById = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
+  const { id } = req.params;
+
+  let user;
+  if (id.match(/^[0-9a-fA-F]{24}$/)) {
+    user = await User.findById(id);
+  } else {
+    user = await User.findOne({ username: id });
+  }
+
   if (!user) {
     res.status(404);
     throw new Error("User not found");
   }
+
   res.json({
     _id: user._id,
     username: user.username,
@@ -336,6 +345,8 @@ const getUserById = asyncHandler(async (req, res) => {
     avatar: user.avatar,
     bio: user.bio,
     role: user.role,
+    followersCount: user.followersCount,
+    followingCount: user.followingCount,
   });
 });
 

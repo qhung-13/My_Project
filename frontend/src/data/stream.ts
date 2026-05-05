@@ -13,7 +13,7 @@ export interface Stream {
 
 export const STREAMS: Stream[] = [
   {
-    id: "tiger-gaming",
+    id: "tigergaming",
     streamerName: "TigerGaming",
     streamTitle: "Rank Challenger LOL — Đường đến Thách Đấu",
     game: "LOL",
@@ -25,7 +25,7 @@ export const STREAMS: Stream[] = [
     createdAt: 15,
   },
   {
-    id: "cspr-ovn",
+    id: "csprovn",
     streamerName: "CSProVN",
     streamTitle: "Major highlights CS2 — Road to Global",
     game: "CS2",
@@ -37,7 +37,7 @@ export const STREAMS: Stream[] = [
     createdAt: 14,
   },
   {
-    id: "nhok-kute",
+    id: "nhokkute",
     streamerName: "NhokKute",
     streamTitle: "Cày rank Valorant — Immortal grind",
     game: "Valorant",
@@ -49,7 +49,7 @@ export const STREAMS: Stream[] = [
     createdAt: 13,
   },
   {
-    id: "galaxy-x",
+    id: "galaxyx",
     streamerName: "GalaxyX",
     streamTitle: "Esport recap Dota 2 — TI highlights",
     game: "Dota 2",
@@ -61,7 +61,7 @@ export const STREAMS: Stream[] = [
     createdAt: 12,
   },
   {
-    id: "pro-battle",
+    id: "probattle",
     streamerName: "ProBattle",
     streamTitle: "Squad mode PUBG — Chicken dinner every game",
     game: "PUBG",
@@ -73,7 +73,7 @@ export const STREAMS: Stream[] = [
     createdAt: 11,
   },
   {
-    id: "mix-gaming",
+    id: "mixgaming",
     streamerName: "MixGaming",
     streamTitle: "Clutch moments FIFA — Ultimate team",
     game: "FIFA",
@@ -85,7 +85,7 @@ export const STREAMS: Stream[] = [
     createdAt: 10,
   },
   {
-    id: "mobile-pro",
+    id: "mobilepro",
     streamerName: "MobilePro",
     streamTitle: "Mythic rank push — Mobile Legends",
     game: "MLBB",
@@ -97,7 +97,7 @@ export const STREAMS: Stream[] = [
     createdAt: 9,
   },
   {
-    id: "ace-shooter",
+    id: "aceshooter",
     streamerName: "AceShooter",
     streamTitle: "Radiant climb — Valorant pro tips",
     game: "Valorant",
@@ -109,7 +109,7 @@ export const STREAMS: Stream[] = [
     createdAt: 8,
   },
   {
-    id: "war-zone-vn",
+    id: "warzone-vn",
     streamerName: "WarzoneVN",
     streamTitle: "Warzone solo vs squad — No mercy",
     game: "COD",
@@ -121,7 +121,7 @@ export const STREAMS: Stream[] = [
     createdAt: 7,
   },
   {
-    id: "sniper-king",
+    id: "sniperking",
     streamerName: "SniperKing",
     streamTitle: "AWP one tap highlights — CS2",
     game: "CS2",
@@ -133,7 +133,7 @@ export const STREAMS: Stream[] = [
     createdAt: 6,
   },
   {
-    id: "hero-king",
+    id: "heroking",
     streamerName: "HeroKing",
     streamTitle: "Marksman gameplay — MLBB ranked",
     game: "MLBB",
@@ -145,7 +145,7 @@ export const STREAMS: Stream[] = [
     createdAt: 5,
   },
   {
-    id: "carry-god",
+    id: "carrygod",
     streamerName: "CarryGod",
     streamTitle: "MMR climbing — Dota 2 divine rank",
     game: "Dota 2",
@@ -157,7 +157,7 @@ export const STREAMS: Stream[] = [
     createdAt: 4,
   },
   {
-    id: "jungle-king",
+    id: "jungleking",
     streamerName: "JungleKing",
     streamTitle: "Vi full clear — LOL jungle guide",
     game: "LOL",
@@ -169,7 +169,7 @@ export const STREAMS: Stream[] = [
     createdAt: 3,
   },
   {
-    id: "chicken-win",
+    id: "chickenwin",
     streamerName: "ChickenWin",
     streamTitle: "Solo vs Squad PUBG — 20 kill game",
     game: "PUBG",
@@ -181,7 +181,7 @@ export const STREAMS: Stream[] = [
     createdAt: 2,
   },
   {
-    id: "fifa-king",
+    id: "fifaking",
     streamerName: "FIFAKing",
     streamTitle: "Ultimate team grind — Pack opening",
     game: "FIFA",
