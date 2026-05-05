@@ -91,6 +91,23 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    // -------- Follow --------------------------------------------
+    followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    following: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    followersCount: {
+      type: Number,
+      default: 0,
+    },
+    followingCount: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true, // auto create createdAt & updatedAt
