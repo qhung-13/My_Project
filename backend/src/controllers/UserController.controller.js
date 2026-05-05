@@ -347,6 +347,7 @@ const getUserById = asyncHandler(async (req, res) => {
     role: user.role,
     followersCount: user.followersCount,
     followingCount: user.followingCount,
+    followers: user.followers,
   });
 });
 

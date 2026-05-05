@@ -6,7 +6,7 @@ export const userApi = createApi({
     baseUrl: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
     credentials: "include",
   }),
-  tagTypes: ["Profile"],
+  tagTypes: ["Profile", "UserById"],
   endpoints: (builder) => ({
     // Login
     login: builder.mutation({
@@ -80,6 +80,7 @@ export const userApi = createApi({
     // Get User By Id
     getUserById: builder.query({
       query: (userId) => `/users/${userId}`,
+      providesTags: ["UserById"],
     }),
 
     // Follow
@@ -88,7 +89,7 @@ export const userApi = createApi({
         url: `/users/${userId}/follow`,
         method: "POST",
       }),
-      invalidatesTags: ["Profile"],
+      invalidatesTags: ["Profile", "UserById"],
     }),
 
     unfollowUser: builder.mutation({
@@ -96,7 +97,7 @@ export const userApi = createApi({
         url: `/users/${userId}/unfollow`,
         method: "POST",
       }),
-      invalidatesTags: ["Profile"],
+      invalidatesTags: ["Profile", "UserById"],
     }),
 
     getFollowers: builder.query({

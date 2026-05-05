@@ -3,22 +3,19 @@ import { useParams } from "react-router-dom";
 import {
   useGetProfileQuery,
   useGetUserByIdQuery,
+  useFollowUserMutation,
+  useUnfollowUserMutation,
 } from "../../store/api/userApi";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
 import EditProfile from "../../components/EditProfile/EditProfile";
 import "./Profile.css";
-import {
-  useFollowUserMutation,
-  useUnfollowUserMutation,
-} from "../../store/api/userApi";
 
 type TabType = "VODs" | "Clips" | "About";
 
 const Profile = () => {
   const { userId } = useParams<{ userId: string }>();
   const [activeTab, setActiveTab] = useState<TabType>("VODs");
-  const [isFollowing, setIsFollowing] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [followUser] = useFollowUserMutation();
   const [unfollowUser] = useUnfollowUserMutation();
@@ -26,7 +23,6 @@ const Profile = () => {
   const { user: authUser } = useSelector((state: RootState) => state.auth);
   const isMyProfile = !userId || userId === "me" || userId === authUser?._id;
 
-  // Fetch my profile
   const { data: myProfile, isLoading: isMyLoading } = useGetProfileQuery(
     undefined,
     {
@@ -34,13 +30,18 @@ const Profile = () => {
     },
   );
 
-  // Fetch other user profile
   const { data: otherProfile, isLoading: isOtherLoading } = useGetUserByIdQuery(
     userId!,
     {
       skip: isMyProfile || !userId,
     },
   );
+
+  const isFollowing = isMyProfile
+    ? false
+    : (otherProfile?.followers?.some(
+        (id: string) => id.toString() === authUser?._id,
+      ) ?? false);
 
   const isLoading = isMyLoading || isOtherLoading;
   if (isLoading) return <div className="profile__loading">Loading...</div>;
@@ -61,7 +62,6 @@ const Profile = () => {
       } else {
         await followUser(userId!).unwrap();
       }
-      setIsFollowing(!isFollowing);
     } catch (err) {
       console.log(err);
     }

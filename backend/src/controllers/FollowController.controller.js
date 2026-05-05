@@ -60,7 +60,9 @@ const unfollowUser = asyncHandler(async (req, res) => {
     throw new Error("User not found");
   }
 
-  const isFollowing = targetUser.followers.includes(myId);
+  const isFollowing = targetUser.followers.some(
+    (id) => id.toString() === myId.toString(),
+  );
   if (!isFollowing) {
     res.status(400);
     throw new Error("You are not following this user");
