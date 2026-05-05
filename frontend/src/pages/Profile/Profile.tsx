@@ -8,6 +8,10 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
 import EditProfile from "../../components/EditProfile/EditProfile";
 import "./Profile.css";
+import {
+  useFollowUserMutation,
+  useUnfollowUserMutation,
+} from "../../store/api/userApi";
 
 type TabType = "VODs" | "Clips" | "About";
 
@@ -16,6 +20,8 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState<TabType>("VODs");
   const [isFollowing, setIsFollowing] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [followUser] = useFollowUserMutation();
+  const [unfollowUser] = useUnfollowUserMutation();
 
   const { user: authUser } = useSelector((state: RootState) => state.auth);
   const isMyProfile = !userId || userId === "me" || userId === authUser?._id;
@@ -47,6 +53,19 @@ const Profile = () => {
     ? myProfile?.avatar || null
     : otherProfile?.avatar || null;
   const bio = isMyProfile ? myProfile?.bio || "" : otherProfile?.bio || "";
+
+  const handleFollow = async () => {
+    try {
+      if (isFollowing) {
+        await unfollowUser(userId!).unwrap();
+      } else {
+        await followUser(userId!).unwrap();
+      }
+      setIsFollowing(!isFollowing);
+    } catch (err) {
+      console.log(err);
+    }
+  };
 
   return (
     <div className="profile">
@@ -83,7 +102,7 @@ const Profile = () => {
           ) : (
             <button
               className={`profile__follow-btn ${isFollowing ? "profile__follow-btn--following" : ""}`}
-              onClick={() => setIsFollowing(!isFollowing)}
+              onClick={handleFollow}
             >
               {isFollowing ? "Following" : "+ Follow"}
             </button>
@@ -96,8 +115,18 @@ const Profile = () => {
 
         <div className="profile__stats">
           {[
-            { label: "Followers", value: 0 },
-            { label: "Following", value: 0 },
+            {
+              label: "Followers",
+              value: isMyProfile
+                ? myProfile?.followersCount || 0
+                : otherProfile?.followersCount || 0,
+            },
+            {
+              label: "Following",
+              value: isMyProfile
+                ? myProfile?.followingCount || 0
+                : otherProfile?.followingCount || 0,
+            },
             { label: "Streams", value: 0 },
           ].map((stat) => (
             <div className="profile__stat" key={stat.label}>

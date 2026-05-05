@@ -77,8 +77,34 @@ export const userApi = createApi({
       }),
     }),
 
+    // Get User By Id
     getUserById: builder.query({
       query: (userId) => `/users/${userId}`,
+    }),
+
+    // Follow
+    followUser: builder.mutation({
+      query: (userId) => ({
+        url: `/users/${userId}/follow`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Profile"],
+    }),
+
+    unfollowUser: builder.mutation({
+      query: (userId) => ({
+        url: `/users/${userId}/unfollow`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Profile"],
+    }),
+
+    getFollowers: builder.query({
+      query: (userId) => `/users/${userId}/followers`,
+    }),
+
+    getFollowing: builder.query({
+      query: (userId) => `/users/${userId}/following`,
     }),
   }),
 });
@@ -93,4 +119,8 @@ export const {
   useUpdateProfileMutation,
   useLogoutMutation,
   useGetUserByIdQuery,
+  useFollowUserMutation,
+  useUnfollowUserMutation,
+  useGetFollowersQuery,
+  useGetFollowingQuery,
 } = userApi;
