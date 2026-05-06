@@ -18,6 +18,7 @@ import configurePassport from "./src/config/passport.config.js";
 
 // Routes
 import userRoute from "./src/routes/UserRoute.route.js";
+import videoRoute from "./src/routes/VideoRoute.route.js";
 
 // ==========================================
 // Initialization & Database Connection
@@ -37,7 +38,10 @@ app.use(express.urlencoded({ extended: true })); // Parse URL-encoded payloads
 app.use(cookieParser()); // Parse Cookie header and populate req.cookies
 app.use(
   cors({
-    origin: ["https://my-project-omega-roan.vercel.app", "http://localhost:5173"],
+    origin: [
+      "https://my-project-omega-roan.vercel.app",
+      "http://localhost:5173",
+    ],
     credentials: true,
   }),
 );
@@ -47,6 +51,7 @@ app.use(passport.initialize()); // Initialize Passport for authentication
 // API Routes
 // ==========================================
 app.use("/api/users", userRoute);
+app.use("/api/videos", videoRoute);
 
 // ==========================================
 // Server Startup
