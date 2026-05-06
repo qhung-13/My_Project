@@ -7,27 +7,19 @@ import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
 // @access  Private
 // ─────────────────────────────────────────────
 const createVideo = asyncHandler(async (req, res) => {
-  const {
-    title,
-    description,
-    videoUrl,
-    thumbnailUrl,
-    duration,
-    category,
-    tags,
-  } = req.body;
+  const { title, description, duration, category, tags } = req.body;
   const userId = req.user._id;
 
-  if (
-    !title ||
-    !description ||
-    !videoUrl ||
-    !thumbnailUrl ||
-    !duration ||
-    !category
-  ) {
+  if (!title || !description || !duration || !category) {
     res.status(400);
     throw new Error("Please fill all fields");
+  }
+
+  // Lấy URL từ Cloudinary sau khi upload
+  const videoUrl = req.file?.path || null;
+  if (!videoUrl) {
+    res.status(400);
+    throw new Error("Please upload a video");
   }
 
   const newVideo = new Video({
@@ -35,10 +27,10 @@ const createVideo = asyncHandler(async (req, res) => {
     title,
     description,
     videoUrl,
-    thumbnailUrl,
     duration,
     category,
-    tags: tags || [],
+    tags: tags ? tags.split(",") : [],
+    status: "processing",
   });
 
   await newVideo.save();
@@ -49,7 +41,6 @@ const createVideo = asyncHandler(async (req, res) => {
     title: newVideo.title,
     description: newVideo.description,
     videoUrl: newVideo.videoUrl,
-    thumbnailUrl: newVideo.thumbnailUrl,
     duration: newVideo.duration,
     category: newVideo.category,
     tags: newVideo.tags,
@@ -120,7 +111,6 @@ const updateVideo = asyncHandler(async (req, res) => {
     throw new Error("Video not found");
   }
 
-  // Chỉ chủ video mới được update
   if (video.userId.toString() !== req.user._id.toString()) {
     res.status(403);
     throw new Error("Not authorized to update this video");
@@ -128,9 +118,9 @@ const updateVideo = asyncHandler(async (req, res) => {
 
   video.title = req.body.title || video.title;
   video.description = req.body.description || video.description;
-  video.thumbnailUrl = req.body.thumbnailUrl || video.thumbnailUrl;
+  video.thumbnailUrl = req.file?.path || video.thumbnailUrl; // Từ Cloudinary
   video.category = req.body.category || video.category;
-  video.tags = req.body.tags || video.tags;
+  video.tags = req.body.tags ? req.body.tags.split(",") : video.tags;
   video.status = req.body.status || video.status;
 
   const updatedVideo = await video.save();

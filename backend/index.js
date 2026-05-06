@@ -15,6 +15,7 @@ import cors from "cors";
 // Configurations & Utilities
 import connectDB from "./src/config/db.config.js";
 import configurePassport from "./src/config/passport.config.js";
+import configureCloudinary from "./src/config/cloudinary.config.js";
 
 // Routes
 import userRoute from "./src/routes/UserRoute.route.js";
@@ -25,6 +26,7 @@ import videoRoute from "./src/routes/VideoRoute.route.js";
 // ==========================================
 dotenv.config(); // Load environment variables from .env file
 configurePassport(); // Initialize Passport OAuth strategies
+configureCloudinary(); // Cloudinary
 connectDB(); // Establish connection to MongoDB
 
 const app = express();

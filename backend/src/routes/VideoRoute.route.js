@@ -10,14 +10,25 @@ import {
   unlikeVideo,
 } from "../controllers/VideoController.controller.js";
 import protect from "../middlewares/Auth.middleware.js";
+import { uploadVideo, uploadImage } from "../config/cloudinary.config.js";
 
 const router = express.Router();
 
 router.get("/", getVideos);
-router.post("/", protect, createVideo);
+router.post(
+  "/",
+  protect,
+  uploadVideo.single("video"), // Upload video file
+  createVideo,
+);
 router.get("/user/:userId", getVideosByUser);
 router.get("/:id", getVideoById);
-router.put("/:id", protect, updateVideo);
+router.put(
+  "/:id",
+  protect,
+  uploadImage.single("thumbnail"), // Upload thumbnail
+  updateVideo,
+);
 router.delete("/:id", protect, deleteVideo);
 router.post("/:id/like", protect, likeVideo);
 router.post("/:id/unlike", protect, unlikeVideo);
