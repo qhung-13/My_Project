@@ -193,33 +193,52 @@ const WatchVideo = () => {
           </div>
         </div>
         <div className="info-actions">
-          {uploaderId !== authUser?._id && (
-            <button className="btn-follow" onClick={handleFollow}>
-              {isFollowing ? "Following" : "Follow"}
-            </button>
-          )}
+          {/* Follow */}
+          <button
+            className="btn-follow"
+            onClick={handleFollow}
+            disabled={uploaderId === authUser?._id}
+            style={{
+              opacity: uploaderId === authUser?._id ? 0.4 : 1,
+              cursor: uploaderId === authUser?._id ? "not-allowed" : "pointer",
+            }}
+          >
+            {isFollowing ? "Following" : "Follow"}
+          </button>
 
-          {uploaderId !== authUser?._id && (
-            <button
-              className={`btn-follow ${isLiked ? "btn-follow--active" : ""}`}
-              onClick={handleLike}
-              style={{ display: "flex", alignItems: "center", gap: "4px" }}
-            >
-              <ThumbsUp size={16} />
-              {video.likesCount}
-            </button>
-          )}
+          {/* Like */}
+          <button
+            className={`btn-follow ${isLiked ? "btn-follow--active" : ""}`}
+            onClick={handleLike}
+            disabled={uploaderId === authUser?._id}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              opacity: uploaderId === authUser?._id ? 0.4 : 1,
+              cursor: uploaderId === authUser?._id ? "not-allowed" : "pointer",
+            }}
+          >
+            <ThumbsUp size={16} />
+            {video.likesCount}
+          </button>
 
-          {uploaderId !== authUser?._id && (
-            <button
-              className={`btn-follow ${isDisliked ? "btn-follow--active" : ""}`}
-              onClick={handleDislike}
-              style={{ display: "flex", alignItems: "center", gap: "4px" }}
-            >
-              <ThumbsDown size={16} />
-              {video.dislikesCount}
-            </button>
-          )}
+          {/* Dislike */}
+          <button
+            className={`btn-follow ${isDisliked ? "btn-follow--active" : ""}`}
+            onClick={handleDislike}
+            disabled={uploaderId === authUser?._id}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              opacity: uploaderId === authUser?._id ? 0.4 : 1,
+              cursor: uploaderId === authUser?._id ? "not-allowed" : "pointer",
+            }}
+          >
+            <ThumbsDown size={16} />
+            {video.dislikesCount}
+          </button>
           <button className="btn-more">
             <MoreHorizontal size={18} />
           </button>
