@@ -77,11 +77,26 @@ const getVideoById = asyncHandler(async (req, res) => {
     throw new Error("Video not found");
   }
 
-  // Tăng view count
+  res.status(200).json(video);
+});
+
+const increaseView = asyncHandler(async (req, res) => {
+  const video = await Video.findById(req.params.id).populate(
+    "userId",
+    "username displayName avatar",
+  );
+
+  if (!video) {
+    res.status(404);
+    throw new Error("Video not found");
+  }
+
   video.views += 1;
   await video.save();
 
-  res.status(200).json(video);
+  res.status(200).json({
+    success: true,
+  });
 });
 
 // ─────────────────────────────────────────────
@@ -321,4 +336,5 @@ export {
   searchVideos,
   dislikeVideo,
   undislikeVideo,
+  increaseView,
 };

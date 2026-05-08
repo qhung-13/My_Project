@@ -103,6 +103,11 @@ export const videoApi = createApi({
       query: (id) => ({ url: `/videos/${id}/undislike`, method: "POST" }),
       invalidatesTags: ["Video"],
     }),
+
+    increaseView: builder.mutation({
+      query: (id) => ({ url: `/videos/${id}/view`, method: "PUT" }),
+      invalidatesTags: ["Video"],
+    }),
   }),
 });
 
@@ -118,4 +123,7 @@ export const {
   useDeleteCommentMutation,
   useLikeCommentMutation,
   useUnlikeCommentMutation,
+  useDislikeVideoMutation,
+  useUndislikeVideoMutation,
+  useIncreaseViewMutation,
 } = videoApi;

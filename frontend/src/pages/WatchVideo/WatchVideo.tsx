@@ -1,8 +1,15 @@
-import { MessageSquare, MoreHorizontal, Send, ThumbsUp } from "lucide-react";
-import { useState, useEffect } from "react";
+import {
+  MessageSquare,
+  MoreHorizontal,
+  Send,
+  ThumbsUp,
+  ThumbsDown,
+} from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
+import type { Video, Comment } from "../../types/index";
 import {
   useGetVideoByIdQuery,
   useGetVideosQuery,
@@ -11,6 +18,9 @@ import {
   useDeleteCommentMutation,
   useLikeVideoMutation,
   useUnlikeVideoMutation,
+  useDislikeVideoMutation,
+  useUndislikeVideoMutation,
+  useIncreaseViewMutation,
 } from "../../store/api/videoApi";
 import {
   useFollowUserMutation,
@@ -19,48 +29,12 @@ import {
 } from "../../store/api/userApi";
 import "./WatchVideo.css";
 
-interface Comment {
-  _id: string;
-  userId: {
-    _id: string;
-    username: string;
-    displayName?: string;
-    avatar?: string | null;
-  };
-  content: string;
-  likesCount: number;
-  createdAt: string;
-}
-
-interface Video {
-  _id: string;
-  userId:
-    | {
-        _id: string;
-        username: string;
-        displayName?: string;
-        avatar?: string | null;
-      }
-    | string;
-  title: string;
-  description: string;
-  videoUrl: string;
-  thumbnailUrl: string | null;
-  duration: number;
-  views: number;
-  likes: string[];
-  likesCount: number;
-  category: string;
-  tags: string[];
-  status: string;
-  createdAt: string;
-}
-
 const WatchVideo = () => {
   const { videoId } = useParams<{ videoId: string }>();
   const navigate = useNavigate();
   const [isCommentOpen, setIsCommentOpen] = useState(false);
   const [commentText, setCommentText] = useState("");
+  const hasViewed = useRef(false);
 
   const { user: authUser } = useSelector((state: RootState) => state.auth);
 
@@ -70,7 +44,6 @@ const WatchVideo = () => {
   const { data: allVideos } = useGetVideosQuery(undefined);
   const { data: comments } = useGetCommentsQuery(videoId!, { skip: !videoId });
 
-  // ✅ Khai báo uploaderId và uploaderName 1 lần duy nhất
   const uploaderId =
     typeof video?.userId === "object" ? video?.userId?._id : video?.userId;
   const uploaderPopulated =
@@ -93,10 +66,24 @@ const WatchVideo = () => {
   const [unlikeVideo] = useUnlikeVideoMutation();
   const [createComment] = useCreateCommentMutation();
   const [deleteComment] = useDeleteCommentMutation();
+  const [dislikeVideo] = useDislikeVideoMutation();
+  const [undislikeVideo] = useUndislikeVideoMutation();
+  const [increaseView] = useIncreaseViewMutation();
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [videoId]);
+
+  useEffect(() => {
+    hasViewed.current = false;
+  }, [videoId]);
+
+  useEffect(() => {
+    if (videoId && !hasViewed.current) {
+      hasViewed.current = true;
+      increaseView(videoId);
+    }
+  }, [videoId, increaseView]);
 
   const isFollowing =
     uploaderData?.followers?.some(
@@ -152,6 +139,20 @@ const WatchVideo = () => {
   if (!video)
     return <div className="watch-video__loading">Video not found</div>;
 
+  const isDisliked =
+    video?.dislikes?.some((id: string) => id.toString() === authUser?._id) ??
+    false;
+
+  const handleDislike = async () => {
+    if (!videoId) return;
+    try {
+      if (isDisliked) await undislikeVideo(videoId).unwrap();
+      else await dislikeVideo(videoId).unwrap();
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
   return (
     <div className="watch-live">
       <div className="watch-live__video">
@@ -197,14 +198,28 @@ const WatchVideo = () => {
               {isFollowing ? "Following" : "Follow"}
             </button>
           )}
-          <button
-            className={`btn-follow ${isLiked ? "btn-follow--active" : ""}`}
-            onClick={handleLike}
-            style={{ display: "flex", alignItems: "center", gap: "4px" }}
-          >
-            <ThumbsUp size={16} />
-            {video.likesCount}
-          </button>
+
+          {uploaderId !== authUser?._id && (
+            <button
+              className={`btn-follow ${isLiked ? "btn-follow--active" : ""}`}
+              onClick={handleLike}
+              style={{ display: "flex", alignItems: "center", gap: "4px" }}
+            >
+              <ThumbsUp size={16} />
+              {video.likesCount}
+            </button>
+          )}
+
+          {uploaderId !== authUser?._id && (
+            <button
+              className={`btn-follow ${isDisliked ? "btn-follow--active" : ""}`}
+              onClick={handleDislike}
+              style={{ display: "flex", alignItems: "center", gap: "4px" }}
+            >
+              <ThumbsDown size={16} />
+              {video.dislikesCount}
+            </button>
+          )}
           <button className="btn-more">
             <MoreHorizontal size={18} />
           </button>

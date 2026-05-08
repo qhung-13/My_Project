@@ -11,6 +11,7 @@ import {
   searchVideos,
   dislikeVideo,
   undislikeVideo,
+  increaseView,
 } from "../controllers/VideoController.controller.js";
 import protect from "../middlewares/Auth.middleware.js";
 import { uploadVideo, uploadImage } from "../config/cloudinary.config.js";
@@ -27,6 +28,7 @@ router.post(
 router.get("/search", searchVideos);
 router.get("/user/:userId", getVideosByUser);
 router.get("/:id", getVideoById);
+router.put("/:id/view", increaseView);
 router.put(
   "/:id",
   protect,

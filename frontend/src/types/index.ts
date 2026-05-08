@@ -38,8 +38,23 @@ export interface Video {
   views: number;
   likes: string[];
   likesCount: number;
+  dislikes: string[];
+  dislikesCount: number;
   category: string;
   tags: string[];
   status: string;
+  createdAt: string;
+}
+
+export interface Comment {
+  _id: string;
+  userId: {
+    _id: string;
+    username: string;
+    displayName?: string;
+    avatar?: string | null;
+  };
+  content: string;
+  likesCount: number;
   createdAt: string;
 }
