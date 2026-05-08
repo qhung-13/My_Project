@@ -210,6 +210,43 @@ const unlikeVideo = asyncHandler(async (req, res) => {
   res.status(200).json({ message: "Video unliked successfully" });
 });
 
+// ─────────────────────────────────────────────
+// @desc    Search and filter videos
+// @route   GET /api/videos/search
+// @access  Public
+// ─────────────────────────────────────────────
+const searchVideos = asyncHandler(async (req, res) => {
+  const { q, category, sort } = req.query;
+
+  // Build query
+  const query = { status: "public" };
+
+  // Search by title hoặc description
+  if (q) {
+    query.$or = [
+      { title: { $regex: q, $options: "i" } },
+      { description: { $regex: q, $options: "i" } },
+    ];
+  }
+
+  // Filter by category
+  if (category) {
+    query.category = category;
+  }
+
+  // Sort options
+  let sortOption = { createdAt: -1 }; // Mặc định mới nhất
+  if (sort === "views") sortOption = { views: -1 };
+  if (sort === "likes") sortOption = { likesCount: -1 };
+  if (sort === "oldest") sortOption = { createdAt: 1 };
+
+  const videos = await Video.find(query)
+    .populate("userId", "username displayName avatar")
+    .sort(sortOption);
+
+  res.status(200).json(videos);
+});
+
 export {
   createVideo,
   getVideos,
@@ -219,4 +256,5 @@ export {
   deleteVideo,
   likeVideo,
   unlikeVideo,
+  searchVideos
 };

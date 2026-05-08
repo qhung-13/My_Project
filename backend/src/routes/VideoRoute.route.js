@@ -8,6 +8,7 @@ import {
   deleteVideo,
   likeVideo,
   unlikeVideo,
+  searchVideos,
 } from "../controllers/VideoController.controller.js";
 import protect from "../middlewares/Auth.middleware.js";
 import { uploadVideo, uploadImage } from "../config/cloudinary.config.js";
@@ -21,6 +22,7 @@ router.post(
   uploadVideo.single("video"), // Upload video file
   createVideo,
 );
+router.get("/search", searchVideos);
 router.get("/user/:userId", getVideosByUser);
 router.get("/:id", getVideoById);
 router.put(
