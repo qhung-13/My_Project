@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
+
 import {
   useGetProfileQuery,
   useGetUserByIdQuery,
   useFollowUserMutation,
   useUnfollowUserMutation,
 } from "../../store/api/userApi";
+import { useGetVideosByUserQuery } from "../../store/api/videoApi";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
+import type { Video } from "../../types/index";
 import EditProfile from "../../components/EditProfile/EditProfile";
 import "./Profile.css";
 
@@ -35,6 +38,12 @@ const Profile = () => {
     {
       skip: isMyProfile || !userId,
     },
+  );
+
+  const profileUserId = isMyProfile ? authUser?._id : otherProfile?._id;
+  const { data: videos, isLoading: isVideosLoading } = useGetVideosByUserQuery(
+    profileUserId,
+    { skip: !profileUserId },
   );
 
   const isFollowing = isMyProfile
@@ -160,10 +169,41 @@ const Profile = () => {
       {/* Tab content */}
       <div className="profile__content">
         {activeTab === "VODs" && (
-          <div className="profile__empty">
-            <span>📹</span>
-            <p>Chưa có VOD nào</p>
-            {isMyProfile && <span>Bắt đầu stream để tạo VOD đầu tiên!</span>}
+          <div className="profile__content">
+            {isVideosLoading ? (
+              <div className="profile__loading">Loading...</div>
+            ) : videos && videos.length > 0 ? (
+              <ul className="profile__vod-list">
+                {videos.map((video: Video) => (
+                  <li className="vod-card" key={video._id}>
+                    <div className="vod-card__thumb">
+                      {video.thumbnailUrl ? (
+                        <img src={video.thumbnailUrl} alt={video.title} />
+                      ) : (
+                        <div className="vod-card__thumb-placeholder" />
+                      )}
+                      <span className="vod-card__duration">
+                        {video.duration}s
+                      </span>
+                    </div>
+                    <div className="vod-card__info">
+                      <div className="vod-card__title">{video.title}</div>
+                      <div className="vod-card__meta">
+                        {video.views} views · {video.category}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="profile__empty">
+                <span>📹</span>
+                <p>Chưa có VOD nào</p>
+                {isMyProfile && (
+                  <span>Bắt đầu stream để tạo VOD đầu tiên!</span>
+                )}
+              </div>
+            )}
           </div>
         )}
         {activeTab === "Clips" && (

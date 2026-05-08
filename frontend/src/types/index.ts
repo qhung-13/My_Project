@@ -18,3 +18,18 @@ export interface RegisterProps {
   onClose: () => void;
   onSwitch: () => void;
 }
+
+//
+export interface Video {
+  _id: string;
+  title: string;
+  description: string;
+  videoUrl: string;
+  thumbnailUrl: string | null;
+  duration: number;
+  views: number;
+  category: string;
+  tags: string[];
+  status: string;
+  createdAt: string;
+}
