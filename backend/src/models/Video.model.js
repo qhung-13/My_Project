@@ -47,6 +47,8 @@ const videoSchema = new mongoose.Schema(
       enum: ["public", "private", "processing"],
       default: "processing",
     },
+    dislikes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    dislikesCount: { type: Number, default: 0 },
   },
   {
     timestamps: true,

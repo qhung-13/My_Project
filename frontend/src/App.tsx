@@ -9,6 +9,7 @@ import { Route, Routes, Navigate } from "react-router-dom";
 import Footer from "./layout/Footer/Footer";
 import WatchLive from "./pages/WatchLive/WatchLive";
 import Profile from "./pages/Profile/Profile";
+import WatchVideo from "./pages/WatchVideo/WatchVideo";
 
 function App() {
   const [darkMode, setDarkMode] = useState<boolean>(false);
@@ -25,6 +26,7 @@ function App() {
         <Route path="/stream/:streamerId" element={<WatchLive />} />
         <Route path="/profile/me" element={<Profile />} />
         <Route path="/profile/:userId" element={<Profile />} />
+        <Route path="/video/:videoId" element={<WatchVideo />} />
       </Routes>
 
       <Footer />

@@ -22,12 +22,22 @@ export interface RegisterProps {
 //
 export interface Video {
   _id: string;
+  userId:
+    | {
+        _id: string;
+        username: string;
+        displayName?: string;
+        avatar?: string | null;
+      }
+    | string; // Có thể là object (populated) hoặc string (id)
   title: string;
   description: string;
   videoUrl: string;
   thumbnailUrl: string | null;
   duration: number;
   views: number;
+  likes: string[];
+  likesCount: number;
   category: string;
   tags: string[];
   status: string;

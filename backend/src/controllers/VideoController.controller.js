@@ -247,6 +247,68 @@ const searchVideos = asyncHandler(async (req, res) => {
   res.status(200).json(videos);
 });
 
+// ─────────────────────────────────────────────
+// @desc    Dislike a video
+// @route   POST /api/videos/:id/dislike
+// @access  Private
+// ─────────────────────────────────────────────
+const dislikeVideo = asyncHandler(async (req, res) => {
+  const video = await Video.findById(req.params.id);
+
+  if (!video) {
+    res.status(404);
+    throw new Error("Video not found");
+  }
+
+  const alreadyDisliked = video.dislikes.some(
+    (id) => id.toString() === req.user._id.toString(),
+  );
+
+  if (alreadyDisliked) {
+    res.status(400);
+    throw new Error("You have already disliked this video");
+  }
+
+  // Nếu đang like thì bỏ like trước
+  await Video.findByIdAndUpdate(req.params.id, {
+    $pull: { likes: req.user._id },
+    $push: { dislikes: req.user._id },
+    $inc: { dislikesCount: 1 },
+  });
+
+  res.status(200).json({ message: "Video disliked successfully" });
+});
+
+// ─────────────────────────────────────────────
+// @desc    Undislike a video
+// @route   POST /api/videos/:id/undislike
+// @access  Private
+// ─────────────────────────────────────────────
+const undislikeVideo = asyncHandler(async (req, res) => {
+  const video = await Video.findById(req.params.id);
+
+  if (!video) {
+    res.status(404);
+    throw new Error("Video not found");
+  }
+
+  const alreadyDisliked = video.dislikes.some(
+    (id) => id.toString() === req.user._id.toString(),
+  );
+
+  if (!alreadyDisliked) {
+    res.status(400);
+    throw new Error("You have not disliked this video");
+  }
+
+  await Video.findByIdAndUpdate(req.params.id, {
+    $pull: { dislikes: req.user._id },
+    $inc: { dislikesCount: -1 },
+  });
+
+  res.status(200).json({ message: "Video undisliked successfully" });
+});
+
 export {
   createVideo,
   getVideos,
@@ -256,5 +318,7 @@ export {
   deleteVideo,
   likeVideo,
   unlikeVideo,
-  searchVideos
+  searchVideos,
+  dislikeVideo,
+  undislikeVideo,
 };

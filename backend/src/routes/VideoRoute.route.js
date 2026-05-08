@@ -9,6 +9,8 @@ import {
   likeVideo,
   unlikeVideo,
   searchVideos,
+  dislikeVideo,
+  undislikeVideo,
 } from "../controllers/VideoController.controller.js";
 import protect from "../middlewares/Auth.middleware.js";
 import { uploadVideo, uploadImage } from "../config/cloudinary.config.js";
@@ -34,5 +36,7 @@ router.put(
 router.delete("/:id", protect, deleteVideo);
 router.post("/:id/like", protect, likeVideo);
 router.post("/:id/unlike", protect, unlikeVideo);
+router.post("/:id/dislike", protect, dislikeVideo);
+router.post("/:id/undislike", protect, undislikeVideo);
 
 export default router;

@@ -93,6 +93,16 @@ export const videoApi = createApi({
       }),
       invalidatesTags: ["Comment"],
     }),
+
+    dislikeVideo: builder.mutation({
+      query: (id) => ({ url: `/videos/${id}/dislike`, method: "POST" }),
+      invalidatesTags: ["Video"],
+    }),
+
+    undislikeVideo: builder.mutation({
+      query: (id) => ({ url: `/videos/${id}/undislike`, method: "POST" }),
+      invalidatesTags: ["Video"],
+    }),
   }),
 });
 

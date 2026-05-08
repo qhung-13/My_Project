@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import {
   useGetProfileQuery,
@@ -22,6 +23,7 @@ const Profile = () => {
   const [showEdit, setShowEdit] = useState(false);
   const [followUser] = useFollowUserMutation();
   const [unfollowUser] = useUnfollowUserMutation();
+  const navigate = useNavigate();
 
   const { user: authUser } = useSelector((state: RootState) => state.auth);
   const isMyProfile = !userId || userId === "me" || userId === authUser?._id;
@@ -175,7 +177,11 @@ const Profile = () => {
             ) : videos && videos.length > 0 ? (
               <ul className="profile__vod-list">
                 {videos.map((video: Video) => (
-                  <li className="vod-card" key={video._id}>
+                  <li
+                    className="vod-card"
+                    key={video._id}
+                    onClick={() => navigate(`/video/${video._id}`)}
+                  >
                     <div className="vod-card__thumb">
                       {video.thumbnailUrl ? (
                         <img src={video.thumbnailUrl} alt={video.title} />
