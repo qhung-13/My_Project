@@ -49,6 +49,11 @@ const videoSchema = new mongoose.Schema(
     },
     dislikes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     dislikesCount: { type: Number, default: 0 },
+    type: {
+      type: String,
+      enum: ["clip", "vod"],
+      default: "clip",
+    },
   },
   {
     timestamps: true,

@@ -44,6 +44,7 @@ export interface Video {
   tags: string[];
   status: string;
   createdAt: string;
+  type: string;
 }
 
 export interface Comment {

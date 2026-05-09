@@ -7,7 +7,7 @@ import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
 // @access  Private
 // ─────────────────────────────────────────────
 const createVideo = asyncHandler(async (req, res) => {
-  const { title, description, duration, category, tags } = req.body;
+  const { title, description, duration, category, tags, type } = req.body;
   const userId = req.user._id;
 
   if (!title || !description || !duration || !category) {
@@ -30,6 +30,7 @@ const createVideo = asyncHandler(async (req, res) => {
     duration,
     category,
     tags: tags ? tags.split(",") : [],
+    type: type || "clip",
     status: "processing",
   });
 

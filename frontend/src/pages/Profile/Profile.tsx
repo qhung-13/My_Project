@@ -78,6 +78,10 @@ const Profile = () => {
     }
   };
 
+  const vodVideos = videos?.filter((v: Video) => v.type === "vod") || [];
+
+  const clipVideos = videos?.filter((v: Video) => v.type === "clip") || [];
+
   return (
     <div className="profile">
       {/* Banner */}
@@ -149,6 +153,12 @@ const Profile = () => {
 
         {isMyProfile && (
           <div className="profile__actions">
+            <button
+              className="profile__action-btn"
+              onClick={() => navigate("/upload")}
+            >
+              ✂️ Upload Clip
+            </button>
             <button className="profile__action-btn">⚙️ Cài đặt</button>
             <button className="profile__action-btn">📊 Dashboard</button>
           </div>
@@ -176,7 +186,7 @@ const Profile = () => {
               <div className="profile__loading">Loading...</div>
             ) : videos && videos.length > 0 ? (
               <ul className="profile__vod-list">
-                {videos.map((video: Video) => (
+                {vodVideos.map((video: Video) => (
                   <li
                     className="vod-card"
                     key={video._id}
@@ -213,9 +223,47 @@ const Profile = () => {
           </div>
         )}
         {activeTab === "Clips" && (
-          <div className="profile__empty">
-            <span>🎬</span>
-            <p>Chưa có Clip nào</p>
+          <div className="profile__content">
+            {isVideosLoading ? (
+              <div className="profile__loading">Loading...</div>
+            ) : clipVideos.length > 0 ? (
+              <ul className="profile__vod-list">
+                {clipVideos.map((video: Video) => (
+                  <li
+                    className="vod-card"
+                    key={video._id}
+                    onClick={() => navigate(`/video/${video._id}`)}
+                  >
+                    <div className="vod-card__thumb">
+                      {video.thumbnailUrl ? (
+                        <img src={video.thumbnailUrl} alt={video.title} />
+                      ) : (
+                        <div className="vod-card__thumb-placeholder" />
+                      )}
+                      <span className="vod-card__duration">
+                        {video.duration}s
+                      </span>
+                    </div>
+                    <div className="vod-card__info">
+                      <div className="vod-card__title">{video.title}</div>
+                      <div className="vod-card__meta">
+                        {video.views} views · {video.category}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="profile__empty">
+                <span>🎬</span>
+                <p>Chưa có Clip nào</p>
+                {isMyProfile && (
+                  <button onClick={() => navigate("/upload")}>
+                    Upload Clip đầu tiên!
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
         {activeTab === "About" && (
