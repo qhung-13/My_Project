@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import instance from "../../utils/axios";
 
+import "./UploadVideo.css";
+
 const UploadVideo = () => {
   const navigate = useNavigate();
 
@@ -62,44 +64,55 @@ const UploadVideo = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      {error && <p>{error}</p>}
+    <form className="upload-video" onSubmit={handleSubmit}>
+      {error && <p className="upload-video__error">{error}</p>}
 
-      <input
-        type="file"
-        accept="video/*"
-        onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
-      />
-
-      <div>
-        <label>Title</label>
+      <div className="upload-video__field upload-video__field--file">
+        <label className="upload-video__label">Video</label>
         <input
+          className="upload-video__file-input"
+          type="file"
+          accept="video/*"
+          onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+        />
+      </div>
+
+      <div className="upload-video__field">
+        <label className="upload-video__label">Title</label>
+        <input
+          className="upload-video__input"
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
       </div>
 
-      <div>
-        <label>Description</label>
+      <div className="upload-video__field">
+        <label className="upload-video__label">Description</label>
         <input
+          className="upload-video__input"
           type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
       </div>
 
-      <div>
-        <label>Category</label>
-        <select value={category} onChange={(e) => setCategory(e.target.value)}>
+      <div className="upload-video__field">
+        <label className="upload-video__label">Category</label>
+        <select
+          className="upload-video__select"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        >
           <option value="LOL">LOL</option>
           <option value="PUBG">PUBG</option>
         </select>
       </div>
 
-      <div>
-        <label>Tags</label>
+      <div className="upload-video__field">
+        <label className="upload-video__label">Tags</label>
         <input
+          className="upload-video__input"
           type="text"
           placeholder="gaming, lol, ..."
           value={tags}
@@ -107,16 +120,17 @@ const UploadVideo = () => {
         />
       </div>
 
-      <div>
-        <label>Thumbnail</label>
+      <div className="upload-video__field upload-video__field--file">
+        <label className="upload-video__label">Thumbnail</label>
         <input
+          className="upload-video__file-input"
           type="file"
           accept="image/*"
           onChange={(e) => setThumbnail(e.target.files?.[0] || null)}
         />
       </div>
 
-      <button type="submit" disabled={loading}>
+      <button className="upload-video__btn" type="submit" disabled={loading}>
         {loading ? "Uploading..." : "Upload"}
       </button>
     </form>
