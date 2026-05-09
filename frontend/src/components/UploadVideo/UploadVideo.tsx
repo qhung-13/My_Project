@@ -23,25 +23,35 @@ const UploadVideo = () => {
       return;
     }
 
-    // Step 2: Create FormData
-    const formData = new FormData();
-    formData.append("video", videoFile);
-    formData.append("title", title);
-    formData.append("description", description);
-    formData.append("category", category);
-    formData.append("tags", tags);
-    formData.append("duration", "0");
-    formData.append("type", "clip");
-    if (thumbnail) formData.append("thumbnail", thumbnail);
-
     setLoading(true);
     try {
-      // Step 3: Call API
-      await instance.post("/videos", formData, {
+      // Step 1: Upload video
+      const formData = new FormData();
+      formData.append("video", videoFile);
+      formData.append("title", title);
+      formData.append("description", description);
+      formData.append("category", category);
+      formData.append("tags", tags);
+      formData.append("duration", "0");
+      formData.append("type", "clip");
+
+      const res = await instance.post("/videos", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // Step 4: Redirect to profile
+      const videoId = res.data._id;
+
+      // Step 2: Upload thumbnail if have
+      if (thumbnail && videoId) {
+        const thumbFormData = new FormData();
+        thumbFormData.append("thumbnail", thumbnail);
+        thumbFormData.append("status", "public");
+
+        await instance.put(`/videos/${videoId}`, thumbFormData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
+
       navigate("/profile/me");
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };

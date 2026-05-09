@@ -36,4 +36,10 @@ const imageStorage = new CloudinaryStorage({
 
 export const uploadVideo = multer({ storage: videoStorage });
 export const uploadImage = multer({ storage: imageStorage });
+export const uploadVideoWithThumbnail = multer({
+  storage: multer.memoryStorage(),
+}).fields([
+  { name: "video", maxCount: 1 },
+  { name: "thumbnail", maxCount: 1 },
+]);
 export default configureCloudinary;
