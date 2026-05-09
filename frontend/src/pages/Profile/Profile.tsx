@@ -184,7 +184,7 @@ const Profile = () => {
           <div className="profile__content">
             {isVideosLoading ? (
               <div className="profile__loading">Loading...</div>
-            ) : videos && videos.length > 0 ? (
+            ) : vodVideos.length > 0 ? (
               <ul className="profile__vod-list">
                 {vodVideos.map((video: Video) => (
                   <li
