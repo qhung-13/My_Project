@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Search,
   TvMinimalPlay,
@@ -55,6 +55,7 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
   const [countries, setCountries] = useState<Country[]>([]);
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -69,6 +70,13 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
     dispatch(clearUser());
     setShowUserMenu(false);
     navigate("/home");
+  };
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && searchQuery.trim()) {
+      navigate(`/search?q=${searchQuery.trim()}`);
+      setSearchQuery("");
+    }
   };
 
   // Fetch countries
@@ -125,6 +133,9 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
               type="text"
               placeholder="Search..."
               className="header__search-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearch}
             />
             <button className="header__search-btn">
               <Search className="header__icon" />

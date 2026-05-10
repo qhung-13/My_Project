@@ -11,6 +11,7 @@ import WatchLive from "./pages/WatchLive/WatchLive";
 import Profile from "./pages/Profile/Profile";
 import WatchVideo from "./pages/WatchVideo/WatchVideo";
 import UploadVideo from "./components/UploadVideo/UploadVideo";
+import Search from "./pages/Search/Search";
 
 function App() {
   const [darkMode, setDarkMode] = useState<boolean>(false);
@@ -29,6 +30,7 @@ function App() {
         <Route path="/profile/:userId" element={<Profile />} />
         <Route path="/video/:videoId" element={<WatchVideo />} />
         <Route path="/upload" element={<UploadVideo />} />
+        <Route path="/search" element={<Search />} />
       </Routes>
 
       <Footer />
