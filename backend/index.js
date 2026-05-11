@@ -74,6 +74,41 @@ const io = new Server(httpServer, {
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
+  // -- Join stream room --
+  // When user join stream, client sent event "join-stream"
+  socket.on("join-stream", (streamId) => {
+    socket.join(`stream:${streamId}`);
+    console.log(`User ${socket.id} joined stream: ${streamId}`);
+
+    // Announce the current number of viewers in the room
+    const viewerCount =
+      io.sockets.adapter.rooms.get(`stream:${streamId}`)?.size || 0;
+    io.to(`stream:${streamId}`).emit("viewer-count", viewerCount);
+  });
+
+  // Leave stream room
+  socket.on("leave-stream", (streamId) => {
+    socket.leave(`stream:${streamId}`);
+    console.log(`User ${socket.id} left stream: ${streamId}`);
+
+    // Update the number of viewers after
+    const viewerCount =
+      io.sockets.adapter.rooms.get(`stream:${streamId}`)?.size || 0;
+    io.to(`stream:${streamId}`).emit("viewer-count", viewerCount);
+  });
+
+  // Send chat
+  // When user sent message, client sent event "chat-message"
+  socket.on("chat-message", ({ streamId, message, user }) => {
+    // Broadcast message sent all in room
+    io.to(`stream:${streamId}`).emit("chat-message", {
+      id: Date.now(),
+      user,
+      message,
+      timestamp: new Date(),
+    });
+  });
+  
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
   });
