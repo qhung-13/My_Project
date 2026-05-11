@@ -11,6 +11,8 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import passport from "passport";
 import cors from "cors";
+import { createServer } from "http";
+import { Server } from "socket.io";
 
 // Configurations & Utilities
 import connectDB from "./src/config/db.config.js";
@@ -26,20 +28,24 @@ import streamRoute from "./src/routes/StreamRoute.route.js";
 // ==========================================
 // Initialization & Database Connection
 // ==========================================
-dotenv.config(); // Load environment variables from .env file
-configurePassport(); // Initialize Passport OAuth strategies
-configureCloudinary(); // Cloudinary
-connectDB(); // Establish connection to MongoDB
+dotenv.config();
+
+configurePassport();
+configureCloudinary();
+connectDB();
 
 const app = express();
+const httpServer = createServer(app);
+
 const port = process.env.PORT || 5000;
 
 // ==========================================
 // Global Middlewares
 // ==========================================
-app.use(express.json()); // Parse incoming JSON payloads
-app.use(express.urlencoded({ extended: true })); // Parse URL-encoded payloads
-app.use(cookieParser()); // Parse Cookie header and populate req.cookies
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
 app.use(
   cors({
     origin: [
@@ -49,7 +55,29 @@ app.use(
     credentials: true,
   }),
 );
-app.use(passport.initialize()); // Initialize Passport for authentication
+
+app.use(passport.initialize());
+
+// ==========================================
+// Socket.IO
+// ==========================================
+const io = new Server(httpServer, {
+  cors: {
+    origin: [
+      "https://my-project-omega-roan.vercel.app",
+      "http://localhost:5173",
+    ],
+    credentials: true,
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+  });
+});
 
 // ==========================================
 // API Routes
@@ -57,11 +85,11 @@ app.use(passport.initialize()); // Initialize Passport for authentication
 app.use("/api/users", userRoute);
 app.use("/api/videos", videoRoute);
 app.use("/api/comments", commentRoute);
-app.use("api/streams", streamRoute);
+app.use("/api/streams", streamRoute);
 
 // ==========================================
 // Server Startup
 // ==========================================
-app.listen(port, () => {
+httpServer.listen(port, () => {
   console.log(`Server is running on port ${port}...`);
 });
