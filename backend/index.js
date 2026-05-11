@@ -21,6 +21,7 @@ import configureCloudinary from "./src/config/cloudinary.config.js";
 import userRoute from "./src/routes/UserRoute.route.js";
 import videoRoute from "./src/routes/VideoRoute.route.js";
 import commentRoute from "./src/routes/CommentRoute.route.js";
+import streamRoute from "./src/routes/StreamRoute.route.js";
 
 // ==========================================
 // Initialization & Database Connection
@@ -56,6 +57,7 @@ app.use(passport.initialize()); // Initialize Passport for authentication
 app.use("/api/users", userRoute);
 app.use("/api/videos", videoRoute);
 app.use("/api/comments", commentRoute);
+app.use("api/streams", streamRoute);
 
 // ==========================================
 // Server Startup
