@@ -1,92 +1,18 @@
 import { MessageSquare, Play, MoreHorizontal, Send } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatViewers } from "../../utils/format";
 import "./WatchLive.css";
 import { useNavigate, useParams } from "react-router-dom";
 import { STREAMS } from "../../data/stream";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
+import type {ChatMessage} from "../../types/index"
 import {
   useFollowUserMutation,
   useUnfollowUserMutation,
   useGetUserByIdQuery,
 } from "../../store/api/userApi";
-
-// ============================================================
-// Mock chat data
-// ============================================================
-const MESSAGES = [
-  {
-    id: 1,
-    user: "NhokKute",
-    color: "#E24B4A",
-    initials: "NK",
-    text: "gg ez win 🔥",
-  },
-  {
-    id: 2,
-    user: "GalaxyX",
-    color: "#534AB7",
-    initials: "GX",
-    text: "pro gameplay! 🎮",
-  },
-  {
-    id: 3,
-    user: "CSProVN",
-    color: "#0F6E56",
-    initials: "CS",
-    text: "go go tiger!!",
-  },
-  {
-    id: 4,
-    user: "ProBattle",
-    color: "#854F0B",
-    initials: "PB",
-    text: "đỉnh quá bro 👏",
-  },
-  {
-    id: 5,
-    user: "MixGaming",
-    color: "#993556",
-    initials: "MX",
-    text: "carry team ez 💪",
-  },
-  {
-    id: 6,
-    user: "TigerGaming",
-    color: "#1877F2",
-    initials: "TG",
-    text: "cảm ơn mọi người 🙏",
-  },
-  {
-    id: 7,
-    user: "NhokKute",
-    color: "#E24B4A",
-    initials: "NK",
-    text: "gg ez win 🔥",
-  },
-  {
-    id: 8,
-    user: "GalaxyX",
-    color: "#534AB7",
-    initials: "GX",
-    text: "pro gameplay! 🎮",
-  },
-  {
-    id: 9,
-    user: "CSProVN",
-    color: "#0F6E56",
-    initials: "CS",
-    text: "go go tiger!!",
-  },
-  {
-    id: 10,
-    user: "ProBattle",
-    color: "#854F0B",
-    initials: "PB",
-    text: "đỉnh quá bro 👏",
-  },
-];
+import socket from "../../utils/socket";
 
 // ============================================================
 // Component
@@ -96,7 +22,10 @@ const WatchLive = () => {
   const navigate = useNavigate();
 
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]); 
+  const [inputMessage, setInputMessage] = useState(""); 
+  const [viewerCount, setViewerCount] = useState(0);
+  const messageEndRef = useRef<HTMLDivElement>(null);
   const [prevId, setPrevId] = useState(id);
 
   const { user: authUser } = useSelector((state: RootState) => state.auth);
@@ -105,7 +34,6 @@ const WatchLive = () => {
 
   const currentStream = STREAMS.find((s) => s.id === id) || STREAMS[0];
 
-  // Reset chat when stream changes
   if (id !== prevId) {
     setPrevId(id);
     setIsChatOpen(false);
@@ -115,7 +43,31 @@ const WatchLive = () => {
     window.scrollTo(0, 0);
   }, [id]);
 
-  // Fetch streamer data to check follow status
+  useEffect(() => {
+    messageEndRef?.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  useEffect(() => {
+    const streamId = currentStream.id;
+    socket.connect();
+    socket.emit("join-stream", streamId);
+
+    socket.on("chat-message", (data: ChatMessage) => {
+      setMessages((prev) => [...prev, data]);
+    });
+
+    socket.on("viewer-count", (count: number) => {
+      setViewerCount(count);
+    });
+
+    return () => {
+      socket.emit("leave-stream", streamId);
+      socket.off("chat-message");
+      socket.off("viewer-count");
+      socket.disconnect();
+    };
+  }, [currentStream.id]);
+
   const { data: streamerData } = useGetUserByIdQuery(currentStream.userId, {
     skip: !currentStream.userId,
   });
@@ -128,14 +80,21 @@ const WatchLive = () => {
   const handleFollow = async () => {
     if (!currentStream.userId) return;
     try {
-      if (isFollowing) {
-        await unfollowUser(currentStream.userId).unwrap();
-      } else {
-        await followUser(currentStream.userId).unwrap();
-      }
+      if (isFollowing) await unfollowUser(currentStream.userId).unwrap();
+      else await followUser(currentStream.userId).unwrap();
     } catch (err) {
       console.log(err);
     }
+  };
+
+  const handleSendMessage = () => {
+    if (!inputMessage.trim()) return;
+    socket.emit("chat-message", {
+      streamId: currentStream.id,
+      message: inputMessage.trim(),
+      user: authUser?.username || "Anonymous",
+    });
+    setInputMessage("");
   };
 
   const suggestedStreams = STREAMS.filter(
@@ -148,9 +107,7 @@ const WatchLive = () => {
       <div className="watch-live__video">
         <div className="video-badges">
           <span className="badge-live">LIVE</span>
-          <span className="badge-viewers">
-            {formatViewers(currentStream.viewers)}
-          </span>
+          <span className="badge-viewers">{formatViewers(viewerCount)}</span>
         </div>
         <div className="video-play-btn">
           <Play size={36} fill="white" />
@@ -164,9 +121,8 @@ const WatchLive = () => {
             className="info-avatar"
             style={{ background: currentStream.avatarColor }}
             onClick={() => {
-              if (currentStream.userId) {
+              if (currentStream.userId)
                 navigate(`/profile/${currentStream.userId}`);
-              }
             }}
           >
             {currentStream.initials}
@@ -192,7 +148,6 @@ const WatchLive = () => {
 
       {/* ── Chat + Suggested ── */}
       <div className="watch-live__interactive">
-        {/* ── Chat panel ── */}
         <div className={`chat-panel ${isChatOpen ? "chat-panel--open" : ""}`}>
           <div
             className="chat-panel__tab"
@@ -214,42 +169,38 @@ const WatchLive = () => {
 
           <div className="chat-panel__content">
             <div className="chat-panel__messages">
-              {MESSAGES.map((msg) => (
+              {messages.map((msg) => (
                 <div className="chat-msg" key={msg.id}>
                   <div
                     className="chat-msg__avatar"
-                    style={{ background: msg.color }}
+                    style={{ background: "#6366f1" }}
                   >
-                    {msg.initials}
+                    {msg.user.slice(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <span
-                      className="chat-msg__user"
-                      style={{ color: msg.color }}
-                    >
-                      {msg.user}{" "}
-                    </span>
-                    <span className="chat-msg__text">{msg.text}</span>
+                    <span className="chat-msg__user">{msg.user} </span>
+                    <span className="chat-msg__text">{msg.message}</span>
                   </div>
                 </div>
               ))}
+              <div ref={messageEndRef} />
             </div>
 
             <div className="chat-panel__input">
               <input
                 type="text"
                 placeholder="Hãy nói điều gì đó..."
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                value={inputMessage} 
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSendMessage()} 
               />
-              <button className="chat-panel__send">
+              <button className="chat-panel__send" onClick={handleSendMessage}>
                 <Send size={14} />
               </button>
             </div>
           </div>
         </div>
 
-        {/* ── Stream Gợi Ý ── */}
         <div
           className={`suggested ${isChatOpen ? "suggested--hidden-mobile" : ""}`}
         >

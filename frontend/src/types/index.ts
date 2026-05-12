@@ -59,3 +59,10 @@ export interface Comment {
   likesCount: number;
   createdAt: string;
 }
+
+export interface ChatMessage {
+  id: number;
+  user: string;
+  message: string;
+  timestamp: Date;
+}
