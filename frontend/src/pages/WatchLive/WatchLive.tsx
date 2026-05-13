@@ -13,6 +13,7 @@ import {
   useGetUserByIdQuery,
 } from "../../store/api/userApi";
 import socket from "../../utils/socket";
+import Hls from "hls.js";
 
 // ============================================================
 // Component
@@ -27,6 +28,7 @@ const WatchLive = () => {
   const [viewerCount, setViewerCount] = useState(0);
   const messageEndRef = useRef<HTMLDivElement>(null);
   const [prevId, setPrevId] = useState(id);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const { user: authUser } = useSelector((state: RootState) => state.auth);
   const [followUser] = useFollowUserMutation();
@@ -66,6 +68,23 @@ const WatchLive = () => {
       socket.off("viewer-count");
       socket.disconnect();
     };
+  }, [currentStream.id]);
+
+  useEffect(() => {
+    const streamKey = currentStream.id;
+    const hlsUrl = `http://localhost:8000/live/${streamKey}/index.m3u8`;
+
+    if(Hls.isSupport()) {
+      const hls = new Hls();
+      hls.loadSource(hlsUrl);
+      hls.attachMedia(videoRef.current)
+
+      return () => {
+        hls.destroy()
+      }
+    } else if (videoRef.current?.canPlayType("application/vnd.apple.mpegurl")) {
+      videoRef.current.src = hlsUrl;
+    }
   }, [currentStream.id]);
 
   const { data: streamerData } = useGetUserByIdQuery(currentStream.userId, {
@@ -109,9 +128,13 @@ const WatchLive = () => {
           <span className="badge-live">LIVE</span>
           <span className="badge-viewers">{formatViewers(viewerCount)}</span>
         </div>
-        <div className="video-play-btn">
-          <Play size={36} fill="white" />
-        </div>
+         <video
+    ref={videoRef}
+    controls
+    autoPlay
+    muted
+    style={{ width: "100%", height: "100%", objectFit: "contain" }}
+  />
       </div>
 
       {/* ── Streamer info ── */}
