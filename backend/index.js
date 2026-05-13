@@ -18,6 +18,7 @@ import { Server } from "socket.io";
 import connectDB from "./src/config/db.config.js";
 import configurePassport from "./src/config/passport.config.js";
 import configureCloudinary from "./src/config/cloudinary.config.js";
+import configureMediaServer from "./src/config/mediaServer.config.js";
 
 // Routes
 import userRoute from "./src/routes/UserRoute.route.js";
@@ -32,6 +33,7 @@ dotenv.config();
 
 configurePassport();
 configureCloudinary();
+configureMediaServer();
 connectDB();
 
 const app = express();
@@ -108,7 +110,7 @@ io.on("connection", (socket) => {
       timestamp: new Date(),
     });
   });
-  
+
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
   });
