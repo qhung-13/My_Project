@@ -123,6 +123,43 @@ app.use("/api/users", userRoute);
 app.use("/api/videos", videoRoute);
 app.use("/api/comments", commentRoute);
 app.use("/api/streams", streamRoute);
+const serveHLS = (req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "*");
+  res.header("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.header("Pragma", "no-cache");
+  next();
+};
+
+app.use(
+  "/live",
+  (req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "*");
+
+    // Quan trọng cho HLS
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+
+    next();
+  },
+  express.static(path.join(process.cwd(), "media/live"), {
+    setHeaders: (res, filePath) => {
+      const ext = path.extname(filePath).toLowerCase();
+
+      if (ext === ".m3u8") {
+        res.setHeader("Content-Type", "application/vnd.apple.mpegurl");
+      } else if (ext === ".ts") {
+        res.setHeader("Content-Type", "video/MP2T");
+      } else if (ext === ".m4s") {
+        res.setHeader("Content-Type", "video/mp4");
+      }
+    },
+  }),
+);
 
 // ==========================================
 // Server Startup

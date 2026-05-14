@@ -21,18 +21,18 @@ const config = {
     mediaroot: "./media",
     allow_origin: "*",
   },
-  trans: {
-    ffmpeg: "ffmpeg",
-    tasks: [
-      {
-        app: "live",
-        hls: true,
-        hlsFlags: "[hls_time=2:hls_list_size=3:hls_flags=delete_segments]",
-        hlsKeep: true,
-        dash: false,
-      },
-    ],
-  },
+  // trans: {
+  //   ffmpeg: "ffmpeg",
+  //   tasks: [
+  //     {
+  //       app: "live",
+  //       hls: true,
+  //       hlsFlags: "[hls_time=2:hls_list_size=3:hls_flags=delete_segments]",
+  //       hlsKeep: false,
+  //       dash: false,
+  //     },
+  //   ],
+  // },
 };
 
 const configureMediaServer = () => {
@@ -50,19 +50,54 @@ const configureMediaServer = () => {
 
     const ffmpeg = spawn("ffmpeg", [
       "-i",
-      `rtmp://localhost/live/${path.split("/").pop()}`,
+      `rtmp://localhost:1935/live/${path.split("/").pop()}`,
+
       "-c:v",
-      "copy",
+      "libx264",
+      "-preset",
+      "veryfast",
+      "-tune",
+      "zerolatency",
+      "-crf",
+      "23",
+      "-profile:v",
+      "baseline", // ← Thêm cái này
+      "-level",
+      "3.1",
+      "-g",
+      "48", // GOP size quan trọng
+      "-keyint_min",
+      "48",
+      "-sc_threshold",
+      "0",
+
       "-c:a",
-      "copy",
+      "aac",
+      "-ar",
+      "44100",
+      "-b:a",
+      "128k",
+      "-ac",
+      "2",
+
       "-f",
       "hls",
+
       "-hls_time",
-      "2",
+      "4",
       "-hls_list_size",
-      "3",
+      "6",
       "-hls_flags",
-      "delete_segments",
+      "delete_segments+append_list+discont_start",
+      "-hls_segment_type",
+      "fmp4",
+      "-hls_fmp4_init_filename",
+      "init.mp4",
+      "-strftime",
+      "1",
+      "-hls_segment_filename",
+      `${folderPath}/seg_%Y%m%d_%H%M%S.m4s`,
+
       `${folderPath}/index.m3u8`,
     ]);
 
@@ -97,7 +132,7 @@ const configureMediaServer = () => {
     console.log("Viewer joined", path);
   });
 
-  console.log("Media server running on RTMP port 1935, HTTP port 8000");
+  console.log("Media server running on RTMP port 1935, HTTP port 5000");
 };
 
 export default configureMediaServer;

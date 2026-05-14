@@ -1,6 +1,7 @@
 export interface Stream {
   id: string;
   userId: string;
+  streamKey: string;
   streamerName: string;
   streamTitle: string;
   game: string;
@@ -15,6 +16,7 @@ export interface Stream {
 export const STREAMS: Stream[] = [
   {
     id: "tigergaming",
+    streamKey: "omexlive",
     userId: "69eaca941af88cd6c3453d3e",
     streamerName: "TigerGaming",
     streamTitle: "Rank Challenger LOL — Đường đến Thách Đấu",
@@ -29,6 +31,7 @@ export const STREAMS: Stream[] = [
   {
     id: "csprovn",
     userId: "",
+    streamKey: "omexlive",
     streamerName: "CSProVN",
     streamTitle: "Major highlights CS2 — Road to Global",
     game: "CS2",
@@ -42,6 +45,7 @@ export const STREAMS: Stream[] = [
   {
     id: "nhokkute",
     userId: "",
+    streamKey: "omexlive",
     streamerName: "NhokKute",
     streamTitle: "Cày rank Valorant — Immortal grind",
     game: "Valorant",
@@ -55,6 +59,7 @@ export const STREAMS: Stream[] = [
   {
     id: "galaxyx",
     userId: "",
+    streamKey: "omexlive",
     streamerName: "GalaxyX",
     streamTitle: "Esport recap Dota 2 — TI highlights",
     game: "Dota 2",
@@ -68,6 +73,7 @@ export const STREAMS: Stream[] = [
   {
     id: "probattle",
     userId: "",
+    streamKey: "omexlive",
     streamerName: "ProBattle",
     streamTitle: "Squad mode PUBG — Chicken dinner every game",
     game: "PUBG",
@@ -81,6 +87,7 @@ export const STREAMS: Stream[] = [
   {
     id: "mixgaming",
     userId: "",
+    streamKey: "omexlive",
     streamerName: "MixGaming",
     streamTitle: "Clutch moments FIFA — Ultimate team",
     game: "FIFA",
@@ -94,6 +101,7 @@ export const STREAMS: Stream[] = [
   {
     id: "mobilepro",
     userId: "",
+    streamKey: "omexlive",
     streamerName: "MobilePro",
     streamTitle: "Mythic rank push — Mobile Legends",
     game: "MLBB",
@@ -107,6 +115,7 @@ export const STREAMS: Stream[] = [
   {
     id: "aceshooter",
     userId: "",
+    streamKey: "omexlive",
     streamerName: "AceShooter",
     streamTitle: "Radiant climb — Valorant pro tips",
     game: "Valorant",
@@ -120,6 +129,7 @@ export const STREAMS: Stream[] = [
   {
     id: "warzone-vn",
     userId: "",
+    streamKey: "omexlive",
     streamerName: "WarzoneVN",
     streamTitle: "Warzone solo vs squad — No mercy",
     game: "COD",
@@ -133,6 +143,7 @@ export const STREAMS: Stream[] = [
   {
     id: "sniperking",
     userId: "",
+    streamKey: "omexlive",
     streamerName: "SniperKing",
     streamTitle: "AWP one tap highlights — CS2",
     game: "CS2",
@@ -146,6 +157,7 @@ export const STREAMS: Stream[] = [
   {
     id: "heroking",
     userId: "",
+    streamKey: "omexlive",
     streamerName: "HeroKing",
     streamTitle: "Marksman gameplay — MLBB ranked",
     game: "MLBB",
@@ -159,6 +171,7 @@ export const STREAMS: Stream[] = [
   {
     id: "carrygod",
     userId: "",
+    streamKey: "omexlive",
     streamerName: "CarryGod",
     streamTitle: "MMR climbing — Dota 2 divine rank",
     game: "Dota 2",
@@ -172,6 +185,7 @@ export const STREAMS: Stream[] = [
   {
     id: "jungleking",
     userId: "",
+    streamKey: "omexlive",
     streamerName: "JungleKing",
     streamTitle: "Vi full clear — LOL jungle guide",
     game: "LOL",
@@ -185,6 +199,7 @@ export const STREAMS: Stream[] = [
   {
     id: "chickenwin",
     userId: "",
+    streamKey: "omexlive",
     streamerName: "ChickenWin",
     streamTitle: "Solo vs Squad PUBG — 20 kill game",
     game: "PUBG",
@@ -198,6 +213,7 @@ export const STREAMS: Stream[] = [
   {
     id: "fifaking",
     userId: "",
+    streamKey: "omexlive",
     streamerName: "FIFAKing",
     streamTitle: "Ultimate team grind — Pack opening",
     game: "FIFA",
