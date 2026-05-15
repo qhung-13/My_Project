@@ -21,18 +21,6 @@ const config = {
     mediaroot: "./media",
     allow_origin: "*",
   },
-  // trans: {
-  //   ffmpeg: "ffmpeg",
-  //   tasks: [
-  //     {
-  //       app: "live",
-  //       hls: true,
-  //       hlsFlags: "[hls_time=2:hls_list_size=3:hls_flags=delete_segments]",
-  //       hlsKeep: false,
-  //       dash: false,
-  //     },
-  //   ],
-  // },
 };
 
 const configureMediaServer = () => {
@@ -50,54 +38,63 @@ const configureMediaServer = () => {
 
     const ffmpeg = spawn("ffmpeg", [
       "-i",
-      `rtmp://localhost:1935/live/${path.split("/").pop()}`,
+      `rtmp://localhost:1935${path}`,
 
+      // Video
       "-c:v",
       "libx264",
       "-preset",
       "veryfast",
       "-tune",
       "zerolatency",
-      "-crf",
-      "23",
       "-profile:v",
-      "baseline", // ← Thêm cái này
+      "baseline", // baseline trước
       "-level",
-      "3.1",
+      "3.0",
+      "-pix_fmt",
+      "yuv420p", // sau profile
+      "-r",
+      "30",
       "-g",
-      "48", // GOP size quan trọng
+      "60",
       "-keyint_min",
-      "48",
+      "60",
+      "-force_key_frames",
+      "expr:gte(t,n_forced*2)",
       "-sc_threshold",
       "0",
+      "-b:v",
+      "1500k", // thêm bitrate cụ thể
+      "-maxrate",
+      "1500k", // ← cap lại
+      "-bufsize",
+      "3000k",
 
+      // Audio
       "-c:a",
       "aac",
       "-ar",
       "44100",
-      "-b:a",
-      "128k",
       "-ac",
       "2",
+      "-b:a",
+      "128k",
 
+      // HLS output
       "-f",
       "hls",
-
       "-hls_time",
-      "4",
+      "2",
       "-hls_list_size",
       "6",
+      "-hls_allow_cache",
+      "0",
       "-hls_flags",
-      "delete_segments+append_list+discont_start",
+      "delete_segments+append_list",
       "-hls_segment_type",
-      "fmp4",
-      "-hls_fmp4_init_filename",
-      "init.mp4",
-      "-strftime",
-      "1",
+      "mpegts",
       "-hls_segment_filename",
-      `${folderPath}/seg_%Y%m%d_%H%M%S.m4s`,
-
+      `${folderPath}/seg_%03d.ts`,
       `${folderPath}/index.m3u8`,
     ]);
 

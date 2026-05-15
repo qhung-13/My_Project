@@ -1,47 +1,70 @@
 import { useEffect, useRef } from "react";
+import Hls from "hls.js";
 
 const VideoPlayer = ({ streamKey }: { streamKey: string }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    console.log("MOUNT VIDEO PLAYER");
+
+    return () => {
+      console.log("UNMOUNT VIDEO PLAYER");
+    };
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !streamKey) return;
 
     const url = `http://localhost:5000/live/${streamKey}/index.m3u8`;
-    console.log("🔄 Loading fMP4 stream:", url);
+    console.log("🔄 Loading HLS stream:", url);
 
-    // Reset video
-    video.pause();
-    video.src = "";
-    video.load();
+    let hls: Hls | null = null;
 
-    video.src = url;
-    video.muted = true;
-    video.playsInline = true;
-    video.crossOrigin = "anonymous";
+    // Safari native support
+    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = url;
+      video.play().catch(console.error);
+      return;
+    }
 
-    const playVideo = () => {
-      video
-        .play()
-        .then(() => console.log("✅ Playback started successfully"))
-        .catch((err) => console.error("Play error:", err.name, err.message));
-    };
+    // Chrome / Edge / Firefox
+    if (Hls.isSupported()) {
+      hls = new Hls({
+        lowLatencyMode: true,
+        enableWorker: true,
+        maxBufferLength: 10,
+        maxMaxBufferLength: 20,
+        fragLoadingMaxRetry: 6,
+        manifestLoadingMaxRetry: 6,
+      });
 
-    video.onloadedmetadata = playVideo;
-    video.oncanplay = playVideo;
-    video.oncanplaythrough = playVideo;
+      hls.loadSource(url);
+      hls.attachMedia(video);
 
-    video.onerror = () => {
-      console.error("Video error:", video.error?.message);
-    };
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.play().catch(console.error);
+      });
 
-    // Fallback
-    setTimeout(playVideo, 1500);
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        console.error("HLS error:", data);
+
+        if (data.fatal) {
+          if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            console.warn("Media error, trying to recover ...");
+            hls!.recoverMediaError();
+          } else {
+            console.error("Fatal error, destroying HLS");
+            hls?.destroy();
+          }
+        }
+      });
+    } else {
+      console.error("HLS is not supported in this browser");
+    }
 
     return () => {
-      video.pause();
-      video.src = "";
-      video.load();
+      if (hls) hls.destroy();
     };
   }, [streamKey]);
 
@@ -49,7 +72,6 @@ const VideoPlayer = ({ streamKey }: { streamKey: string }) => {
     <video
       ref={videoRef}
       controls
-      autoPlay
       muted
       playsInline
       style={{

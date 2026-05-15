@@ -12,6 +12,7 @@
   "dependencies": {
     "@reduxjs/toolkit": "^2.11.2",
     "@tailwindcss/vite": "^4.2.2",
+    "@types/hls.js": "^0.13.3",
     "axios": "^1.15.1",
     "hls.js": "^1.6.16",
     "lucide-react": "^0.577.0",

@@ -110,7 +110,12 @@ const WatchLive = () => {
           <span className="badge-live">LIVE</span>
           <span className="badge-viewers">{formatViewers(viewerCount)}</span>
         </div>
-        <VideoPlayer streamKey={currentStream.streamKey} />
+        <VideoPlayer
+          streamKey={currentStream.streamKey}
+          // src={"http://localhost:5000/live/omexlive/index.m3u8"}
+          // videoUrlSrc={("http://localhost:5000/live/omexlive/index.m3u8")}
+          // videoFile={null}
+        />
       </div>
 
       {/* ── Streamer info ── */}
