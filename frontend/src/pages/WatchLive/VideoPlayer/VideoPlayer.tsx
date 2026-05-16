@@ -5,66 +5,68 @@ const VideoPlayer = ({ streamKey }: { streamKey: string }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    console.log("MOUNT VIDEO PLAYER");
-
-    return () => {
-      console.log("UNMOUNT VIDEO PLAYER");
-    };
-  }, []);
-
-  useEffect(() => {
     const video = videoRef.current;
     if (!video || !streamKey) return;
 
     const url = `http://localhost:5000/live/${streamKey}/index.m3u8`;
-    console.log("🔄 Loading HLS stream:", url);
-
     let hls: Hls | null = null;
 
-    // Safari native support
+    // Trình duyệt hỗ trợ HLS native (Safari)
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = url;
       video.play().catch(console.error);
-      return;
     }
-
-    // Chrome / Edge / Firefox
-    if (Hls.isSupported()) {
+    // Các trình duyệt khác (Chrome, Edge, Firefox)
+    else if (Hls.isSupported()) {
       hls = new Hls({
+        debug: false, // Tạm tắt debug cho đỡ rác console
         lowLatencyMode: true,
-        enableWorker: true,
-        maxBufferLength: 10,
-        maxMaxBufferLength: 20,
-        fragLoadingMaxRetry: 6,
-        manifestLoadingMaxRetry: 6,
       });
 
-      hls.loadSource(url);
+      // BƯỚC 1: Gắn video element vào HLS trước
       hls.attachMedia(video);
 
+      // BƯỚC 2: Khi media đã gắn thành công, mới bắt đầu tải source
+      hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+        console.log("📺 Gắn media thành công, đang tải luồng HLS...");
+        hls?.loadSource(url);
+      });
+
+      // BƯỚC 3: Khi phân tích xong file m3u8, bắt đầu chạy video
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        console.log("✅ Đã kết nối luồng Live, bắt đầu phát!");
+        // Lưu ý: Browser bắt buộc video phải 'muted' mới cho phép tự động play
         video.play().catch(console.error);
       });
 
+      // Xử lý lỗi trơn tru hơn để không vỡ app
       hls.on(Hls.Events.ERROR, (_, data) => {
-        console.error("HLS error:", data);
-
         if (data.fatal) {
-          if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-            console.warn("Media error, trying to recover ...");
-            hls!.recoverMediaError();
-          } else {
-            console.error("Fatal error, destroying HLS");
-            hls?.destroy();
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              console.warn(
+                "⚠️ Lỗi mạng (Có thể stream chưa lên), đang thử lại...",
+              );
+              hls?.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              console.warn("⚠️ Lỗi khung hình media, đang khôi phục...");
+              hls?.recoverMediaError();
+              break;
+            default:
+              console.error("🚨 Lỗi nghiêm trọng, hủy HLS:", data);
+              hls?.destroy();
+              break;
           }
         }
       });
-    } else {
-      console.error("HLS is not supported in this browser");
     }
 
+    // Cleanup function: Dọn dẹp HLS khi component bị unmount
     return () => {
-      if (hls) hls.destroy();
+      if (hls) {
+        hls.destroy();
+      }
     };
   }, [streamKey]);
 
@@ -72,7 +74,7 @@ const VideoPlayer = ({ streamKey }: { streamKey: string }) => {
     <video
       ref={videoRef}
       controls
-      muted
+      muted // <-- RẤT QUAN TRỌNG: Nếu không có muted, Chrome sẽ chặn autoplay
       playsInline
       style={{
         width: "100%",
