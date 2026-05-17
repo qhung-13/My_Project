@@ -1,6 +1,7 @@
 import NodeMediaServer from "node-media-server";
 import { mkdirSync } from "fs";
 import { spawn } from "child_process";
+import { writeFileSync} from "fs";
 
 // const FFMPEG_PATH =
 //   "C:/Users/LENOVO/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/ffmpeg.exe";
@@ -34,68 +35,101 @@ const configureMediaServer = () => {
 
     if (!path) return;
     const folderPath = `./media${path}`;
+
     mkdirSync(folderPath, { recursive: true });
+    mkdirSync(`${folderPath}/1080p`, { recursive: true });
+    mkdirSync(`${folderPath}/720p`, { recursive: true });
+    mkdirSync(`${folderPath}/480p`, { recursive: true });
+
+    const masterPlaylist = `#EXTM3U
+#EXT-X-STREAM-INF:BANDWIDTH=5000000,RESOLUTION=1920x1080
+1080p/index.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=2500000,RESOLUTION=1280x720
+720p/index.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=854x480
+480p/index.m3u8`;
+
+    writeFileSync(`${folderPath}/index.m3u8`, masterPlaylist);
+    console.log("Master playlist created at:", `${folderPath}/index.m3u8`);
 
     const ffmpeg = spawn("ffmpeg", [
       "-i",
       `rtmp://localhost:1935${path}`,
 
-      // Video
+      // ── 1080p ──
+      "-map",
+      "0:v",
+      "-map",
+      "0:a",
       "-c:v",
       "libx264",
-      "-preset",
-      "veryfast",
-      "-tune",
-      "zerolatency",
-      "-profile:v",
-      "baseline", // baseline trước
-      "-level",
-      "3.0",
-      "-pix_fmt",
-      "yuv420p", // sau profile
-      "-r",
-      "30",
-      "-g",
-      "60",
-      "-keyint_min",
-      "60",
-      "-force_key_frames",
-      "expr:gte(t,n_forced*2)",
-      "-sc_threshold",
-      "0",
       "-b:v",
-      "1500k", // thêm bitrate cụ thể
-      "-maxrate",
-      "1500k", // ← cap lại
-      "-bufsize",
-      "3000k",
-
-      // Audio
+      "5000k",
+      "-s",
+      "1920x1080",
       "-c:a",
       "aac",
-      "-ar",
-      "44100",
-      "-ac",
-      "2",
       "-b:a",
-      "128k",
-
-      // HLS output
+      "192k",
       "-f",
       "hls",
       "-hls_time",
       "2",
       "-hls_list_size",
-      "6",
-      "-hls_allow_cache",
-      "0",
+      "3",
       "-hls_flags",
-      "delete_segments+append_list",
-      "-hls_segment_type",
-      "mpegts",
-      "-hls_segment_filename",
-      `${folderPath}/seg_%03d.ts`,
-      `${folderPath}/index.m3u8`,
+      "delete_segments",
+      `${folderPath}/1080p/index.m3u8`,
+
+      // ── 720p ──
+      "-map",
+      "0:v",
+      "-map",
+      "0:a",
+      "-c:v",
+      "libx264",
+      "-b:v",
+      "2500k",
+      "-s",
+      "1280x720",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "128k",
+      "-f",
+      "hls",
+      "-hls_time",
+      "2",
+      "-hls_list_size",
+      "3",
+      "-hls_flags",
+      "delete_segments",
+      `${folderPath}/720p/index.m3u8`,
+
+      // ── 480p ──
+      "-map",
+      "0:v",
+      "-map",
+      "0:a",
+      "-c:v",
+      "libx264",
+      "-b:v",
+      "1000k",
+      "-s",
+      "854x480",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "96k",
+      "-f",
+      "hls",
+      "-hls_time",
+      "2",
+      "-hls_list_size",
+      "3",
+      "-hls_flags",
+      "delete_segments",
+      `${folderPath}/480p/index.m3u8`,
     ]);
 
     ffmpeg.stderr.on("data", (data) => {

@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 import Hls from "hls.js";
+import Plyr from "plyr";
+import "plyr/dist/plyr.css"; 
 
 const VideoPlayer = ({ streamKey }: { streamKey: string }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -10,51 +12,86 @@ const VideoPlayer = ({ streamKey }: { streamKey: string }) => {
 
     const url = `http://localhost:5000/live/${streamKey}/index.m3u8`;
     let hls: Hls | null = null;
+    let player: Plyr | null = null;
 
-    // Trình duyệt hỗ trợ HLS native (Safari)
+    const initPlyr = (customQualityOptions: number[]) => {
+      player = new Plyr(video, {
+        controls: [
+          "play-large", "play", "progress", "current-time", 
+          "mute", "volume", "settings", "fullscreen"
+        ],
+        settings: ["quality", "speed"],
+        quality: {
+          default: 0, // 0 nghĩa là Auto
+          options: [0, ...customQualityOptions],
+          forced: true,
+          onChange: (newQuality: number) => {
+            if (hls) {
+              if (newQuality === 0) {
+                hls.currentLevel = -1; 
+                console.log("Đã chuyển sang chế độ Auto");
+              } else {
+                const targetIndex = hls.levels.findIndex(
+                  (level) => level.height === newQuality
+                );
+                if (targetIndex !== -1) {
+                  hls.currentLevel = targetIndex;
+                  console.log(`Đã chuyển chất lượng thủ công sang: ${newQuality}p`);
+                }
+              }
+            }
+          },
+        },
+        i18n: {
+          quality: "Chất lượng",
+          speed: "Tốc độ",
+          auto: "Tự động",
+        }
+      });
+    };
+
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = url;
+      player = new Plyr(video);
       video.play().catch(console.error);
-    }
-    // Các trình duyệt khác (Chrome, Edge, Firefox)
+    } 
+
     else if (Hls.isSupported()) {
       hls = new Hls({
-        debug: false, // Tạm tắt debug cho đỡ rác console
         lowLatencyMode: true,
       });
 
-      // BƯỚC 1: Gắn video element vào HLS trước
       hls.attachMedia(video);
 
-      // BƯỚC 2: Khi media đã gắn thành công, mới bắt đầu tải source
       hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-        console.log("📺 Gắn media thành công, đang tải luồng HLS...");
         hls?.loadSource(url);
       });
 
-      // BƯỚC 3: Khi phân tích xong file m3u8, bắt đầu chạy video
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        console.log("✅ Đã kết nối luồng Live, bắt đầu phát!");
-        // Lưu ý: Browser bắt buộc video phải 'muted' mới cho phép tự động play
+      hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+        console.log("✅ Đã kết nối luồng Live!");
+        
+        const availableQualities = data.levels
+          .map((level) => level.height)
+          .sort((a, b) => b - a); 
+
+        initPlyr(availableQualities);
+
         video.play().catch(console.error);
       });
 
-      // Xử lý lỗi trơn tru hơn để không vỡ app
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              console.warn(
-                "⚠️ Lỗi mạng (Có thể stream chưa lên), đang thử lại...",
-              );
+              console.warn("Lỗi mạng, đang thử lại...");
               hls?.startLoad();
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
-              console.warn("⚠️ Lỗi khung hình media, đang khôi phục...");
+              console.warn("Lỗi khung hình media, đang khôi phục...");
               hls?.recoverMediaError();
               break;
             default:
-              console.error("🚨 Lỗi nghiêm trọng, hủy HLS:", data);
+              console.error("Lỗi nghiêm trọng, hủy HLS:", data);
               hls?.destroy();
               break;
           }
@@ -62,27 +99,25 @@ const VideoPlayer = ({ streamKey }: { streamKey: string }) => {
       });
     }
 
-    // Cleanup function: Dọn dẹp HLS khi component bị unmount
     return () => {
-      if (hls) {
-        hls.destroy();
-      }
+      if (hls) hls.destroy();
+      if (player) player.destroy();
     };
   }, [streamKey]);
 
   return (
-    <video
-      ref={videoRef}
-      controls
-      muted // <-- RẤT QUAN TRỌNG: Nếu không có muted, Chrome sẽ chặn autoplay
-      playsInline
-      style={{
-        width: "100%",
-        height: "100%",
-        objectFit: "contain",
-        background: "black",
-      }}
-    />
+    <div style={{ width: "100%", height: "100%", background: "black" }}>
+      <video
+        ref={videoRef}
+        playsInline
+        muted
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
+        }}
+      />
+    </div>
   );
 };
 
