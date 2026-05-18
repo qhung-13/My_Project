@@ -108,6 +108,14 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+
+    // ------ Stream Key --------------
+    streamKey: {
+      type: String,
+      unique: true, 
+      sparse: true, // Allowing null, just unique when have valuable
+      default: null,
+    }
   },
   {
     timestamps: true, // auto create createdAt & updatedAt

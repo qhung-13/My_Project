@@ -4,6 +4,7 @@ import createToken from "../utils/createToken.js";
 import Otp from "../models/Otp.model.js";
 import sendOtpEmail from "../utils/sendEmail.js";
 import bcrypt from "bcryptjs";
+import { v4 as uuidv4 } from "uuid";
 
 // Note: Removed unused import { compare } from "bcryptjs"
 // comparePassword is already handled by the User model method
@@ -278,8 +279,8 @@ const getProfile = asyncHandler(async (req, res) => {
       bio: user.bio,
       role: user.role,
       isVerified: user.isVerified,
-      followersCount: user.followersCount, 
-      followingCount: user.followingCount, 
+      followersCount: user.followersCount,
+      followingCount: user.followingCount,
     });
   } else {
     res.status(404);
@@ -353,6 +354,44 @@ const getUserById = asyncHandler(async (req, res) => {
   });
 });
 
+// ─────────────────────────────────────────────
+// @desc    Get stream key
+// @route   GET /api/users/stream-key
+// @access  Private
+// ─────────────────────────────────────────────
+const getStreamKey = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+
+  if (!user.streamKey) {
+    user.streamKey = uuidv4();
+    await user.save();
+  }
+
+  res.status(200).json({ streamKey: user.streamKey });
+});
+
+// ─────────────────────────────────────────────
+// @desc    Reset stream key
+// @route   POST /api/users/stream-key/reset
+// @access  Private
+// ─────────────────────────────────────────────
+const resetStreamKey = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+
+  user.streamKey = uuidv4();
+  await user.save();
+
+  res.status(200).json({ streamKey: user.streamKey });
+});
+
 export {
   userRegister,
   userLogin,
@@ -365,4 +404,6 @@ export {
   verifyLoginOtp,
   updateProfile,
   getUserById,
+  getStreamKey,
+  resetStreamKey
 };
