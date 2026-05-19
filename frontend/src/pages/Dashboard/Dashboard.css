@@ -1,0 +1,159 @@
+.dashboard {
+  max-width: 800px;
+  margin: 80px auto 40px;
+  padding: 24px 16px;
+}
+
+.dashboard__title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-text-primary, #333);
+  margin-bottom: 24px;
+}
+
+.dashboard__loading {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+}
+
+.dashboard__card {
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.dashboard__card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.dashboard__card-desc {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 20px;
+}
+
+.dashboard__field {
+  margin-bottom: 16px;
+}
+
+.dashboard__label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.dashboard__input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.dashboard__input {
+  flex: 1;
+  height: 40px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 14px;
+  font-family: monospace;
+  background: #f9f9f9;
+  color: #333;
+  outline: none;
+}
+
+.dashboard__btn {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid #ddd;
+  background: white;
+  color: #333;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.dashboard__btn:hover {
+  background: #f5f5f5;
+}
+
+.dashboard__btn--primary {
+  background: #6366f1;
+  color: white;
+  border-color: #6366f1;
+}
+
+.dashboard__btn--primary:hover {
+  background: #4f46e5;
+}
+
+.dashboard__btn--danger {
+  background: #fee2e2;
+  color: #ef4444;
+  border-color: #fecaca;
+  margin-top: 8px;
+}
+
+.dashboard__btn--danger:hover {
+  background: #fecaca;
+}
+
+.dashboard__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dashboard__guide {
+  padding-left: 20px;
+  color: #555;
+  font-size: 14px;
+  line-height: 2;
+}
+
+.dashboard__guide strong {
+  color: #333;
+}
+
+/* Dark mode */
+.dark-mode .dashboard__card {
+  background: #27272a;
+  border-color: #3f3f46;
+}
+
+.dark-mode .dashboard__card-title {
+  color: #e4e4e7;
+}
+
+.dark-mode .dashboard__label {
+  color: #a1a1aa;
+}
+
+.dark-mode .dashboard__input {
+  background: #3f3f46;
+  border-color: #52525b;
+  color: #e4e4e7;
+}
+
+.dark-mode .dashboard__btn {
+  background: #3f3f46;
+  border-color: #52525b;
+  color: #e4e4e7;
+}
+
+.dark-mode .dashboard__guide {
+  color: #a1a1aa;
+}
+
+.dark-mode .dashboard__guide strong {
+  color: #e4e4e7;
+}

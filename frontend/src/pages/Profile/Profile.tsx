@@ -160,7 +160,12 @@ const Profile = () => {
               ✂️ Upload Clip
             </button>
             <button className="profile__action-btn">⚙️ Cài đặt</button>
-            <button className="profile__action-btn">📊 Dashboard</button>
+            <button
+              className="profile__action-btn"
+              onClick={() => navigate("/dashboard")}
+            >
+              📊 Dashboard
+            </button>
           </div>
         )}
       </div>

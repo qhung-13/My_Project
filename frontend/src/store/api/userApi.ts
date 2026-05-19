@@ -6,7 +6,7 @@ export const userApi = createApi({
     baseUrl: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
     credentials: "include",
   }),
-  tagTypes: ["Profile", "UserById"],
+  tagTypes: ["Profile", "UserById", "StreamKey"],
   endpoints: (builder) => ({
     // Login
     login: builder.mutation({
@@ -107,6 +107,19 @@ export const userApi = createApi({
     getFollowing: builder.query({
       query: (userId) => `/users/${userId}/following`,
     }),
+
+    getStreamKey: builder.query({
+      query: () => "/users/stream-key",
+      providesTags: ["StreamKey"],
+    }),
+
+    resetStreamKey: builder.mutation({
+      query: () => ({
+        url: "/users/stream-key/reset",
+        method: "POST",
+      }),
+      invalidatesTags: ["StreamKey"],
+    }),
   }),
 });
 
@@ -124,4 +137,6 @@ export const {
   useUnfollowUserMutation,
   useGetFollowersQuery,
   useGetFollowingQuery,
+  useGetStreamKeyQuery,
+  useResetStreamKeyMutation,
 } = userApi;
