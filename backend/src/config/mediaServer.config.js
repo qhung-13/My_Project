@@ -2,7 +2,7 @@ import NodeMediaServer from "node-media-server";
 import { mkdirSync } from "fs";
 import { spawn } from "child_process";
 import { writeFileSync } from "fs";
-import User from "../models/User.model";
+import User from "../models/User.model.js";
 
 // const FFMPEG_PATH =
 //   "C:/Users/LENOVO/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/ffmpeg.exe";

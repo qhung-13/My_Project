@@ -10,6 +10,7 @@ const Dashboard = () => {
   const [copied, setCopied] = useState(false);
 
   const { data, isLoading } = useGetStreamKeyQuery(undefined);
+  console.log(data);
   const [resetStreamKey, { isLoading: isResetting }] =
     useResetStreamKeyMutation();
 

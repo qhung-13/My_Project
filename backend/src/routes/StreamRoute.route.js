@@ -18,4 +18,5 @@ router.get("/user/:userId", getStreamsByUser);
 router.get("/:id", getStreamById);
 router.put("/:id/viewers", protect, updateViewers);
 
+
 export default router;

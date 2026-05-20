@@ -80,13 +80,13 @@ router.get(
  */
 router.get("/profile", protect, getProfile);
 router.put("/profile", protect, updateProfile);
+router.get("/stream-key", protect, getStreamKey);
+router.post("/stream-key/reset", protect, resetStreamKey);
 router.post("/verify-login-otp", verifyLoginOtp);
 router.get("/:id", getUserById);
 router.post("/:id/follow", protect, followUser);
 router.post("/:id/unfollow", protect, unfollowUser);
 router.get("/:id/followers", getFollowers);
 router.get("/:id/following", getFollowing);
-router.get("/stream-key", protect, getStreamKey);
-router.post("/stream-key/reset", protect, resetStreamKey);
 // Route — cần protect middleware
 export default router;
