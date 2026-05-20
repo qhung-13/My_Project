@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import { type } from "node:os";
 
 /**
  * Mongoose schema and model for Users
@@ -112,10 +113,15 @@ const userSchema = new mongoose.Schema(
     // ------ Stream Key --------------
     streamKey: {
       type: String,
-      unique: true, 
+      unique: true,
       sparse: true, // Allowing null, just unique when have valuable
       default: null,
-    }
+    },
+
+    isLive: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true, // auto create createdAt & updatedAt

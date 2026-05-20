@@ -1,7 +1,8 @@
 import NodeMediaServer from "node-media-server";
 import { mkdirSync } from "fs";
 import { spawn } from "child_process";
-import { writeFileSync} from "fs";
+import { writeFileSync } from "fs";
+import User from "../models/User.model";
 
 // const FFMPEG_PATH =
 //   "C:/Users/LENOVO/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/ffmpeg.exe";
@@ -29,13 +30,22 @@ const configureMediaServer = () => {
   nms.run();
 
   //   Log when have stream connection
-  nms.on("prePublish", (id, StreamPath, args) => {
+  nms.on("prePublish", async (id, StreamPath, args) => {
     const path = typeof id === "object" ? id.streamPath : StreamPath;
+    const streamKey = path?.split("/").pop();
     console.log("Stream started:", path);
 
     if (!path) return;
-    const folderPath = `./media${path}`;
+    const user = await User.findOne({ streamKey });
+    if (!user) {
+      console.log("Invalid stream key:", streamKey);
+      const session = nms.getSession(id);
+      if (session) session.reject();
+      return;
+    }
+    console.log(`Valid stream key for user: ${user.username}`);
 
+    const folderPath = `./media${path}`;
     mkdirSync(folderPath, { recursive: true });
     mkdirSync(`${folderPath}/1080p`, { recursive: true });
     mkdirSync(`${folderPath}/720p`, { recursive: true });
@@ -143,10 +153,12 @@ const configureMediaServer = () => {
 
     ffmpegProcesses.set(path, ffmpeg);
     console.log("ffmpeg started for:", path);
+
+    await User.findByIdAndUpdate(user._id, { isLive: true });
   });
 
   //   Log when streamer disconnection
-  nms.on("donePublish", (id, StreamPath, args) => {
+  nms.on("donePublish", async (id, StreamPath, args) => {
     const path = typeof id === "object" ? id.streamPath : StreamPath;
     console.log("Stream ended", path);
 
@@ -154,6 +166,11 @@ const configureMediaServer = () => {
       ffmpegProcesses.get(path).kill();
       ffmpegProcesses.delete(path);
       console.log("ffmpeg stopped for:", path);
+    }
+
+    const user = await User.findOne({ streamKey });
+    if (user) {
+      await User.findByIdAndUpdate(user._id, { isLive: false });
     }
   });
 
