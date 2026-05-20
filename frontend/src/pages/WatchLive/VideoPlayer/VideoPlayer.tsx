@@ -110,7 +110,7 @@ const VideoPlayer = ({ streamKey }: VideoPlayerProps) => {
       });
 
       // Initialize player once manifest is parsed
-      hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+      hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
         console.log("Live stream connected successfully!");
 
         // Extract available quality levels (sorted highest to lowest)
@@ -131,7 +131,7 @@ const VideoPlayer = ({ streamKey }: VideoPlayerProps) => {
       });
 
       // Comprehensive error handling with recovery
-      hls.on(Hls.Events.ERROR, (event, data) => {
+      hls.on(Hls.Events.ERROR, (_, data) => {
         if (!data.fatal) return;
 
         console.error("❌ HLS Error:", data);
@@ -156,7 +156,7 @@ const VideoPlayer = ({ streamKey }: VideoPlayerProps) => {
       });
 
       // Handle stream level switching
-      hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+      hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
         const level = hls.levels[data.level];
         console.log(
           `Switched to ${level?.height}p (${(level?.bitrate / 1000) | 0}kbps)`,
