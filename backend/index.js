@@ -25,6 +25,7 @@ import userRoute from "./src/routes/UserRoute.route.js";
 import videoRoute from "./src/routes/VideoRoute.route.js";
 import commentRoute from "./src/routes/CommentRoute.route.js";
 import streamRoute from "./src/routes/StreamRoute.route.js";
+import donationRoute from "./src/routes/DonationRoute.route.js";
 
 // ==========================================
 // Initialization & Database Connection
@@ -123,6 +124,7 @@ app.use("/api/users", userRoute);
 app.use("/api/videos", videoRoute);
 app.use("/api/comments", commentRoute);
 app.use("/api/streams", streamRoute);
+app.use("api/donation", donationRoute);
 const serveHLS = (req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
