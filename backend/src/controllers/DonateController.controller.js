@@ -30,6 +30,7 @@ const createPayment = asyncHandler(async (req, res) => {
   await newDonation.save();
 
   res.status(200).json({
+    clientSecret: paymentIntent.client_secret,
     fromUserId: newDonation.fromUserId,
     toUserId: newDonation.toUserId,
     amount: newDonation.amount,

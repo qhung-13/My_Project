@@ -1,0 +1,47 @@
+.checkout-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.checkout-form__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.checkout-form__amount {
+  font-size: 14px;
+  color: #555;
+}
+
+.checkout-form__error {
+  color: #ef4444;
+  font-size: 13px;
+  background: #fee2e2;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.checkout-form__btn {
+  width: 100%;
+  height: 44px;
+  background: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 8px;
+}
+
+.checkout-form__btn:hover {
+  background: #4f46e5;
+}
+
+.checkout-form__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

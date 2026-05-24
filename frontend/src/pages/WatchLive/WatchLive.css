@@ -135,6 +135,17 @@
 .btn-follow:hover {
   background: #7c3ae0;
 }
+.btn-donate {
+  border: 1px solid #444;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: background 0.2s;
+}
 
 .btn-share,
 .btn-more {

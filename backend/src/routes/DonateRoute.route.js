@@ -1,5 +1,5 @@
 import express from "express";
-import { createPayment } from "../controllers/DonationController.controller.js";
+import { createPayment } from "../controllers/DonateController.controller.js";
 
 const router = express.Router();
 
