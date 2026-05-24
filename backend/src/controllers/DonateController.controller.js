@@ -2,9 +2,9 @@ import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
 import Donation from "../models/Donation.model.js";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
 const createPayment = asyncHandler(async (req, res) => {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  
   const { fromUserId, toUserId, amount, message } = req.body;
 
   if (!fromUserId || !toUserId || !amount || !message) {
