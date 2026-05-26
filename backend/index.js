@@ -124,7 +124,7 @@ app.use("/api/users", userRoute);
 app.use("/api/videos", videoRoute);
 app.use("/api/comments", commentRoute);
 app.use("/api/streams", streamRoute);
-app.use("api/donations", donateRoute);
+app.use("/api/donations", donateRoute);
 const serveHLS = (req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, OPTIONS");

@@ -1,5 +1,5 @@
 import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
-import Donation from "../models/Donation.model.js";
+import Donation from "../models/Donate.model.js";
 import Stripe from "stripe";
 
 const createPayment = asyncHandler(async (req, res) => {
@@ -7,7 +7,7 @@ const createPayment = asyncHandler(async (req, res) => {
   
   const { fromUserId, toUserId, amount, message } = req.body;
 
-  if (!fromUserId || !toUserId || !amount || !message) {
+  if (!fromUserId || !toUserId || !amount) {
     res.status(400);
     throw new Error("Missing required fields for donation.");
   }

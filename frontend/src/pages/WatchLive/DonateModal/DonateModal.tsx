@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useSelector } from "react-redux";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
+import type { RootState } from "../../../store/store";
 import CheckoutForm from "../CheckoutForm/CheckoutForm";
 import instance from "../../../utils/axios";
 import "./DonateModal.css";
@@ -22,13 +24,14 @@ const DonateModal = ({
   const [step, setStep] = useState<"amount" | "payment" | "success">("amount");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { user: authUser } = useSelector((state: RootState) => state.auth);
 
   const handleProceed = async () => {
     setError("");
     setLoading(true);
     try {
       const res = await instance.post("/donations/create-payment-intent", {
-        fromUserId: "me",
+        fromUserId: authUser?._id,
         toUserId: streamerId,
         amount,
         message,
