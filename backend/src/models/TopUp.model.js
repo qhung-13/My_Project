@@ -1,25 +1,19 @@
 import mongoose from "mongoose";
 
-const donationSchema = new mongoose.Schema(
+const topUpSchema = new mongoose.Schema(
   {
-    fromUserId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    toUserId: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
     amount: {
       type: Number,
-      required: true,
+      required: true, 
     },
-    message: {
-      type: String,
-      default: "",
-      maxlength: 200,
+    coins: {
+      type: Number,
+      required: true, 
     },
     stripePaymentIntentId: {
       type: String,
@@ -32,10 +26,8 @@ const donationSchema = new mongoose.Schema(
       default: "pending",
     },
   },
-  {
-    timestamps: true,
-  },
+  { timestamps: true },
 );
 
-const Donation = mongoose.model("Donation", donationSchema);
-export default Donation;
+const TopUp = mongoose.model("TopUp", topUpSchema);
+export default TopUp;

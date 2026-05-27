@@ -26,6 +26,7 @@ import videoRoute from "./src/routes/VideoRoute.route.js";
 import commentRoute from "./src/routes/CommentRoute.route.js";
 import streamRoute from "./src/routes/StreamRoute.route.js";
 import donateRoute from "./src/routes/DonateRoute.route.js";
+import coinRoute from "./src/routes/CoinRoute.route.js";
 
 // ==========================================
 // Initialization & Database Connection
@@ -125,6 +126,7 @@ app.use("/api/videos", videoRoute);
 app.use("/api/comments", commentRoute);
 app.use("/api/streams", streamRoute);
 app.use("/api/donations", donateRoute);
+app.use("/api/coins", coinRoute);
 const serveHLS = (req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, OPTIONS");

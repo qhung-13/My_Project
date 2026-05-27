@@ -122,6 +122,11 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    coins: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true, // auto create createdAt & updatedAt

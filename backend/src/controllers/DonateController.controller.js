@@ -1,5 +1,5 @@
 import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
-import Donation from "../models/Donate.model.js";
+import Donation from "../models/Donation.model.js";
 import Stripe from "stripe";
 
 const createPayment = asyncHandler(async (req, res) => {
