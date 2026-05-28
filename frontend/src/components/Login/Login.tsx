@@ -54,6 +54,7 @@ const Login = ({ onClose, onSwitch }: LoginProps) => {
           username: res.username,
           email: res.email,
           avatar: res.avatar || null,
+          coins: res.coins || 0,
         }),
       );
       onClose();

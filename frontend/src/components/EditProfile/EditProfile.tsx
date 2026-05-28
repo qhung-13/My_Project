@@ -49,6 +49,7 @@ const EditProfile = ({ profile, onClose }: EditProfileProps) => {
           username: res.username,
           email: res.email,
           avatar: res.avatar || null,
+          coins: res.coins || 0,
         }),
       );
 
