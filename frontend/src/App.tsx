@@ -13,6 +13,7 @@ import WatchVideo from "./pages/WatchVideo/WatchVideo";
 import UploadVideo from "./components/UploadVideo/UploadVideo";
 import Search from "./pages/Search/Search";
 import Dashboard from "./pages/Dashboard/Dashboard";
+import TopUp from "./pages/TopUp/TopUp";
 
 function App() {
   const [darkMode, setDarkMode] = useState<boolean>(false);
@@ -33,6 +34,7 @@ function App() {
         <Route path="/upload" element={<UploadVideo />} />
         <Route path="/search" element={<Search />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/topup" element={<TopUp />} />
       </Routes>
 
       <Footer />

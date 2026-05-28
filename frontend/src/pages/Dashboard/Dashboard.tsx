@@ -3,6 +3,7 @@ import {
   useGetStreamKeyQuery,
   useResetStreamKeyMutation,
 } from "../../store/api/userApi";
+import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
 
 const Dashboard = () => {
@@ -10,6 +11,8 @@ const Dashboard = () => {
   const [copied, setCopied] = useState(false);
 
   const { data, isLoading } = useGetStreamKeyQuery(undefined);
+
+  const navigate = useNavigate();
   console.log(data);
   const [resetStreamKey, { isLoading: isResetting }] =
     useResetStreamKeyMutation();
@@ -123,6 +126,13 @@ const Dashboard = () => {
           </li>
         </ol>
       </div>
+
+      <button
+        className="dashboard__btn dashboard__btn--primary"
+        onClick={() => navigate("/topup")}
+      >
+        💰 Nạp Xu
+      </button>
     </div>
   );
 };
