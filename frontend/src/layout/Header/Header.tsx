@@ -200,6 +200,15 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
                       >
                         🚪 Logout
                       </button>
+                      <button
+                        className="header__user-menu-item"
+                        onClick={() => {
+                          navigate("/topup");
+                          setShowUserMenu(false);
+                        }}
+                      >
+                        💰 Nạp Xu ({user?.coins || 0})
+                      </button>
                     </div>
                   )}
                 </div>

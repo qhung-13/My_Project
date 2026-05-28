@@ -1,48 +1,59 @@
 import { useState } from "react";
 import { useSelector } from "react-redux";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements } from "@stripe/react-stripe-js";
 import type { RootState } from "../../../store/store";
-import CheckoutForm from "../CheckoutForm/CheckoutForm";
-import instance from "../../../utils/axios";
+import {
+  useGetCoinBalanceQuery,
+  useDonateCoinsMutation,
+} from "../../../store/api/coinApi";
+import { useNavigate } from "react-router-dom";
 import "./DonateModal.css";
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-
-const PRESET_AMOUNTS = [1, 5, 10, 20, 50];
+const PRESET_COINS = [10, 50, 100, 500, 1000];
 
 const DonateModal = ({
   streamerId,
+  streamerName,
   onClose,
 }: {
   streamerId: string;
+  streamerName: string;
   onClose: () => void;
 }) => {
-  const [amount, setAmount] = useState(5);
+  const navigate = useNavigate();
+  const [coins, setCoins] = useState(50);
   const [message, setMessage] = useState("");
-  const [clientSecret, setClientSecret] = useState("");
-  const [step, setStep] = useState<"amount" | "payment" | "success">("amount");
-  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<"donate" | "success">("donate");
   const [error, setError] = useState("");
-  const { user: authUser } = useSelector((state: RootState) => state.auth);
 
-  const handleProceed = async () => {
+  const { user: authUser } = useSelector((state: RootState) => state.auth);
+  const { data: balance } = useGetCoinBalanceQuery(undefined, {
+    skip: !authUser,
+  });
+  const [donateCoins, { isLoading }] = useDonateCoinsMutation();
+
+  const handleDonate = async () => {
     setError("");
-    setLoading(true);
+
+    if (!authUser) {
+      setError("Bạn cần đăng nhập để donate");
+      return;
+    }
+
+    if ((balance?.coins || 0) < coins) {
+      setError("Số xu không đủ! Hãy nạp thêm xu.");
+      return;
+    }
+
     try {
-      const res = await instance.post("/donations/create-payment-intent", {
-        fromUserId: authUser?._id,
+      await donateCoins({
         toUserId: streamerId,
-        amount,
+        coins,
         message,
-      });
-      setClientSecret(res.data.clientSecret);
-      setStep("payment");
+      }).unwrap();
+      setStep("success");
     } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || "Failed to create payment");
-    } finally {
-      setLoading(false);
+      const error = err as { data?: { message?: string } };
+      setError(error.data?.message || "Donate thất bại");
     }
   };
 
@@ -50,39 +61,50 @@ const DonateModal = ({
     <div className="donate-modal">
       <div className="donate-modal__overlay" onClick={onClose} />
       <div className="donate-modal__card">
-        <button className="donate-modal__close" onClick={onClose}>
-          &times;
-        </button>
+        <button className="donate-modal__close" onClick={onClose}>&times;</button>
 
-        {step === "amount" && (
+        {step === "donate" && (
           <>
             <h2 className="donate-modal__title">💝 Donate</h2>
-            <p className="donate-modal__subtitle">Ủng hộ streamer yêu thích!</p>
+            <p className="donate-modal__subtitle">
+              Ủng hộ <strong>{streamerName}</strong>
+            </p>
+
+            {/* Coin balance */}
+            <div className="donate-modal__balance">
+              Số dư: <strong>{balance?.coins || 0} xu</strong>
+              <button
+                className="donate-modal__topup-link"
+                onClick={() => { onClose(); navigate("/topup"); }}
+              >
+                + Nạp thêm
+              </button>
+            </div>
 
             {error && <p className="donate-modal__error">{error}</p>}
 
-            {/* Preset amounts */}
+            {/* Preset coins */}
             <div className="donate-modal__presets">
-              {PRESET_AMOUNTS.map((preset) => (
+              {PRESET_COINS.map((preset) => (
                 <button
                   key={preset}
-                  className={`donate-modal__preset ${amount === preset ? "donate-modal__preset--active" : ""}`}
-                  onClick={() => setAmount(preset)}
+                  className={`donate-modal__preset ${coins === preset ? "donate-modal__preset--active" : ""}`}
+                  onClick={() => setCoins(preset)}
                 >
-                  ${preset}
+                  🪙 {preset}
                 </button>
               ))}
             </div>
 
             {/* Custom amount */}
             <div className="donate-modal__field">
-              <label className="donate-modal__label">Số tiền ($)</label>
+              <label className="donate-modal__label">Số xu</label>
               <input
                 className="donate-modal__input"
                 type="number"
                 min={1}
-                value={amount}
-                onChange={(e) => setAmount(Number(e.target.value))}
+                value={coins}
+                onChange={(e) => setCoins(Number(e.target.value))}
               />
             </div>
 
@@ -90,9 +112,7 @@ const DonateModal = ({
             <div className="donate-modal__field">
               <label className="donate-modal__label">
                 Lời nhắn{" "}
-                <span className="donate-modal__count">
-                  {message.length}/200
-                </span>
+                <span className="donate-modal__count">{message.length}/200</span>
               </label>
               <textarea
                 className="donate-modal__textarea"
@@ -106,31 +126,21 @@ const DonateModal = ({
 
             <button
               className="donate-modal__btn"
-              onClick={handleProceed}
-              disabled={loading || amount < 1}
+              onClick={handleDonate}
+              disabled={isLoading || coins < 1}
             >
-              {loading ? "Loading..." : `Donate $${amount}`}
+              {isLoading ? "Đang gửi..." : `Donate 🪙 ${coins} xu`}
             </button>
           </>
-        )}
-
-        {step === "payment" && clientSecret && (
-          <Elements stripe={stripePromise} options={{ clientSecret }}>
-            <CheckoutForm
-              amount={amount}
-              onSuccess={() => setStep("success")}
-            />
-          </Elements>
         )}
 
         {step === "success" && (
           <div className="donate-modal__success">
             <span>🎉</span>
-            <h2>Cảm ơn bạn!</h2>
-            <p>Donation ${amount} đã được gửi thành công!</p>
-            <button className="donate-modal__btn" onClick={onClose}>
-              Đóng
-            </button>
+            <h2>Donate thành công!</h2>
+            <p>Bạn đã gửi <strong>🪙 {coins} xu</strong> cho {streamerName}</p>
+            {message && <p className="donate-modal__success-msg">"{message}"</p>}
+            <button className="donate-modal__btn" onClick={onClose}>Đóng</button>
           </div>
         )}
       </div>

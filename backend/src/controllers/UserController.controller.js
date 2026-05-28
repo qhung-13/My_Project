@@ -264,6 +264,7 @@ const verifyLoginOtp = asyncHandler(async (req, res) => {
     _id: user._id,
     username: user.username,
     email: user.email,
+    coins: user.coins,
   });
 });
 
@@ -405,5 +406,5 @@ export {
   updateProfile,
   getUserById,
   getStreamKey,
-  resetStreamKey
+  resetStreamKey,
 };

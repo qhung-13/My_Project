@@ -257,6 +257,7 @@ const WatchLive = () => {
       {isDonateModalOpen && (
         <DonateModal
           streamerId={currentStream.userId}
+          streamerName={currentStream.streamerName}
           onClose={() => setIsDonateModalOpen(false)}
         />
       )}

@@ -14,6 +14,7 @@ import {
   useElements,
   PaymentElement,
 } from "@stripe/react-stripe-js";
+import type { CoinPackage } from "../../types/index";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
@@ -89,7 +90,7 @@ const TopUp = () => {
   const { data: balance, refetch } = useGetCoinBalanceQuery(undefined);
   const [createTopUp] = useCreateTopUpMutation();
 
-  const handleSelectPackage = async (pkg: any) => {
+  const handleSelectPackage = async (pkg: CoinPackage) => {
     setSelectedPackage(pkg.id);
     setLoading(true);
     try {
@@ -126,7 +127,7 @@ const TopUp = () => {
         <>
           <p className="topup__desc">Chọn gói xu phù hợp với bạn</p>
           <div className="topup__packages">
-            {packages?.map((pkg: any) => (
+            {packages?.map((pkg: CoinPackage) => (
               <div
                 key={pkg.id}
                 className={`topup__package ${selectedPackage === pkg.id ? "topup__package--active" : ""}`}

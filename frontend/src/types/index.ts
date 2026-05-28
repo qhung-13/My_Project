@@ -66,3 +66,11 @@ export interface ChatMessage {
   message: string;
   timestamp: Date;
 }
+
+export interface CoinPackage {
+  id: number;
+  label?: string;
+  coins: number;
+  bonus: number;
+  price: number;
+}
