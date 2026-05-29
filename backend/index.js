@@ -55,6 +55,7 @@ app.use(
     origin: [
       "https://my-project-omega-roan.vercel.app",
       "http://localhost:5173",
+      "http://localhost",
     ],
     credentials: true,
   }),
