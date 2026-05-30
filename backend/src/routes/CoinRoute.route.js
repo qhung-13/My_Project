@@ -6,10 +6,17 @@ import {
   getCoinBalance,
   donateCoins,
   getDonationHistory,
+  handleWebhook,
 } from "../controllers/CoinController.controller.js";
 import protect from "../middlewares/Auth.middleware.js";
 
 const router = express.Router();
+
+router.post(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  handleWebhook,
+);
 
 router.get("/packages", getCoinPackages);
 router.get("/balance", protect, getCoinBalance);

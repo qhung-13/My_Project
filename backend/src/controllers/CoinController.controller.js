@@ -200,6 +200,50 @@ const getDonationHistory = asyncHandler(async (req, res) => {
   res.status(200).json({ sent, received });
 });
 
+// ─────────────────────────────────────────────
+// @desc    Handle Stripe webhook
+// @route   POST /api/coins/webhook
+// @access  Public (Stripe calls this)
+// ─────────────────────────────────────────────
+const handleWebhook = asyncHandler(async (req, res) => {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  const sig = req.headers["stripe-signature"];
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET,
+    );
+  } catch (err) {
+    console.log("Webhook signature failed:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === "payment_intent.succeeded") {
+    const paymentIntent = event.data.object;
+    const { userId, coins } = paymentIntent.metadata;
+
+    const topUp = await TopUp.findOne({
+      stripePaymentIntentId: paymentIntent.id,
+    });
+
+    if (topUp && topUp.status !== "completed") {
+      topUp.status = "completed";
+      await topUp.save();
+
+      await User.findByIdAndUpdate(userId, {
+        $inc: { coins: parseInt(coins) },
+      });
+
+      console.log(`Webhook: Added ${coins} coins to user ${userId}`);
+    }
+  }
+
+  res.status(200).json({ received: true });
+});
+
 export {
   getCoinPackages,
   createTopUp,
@@ -207,4 +251,5 @@ export {
   getCoinBalance,
   donateCoins,
   getDonationHistory,
+  handleWebhook,
 };

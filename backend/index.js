@@ -46,7 +46,15 @@ const port = process.env.PORT || 5000;
 // ==========================================
 // Global Middlewares
 // ==========================================
-app.use(express.json());
+// app.use(express.json());
+// app.use(express.urlencoded({ extended: true }));
+app.use((req, res, next) => {
+  if (req.originalUrl === "/api/coins/webhook") {
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+});
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
@@ -128,6 +136,7 @@ app.use("/api/comments", commentRoute);
 app.use("/api/streams", streamRoute);
 app.use("/api/donations", donateRoute);
 app.use("/api/coins", coinRoute);
+
 const serveHLS = (req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
