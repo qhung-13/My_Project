@@ -3,6 +3,7 @@ import User from "../models/User.model.js";
 import TopUp from "../models/TopUp.model.js";
 import Donation from "../models/Donation.model.js";
 import Stripe from "stripe";
+import io from "../../index.js";
 
 const COIN_RATE = 100;
 
@@ -172,6 +173,13 @@ const donateCoins = asyncHandler(async (req, res) => {
   await donation.save();
 
   // TODO: Socket.io notify streamer
+  io.to(`stream:${toUserId}`).email("donation-received", {
+    fromUsername: sender.userName,
+    fromAvatar: sender.avatar,
+    coins,
+    message: message || "",
+    timestamp: new Date(),
+  });
 
   res.status(200).json({
     message: "Donation successful",

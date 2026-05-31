@@ -74,3 +74,11 @@ export interface CoinPackage {
   bonus: number;
   price: number;
 }
+
+export interface DonationAlert {
+  fromUsername: string;
+  fromAvatar: string | null;
+  coins: number;
+  message: string;
+  timestamp: Date;
+}

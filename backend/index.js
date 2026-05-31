@@ -172,3 +172,5 @@ app.use(
 httpServer.listen(port, () => {
   console.log(`Server is running on port ${port}...`);
 });
+
+export { io };

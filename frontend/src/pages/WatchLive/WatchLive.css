@@ -402,6 +402,86 @@
   background: #7c3ae0;
 }
 
+.donation-alerts {
+  position: fixed;
+  bottom: 100px;
+  right: 24px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.donation-alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+  min-width: 260px;
+  max-width: 320px;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.donation-alert__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.donation-alert__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.donation-alert__content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.donation-alert__username {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.donation-alert__coins {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.donation-alert__message {
+  font-size: 12px;
+  opacity: 0.8;
+  margin: 0;
+  font-style: italic;
+}
+
 /* ============================================================
    3. THEMING (DARK / LIGHT)
    ============================================================ */

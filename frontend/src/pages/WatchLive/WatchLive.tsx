@@ -7,6 +7,7 @@ import { STREAMS } from "../../data/stream";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
 import type { ChatMessage } from "../../types/index";
+import type { DonationAlert } from "../../types/index";
 import {
   useFollowUserMutation,
   useUnfollowUserMutation,
@@ -30,6 +31,7 @@ const WatchLive = () => {
   const messageEndRef = useRef<HTMLDivElement>(null);
   const [prevId, setPrevId] = useState(id);
   const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
+  const [donationAlerts, setDonationAlerts] = useState<DonationAlert[]>([]);
 
   const { user: authUser } = useSelector((state: RootState) => state.auth);
   const [followUser] = useFollowUserMutation();
@@ -63,10 +65,19 @@ const WatchLive = () => {
       setViewerCount(count);
     });
 
+    socket.on("donation-received", (data: DonationAlert) => {
+      setDonationAlerts((prev) => [...prev, data]);
+
+      setTimeout(() => {
+        setDonationAlerts((prev) => prev.filter((_, i) => i !== 0));
+      }, 5000);
+    });
+
     return () => {
       socket.emit("leave-stream", streamId);
       socket.off("chat-message");
       socket.off("viewer-count");
+      socket.off("donation-received");
       socket.disconnect();
     };
   }, [currentStream.id]);
@@ -252,6 +263,29 @@ const WatchLive = () => {
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="donation-alerts">
+        {donationAlerts.map((alert, index) => (
+          <div className="donation-alert" key={index}>
+            <div className="donation-alert__avatar">
+              {alert.fromAvatar ? (
+                <img src={alert.fromAvatar} alt={alert.fromUsername} />
+              ) : (
+                alert.fromUsername.slice(0, 2).toUpperCase()
+              )}
+            </div>
+            <div className="donation-alert__content">
+              <span className="donation-alert__username">
+                {alert.fromUsername}
+              </span>
+              <span className="donation-alert__coins">{alert.coins} xu</span>
+              {alert.message && (
+                <p className="donation-alert__message">{alert.message}</p>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
 
       {isDonateModalOpen && (
