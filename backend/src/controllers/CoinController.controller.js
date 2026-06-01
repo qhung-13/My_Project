@@ -3,7 +3,7 @@ import User from "../models/User.model.js";
 import TopUp from "../models/TopUp.model.js";
 import Donation from "../models/Donation.model.js";
 import Stripe from "stripe";
-import io from "../../index.js";
+import { io } from "../../index.js";
 
 const COIN_RATE = 100;
 
