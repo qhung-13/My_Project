@@ -82,3 +82,29 @@ export interface DonationAlert {
   message: string;
   timestamp: Date;
 }
+
+export interface StreamUser {
+  _id: string;
+  username: string;
+  displayName?: string;
+  avatar?: string | null;
+}
+
+export interface Stream {
+  _id: string;
+  userId: StreamUser;
+  title: string;
+  description?: string;
+  category: string;
+  tags?: string[];
+  streamKey?: string;
+  thumbnailUrl?: string | null;
+  isLive: boolean;
+  viewers: number;
+  peakViewers?: number;
+  startedAt?: string;
+  endedAt?: string | null;
+  vodUrl?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
