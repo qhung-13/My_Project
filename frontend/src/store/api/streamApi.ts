@@ -13,7 +13,14 @@ export const streamApi = createApi({
     getStreamById: builder.query({
       query: (id) => `/streams/${id}`,
     }),
+    getTopStreamersByHours: builder.query({
+      query: () => "/streams/top-hours",
+    }),
   }),
 });
 
-export const { useGetLiveStreamsQuery, useGetStreamByIdQuery } = streamApi;
+export const {
+  useGetLiveStreamsQuery,
+  useGetStreamByIdQuery,
+  useGetTopStreamersByHoursQuery,
+} = streamApi;

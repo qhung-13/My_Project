@@ -120,6 +120,11 @@ export const userApi = createApi({
       }),
       invalidatesTags: ["StreamKey"],
     }),
+
+    getTopUsers: builder.query({
+      query: () => "/users/top",
+      providesTags: ["UserById"],
+    }),
   }),
 });
 
@@ -139,4 +144,5 @@ export const {
   useGetFollowingQuery,
   useGetStreamKeyQuery,
   useResetStreamKeyMutation,
+  useGetTopUsersQuery,
 } = userApi;

@@ -14,10 +14,16 @@ import {
   getUserById,
   getStreamKey,
   resetStreamKey,
+  getTopUsers,
 } from "../controllers/UserController.controller.js";
 import createToken from "../utils/createToken.js";
 import protect from "../middlewares/Auth.middleware.js";
-import { followUser, unfollowUser, getFollowers, getFollowing } from "../controllers/FollowController.controller.js";
+import {
+  followUser,
+  unfollowUser,
+  getFollowers,
+  getFollowing,
+} from "../controllers/FollowController.controller.js";
 
 const router = express.Router();
 
@@ -78,6 +84,7 @@ router.get(
  * Retrieves the profile of the currently authenticated user.
  * Requires a valid JWT token via the 'protect' middleware.
  */
+router.get("/top", getTopUsers);
 router.get("/profile", protect, getProfile);
 router.put("/profile", protect, updateProfile);
 router.get("/stream-key", protect, getStreamKey);

@@ -1,150 +1,68 @@
 import { useState } from "react";
 import "./Leaderboard.css";
+import {
+  useGetLiveStreamsQuery,
+  useGetTopStreamersByHoursQuery,
+} from "../../../../store/api/streamApi";
+import { useGetTopUsersQuery } from "../../../../store/api/userApi";
+import { generateColor } from "../../../../utils/format";
+import { useNavigate } from "react-router-dom";
 
 type TabType = "Viewers" | "Followers" | "Hours";
 
 function Leaderboard() {
   const [activeTab, setActiveTab] = useState<TabType>("Viewers");
+  const navigate = useNavigate();
+
+  const { data: liveStreams } = useGetLiveStreamsQuery(undefined);
+  const { data: topUsers } = useGetTopUsersQuery(undefined);
+  const { data: topHours } = useGetTopStreamersByHoursQuery(undefined);
 
   const tabs: TabType[] = ["Viewers", "Followers", "Hours"];
 
-  const data = {
-    Viewers: [
-      {
-        id: 1,
-        name: "TigerGaming",
-        value: "8.1k",
-        color: "#1877F2",
-        initials: "TG",
+  const getCurrentData = () => {
+    if (activeTab === "Viewers") {
+      return (liveStreams || []).slice(0, 5).map((s: any) => ({
+        id: s._id,
+        userId: s.userId?._id,
+        name: s.userId?.displayName || s.userId?.username || "Unknown",
+        avatar: s.userId?.avatar,
+        value: `${(s.viewers / 1000).toFixed(1)}k`,
         live: true,
-      },
-      {
-        id: 2,
-        name: "CSProVN",
-        value: "5.6k",
-        color: "#0F6E56",
-        initials: "CS",
-        live: true,
-      },
-      {
-        id: 3,
-        name: "NhokKute",
-        value: "2.4k",
-        color: "#E24B4A",
-        initials: "NK",
-        live: true,
-      },
-      {
-        id: 4,
-        name: "GalaxyX",
-        value: "1.9k",
-        color: "#534AB7",
-        initials: "GX",
+      }));
+    }
+    if (activeTab === "Followers") {
+      return (topUsers || []).map((u: any) => ({
+        id: u._id,
+        userId: u._id,
+        name: u.displayName || u.username,
+        avatar: u.avatar,
+        value:
+          u.followersCount >= 1000
+            ? `${(u.followersCount / 1000).toFixed(1)}k`
+            : `${u.followersCount}`,
         live: false,
-      },
-      {
-        id: 5,
-        name: "ProBattle",
-        value: "1.2k",
-        color: "#854F0B",
-        initials: "PB",
-        live: true,
-      },
-    ],
-
-    Followers: [
-      {
-        id: 1,
-        name: "TigerGaming",
-        value: "320k",
-        color: "#1877F2",
-        initials: "TG",
-        live: true,
-      },
-      {
-        id: 2,
-        name: "VNGamer",
-        value: "280k",
-        color: "#854F0B",
-        initials: "VN",
+      }));
+    }
+    if (activeTab === "Hours") {
+      return (topHours || []).map((u: any) => ({
+        id: u._id,
+        userId: u._id,
+        name: u.displayName || u.username,
+        avatar: u.avatar,
+        value: `${u.totalHours}h`,
         live: false,
-      },
-      {
-        id: 3,
-        name: "SkyKing",
-        value: "210k",
-        color: "#534AB7",
-        initials: "SK",
-        live: false,
-      },
-      {
-        id: 4,
-        name: "MixGaming",
-        value: "195k",
-        color: "#993556",
-        initials: "MX",
-        live: true,
-      },
-      {
-        id: 5,
-        name: "CSProVN",
-        value: "180k",
-        color: "#0F6E56",
-        initials: "CS",
-        live: true,
-      },
-    ],
-
-    Hours: [
-      {
-        id: 1,
-        name: "VNGamer",
-        value: "312h",
-        color: "#854F0B",
-        initials: "VN",
-        live: false,
-      },
-      {
-        id: 2,
-        name: "TigerGaming",
-        value: "298h",
-        color: "#1877F2",
-        initials: "TG",
-        live: true,
-      },
-      {
-        id: 3,
-        name: "ProBattle",
-        value: "245h",
-        color: "#854F0B",
-        initials: "PB",
-        live: true,
-      },
-      {
-        id: 4,
-        name: "GalaxyX",
-        value: "201h",
-        color: "#534AB7",
-        initials: "GX",
-        live: false,
-      },
-      {
-        id: 5,
-        name: "NhokKute",
-        value: "189h",
-        color: "#E24B4A",
-        initials: "NK",
-        live: true,
-      },
-    ],
+      }));
+    }
+    return [];
   };
 
-  const currentData = data[activeTab];
-
+  const currentData = getCurrentData();
   const top3 = currentData.slice(0, 3);
   const rest = currentData.slice(3);
+  const podiumOrder = top3.length === 3 ? [top3[1], top3[0], top3[2]] : top3;
 
-  const podiumOrder = [top3[1], top3[0], top3[2]];
+  if (currentData.length === 0) return null;
 
   return (
     <div className="leaderboard">
@@ -152,7 +70,6 @@ function Leaderboard() {
         <h2 className="leaderboard__title">Top Streamers</h2>
       </div>
 
-      {/* Tabs */}
       <div className="leaderboard__tabs">
         {tabs.map((tab) => (
           <button
@@ -165,38 +82,76 @@ function Leaderboard() {
         ))}
       </div>
 
-      {/* Podium */}
       <div className="leaderboard__podium">
         {podiumOrder.map((item, index) => (
-          <div key={item.id} className={`podium-item rank-${index}`}>
-            {/* Medal */}
+          <div
+            key={item.id}
+            className={`podium-item rank-${index}`}
+            onClick={() => navigate(`/profile/${item.userId}`)}
+            style={{ cursor: "pointer" }}
+          >
             {index === 1 && <div className="medal">👑</div>}
             {index === 0 && <div className="medal">🥈</div>}
             {index === 2 && <div className="medal">🥉</div>}
 
-            <div className="avatar" style={{ background: item.color }}>
-              {item.initials}
+            <div
+              className="avatar"
+              style={{ background: generateColor(item.name) }}
+            >
+              {item.avatar ? (
+                <img
+                  src={item.avatar}
+                  alt={item.name}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                  }}
+                />
+              ) : (
+                item.name.slice(0, 2).toUpperCase()
+              )}
             </div>
 
             <div className="name">{item.name}</div>
             <div className="value">{item.value}</div>
+            {item.live && <span className="live-badge">LIVE</span>}
           </div>
         ))}
       </div>
 
-      {/* List */}
       <div className="leaderboard__list">
         {rest.map((item, index) => (
-          <div key={item.id} className="list-item">
+          <div
+            key={item.id}
+            className="list-item"
+            onClick={() => navigate(`/profile/${item.userId}`)}
+            style={{ cursor: "pointer" }}
+          >
             <div className="rank">{index + 4}</div>
-
-            <div className="avatar small" style={{ background: item.color }}>
-              {item.initials}
+            <div
+              className="avatar small"
+              style={{ background: generateColor(item.name) }}
+            >
+              {item.avatar ? (
+                <img
+                  src={item.avatar}
+                  alt=""
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                  }}
+                />
+              ) : (
+                item.name.slice(0, 2).toUpperCase()
+              )}
             </div>
-
             <div className="name">{item.name}</div>
-
             <div className="value">{item.value}</div>
+            {item.live && <span className="live-badge">LIVE</span>}
           </div>
         ))}
       </div>

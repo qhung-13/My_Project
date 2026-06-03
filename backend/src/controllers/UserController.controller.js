@@ -393,6 +393,20 @@ const resetStreamKey = asyncHandler(async (req, res) => {
   res.status(200).json({ streamKey: user.streamKey });
 });
 
+// ─────────────────────────────────────────────
+// @desc    Get top users by followers
+// @route   GET /api/users/top
+// @access  Public
+// ─────────────────────────────────────────────
+const getTopUsers = asyncHandler(async (req, res) => {
+  const users = await User.find({})
+    .sort({ followersCount: -1 })
+    .limit(5)
+    .select("username displayName avatar followersCount");
+
+  res.status(200).json(users);
+});
+
 export {
   userRegister,
   userLogin,
@@ -407,4 +421,5 @@ export {
   getUserById,
   getStreamKey,
   resetStreamKey,
+  getTopUsers,
 };

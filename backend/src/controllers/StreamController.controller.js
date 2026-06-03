@@ -150,6 +150,43 @@ const updateViewers = asyncHandler(async (req, res) => {
     .json({ viewers: stream.viewers, peakViewers: stream.peakViewers });
 });
 
+// ─────────────────────────────────────────────
+// @desc    Get top streamers by hours
+// @route   GET /api/streams/top-hours
+// @access  Public
+// ─────────────────────────────────────────────
+const getTopStreamersByHours = asyncHandler(async (req, res) => {
+  const streams = await Stream.find({ endedAt: { $ne: null } }).populate(
+    "userId",
+    "username displayName avatar",
+  );
+
+  // Tính tổng giờ stream theo userId
+  const hoursMap = new Map();
+  streams.forEach((stream) => {
+    if (!stream.startedAt || !stream.endedAt) return;
+    const hours =
+      (new Date(stream.endedAt) - new Date(stream.startedAt)) /
+      (1000 * 60 * 60);
+    const uid = stream.userId?._id?.toString();
+    if (!uid) return;
+    hoursMap.set(uid, {
+      user: stream.userId,
+      hours: (hoursMap.get(uid)?.hours || 0) + hours,
+    });
+  });
+
+  const result = Array.from(hoursMap.values())
+    .sort((a, b) => b.hours - a.hours)
+    .slice(0, 5)
+    .map((item) => ({
+      ...item.user._doc,
+      totalHours: Math.round(item.hours),
+    }));
+
+  res.status(200).json(result);
+});
+
 export {
   startStream,
   endStream,
@@ -157,4 +194,5 @@ export {
   getStreamById,
   getStreamsByUser,
   updateViewers,
+  getTopStreamersByHours,
 };
