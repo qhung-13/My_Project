@@ -108,3 +108,28 @@ export interface Stream {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface LeaderboardItem {
+  id: string;
+  userId: string;
+  name: string;
+  avatar?: string | null;
+  value: string;
+  live: boolean;
+}
+
+export interface TopUser {
+  _id: string;
+  username: string;
+  displayName?: string;
+  avatar?: string | null;
+  followersCount: number;
+}
+
+export interface TopHoursUser {
+  _id: string;
+  username: string;
+  displayName?: string;
+  avatar?: string | null;
+  totalHours: number;
+}

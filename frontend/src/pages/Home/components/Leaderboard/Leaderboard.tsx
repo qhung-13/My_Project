@@ -7,6 +7,12 @@ import {
 import { useGetTopUsersQuery } from "../../../../store/api/userApi";
 import { generateColor } from "../../../../utils/format";
 import { useNavigate } from "react-router-dom";
+import type {
+  Stream,
+  LeaderboardItem,
+  TopUser,
+  TopHoursUser,
+} from "../../../../types/index";
 
 type TabType = "Viewers" | "Followers" | "Hours";
 
@@ -22,7 +28,7 @@ function Leaderboard() {
 
   const getCurrentData = () => {
     if (activeTab === "Viewers") {
-      return (liveStreams || []).slice(0, 5).map((s: any) => ({
+      return (liveStreams || []).slice(0, 5).map((s: Stream) => ({
         id: s._id,
         userId: s.userId?._id,
         name: s.userId?.displayName || s.userId?.username || "Unknown",
@@ -32,7 +38,7 @@ function Leaderboard() {
       }));
     }
     if (activeTab === "Followers") {
-      return (topUsers || []).map((u: any) => ({
+      return (topUsers || []).map((u: TopUser) => ({
         id: u._id,
         userId: u._id,
         name: u.displayName || u.username,
@@ -45,7 +51,7 @@ function Leaderboard() {
       }));
     }
     if (activeTab === "Hours") {
-      return (topHours || []).map((u: any) => ({
+      return (topHours || []).map((u: TopHoursUser) => ({
         id: u._id,
         userId: u._id,
         name: u.displayName || u.username,
@@ -83,7 +89,7 @@ function Leaderboard() {
       </div>
 
       <div className="leaderboard__podium">
-        {podiumOrder.map((item, index) => (
+        {podiumOrder.map((item: LeaderboardItem, index: number) => (
           <div
             key={item.id}
             className={`podium-item rank-${index}`}
@@ -122,7 +128,7 @@ function Leaderboard() {
       </div>
 
       <div className="leaderboard__list">
-        {rest.map((item, index) => (
+        {rest.map((item: LeaderboardItem, index: number) => (
           <div
             key={item.id}
             className="list-item"
