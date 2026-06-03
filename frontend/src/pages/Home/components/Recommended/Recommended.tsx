@@ -1,124 +1,116 @@
 import { Play } from "lucide-react";
-import { formatViewers } from "../../../../utils/format";
+import { formatViewers, generateColor } from "../../../../utils/format";
+import { useNavigate } from "react-router-dom";
+import { useGetVideosQuery } from "../../../../store/api/videoApi";
+import type { Video } from "../../../../types/index";
 import "./Recommended.css";
 
+const formatDaysAgo = (dateStr: string) => {
+  const days = Math.floor(
+    (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24),
+  );
+  if (days === 0) {
+    return "Today";
+  }
+  if (days === 1) {
+    return "Yesterday";
+  }
+  return `${days} ago`;
+};
+
 const Recommended = () => {
-  const recommended = [
-    {
-      id: 1,
-      streamerName: "VNGamer",
-      streamTitle: "VNGamer highlight reel",
-      views: 320000,
-      daysAgo: 2,
-      bg: "#0d1a2e",
-      initials: "VN",
-      avatarColor: "#854F0B",
-    },
-    {
-      id: 2,
-      streamerName: "SkyKing",
-      streamTitle: "SkyKing top 10 plays",
-      views: 180000,
-      daysAgo: 5,
-      bg: "#1a0d2e",
-      initials: "SK",
-      avatarColor: "#534AB7",
-    },
-    {
-      id: 3,
-      streamerName: "GalaxyX",
-      streamTitle: "GalaxyX esport recap",
-      views: 95000,
-      daysAgo: 7,
-      bg: "#0d2e1a",
-      initials: "GX",
-      avatarColor: "#0F6E56",
-    },
-    {
-      id: 4,
-      streamerName: "MixGaming",
-      streamTitle: "MixGaming clutch moments",
-      views: 210000,
-      daysAgo: 3,
-      bg: "#2e0d1a",
-      initials: "MX",
-      avatarColor: "#993556",
-    },
-    {
-      id: 5,
-      streamerName: "VNGamer",
-      streamTitle: "VNGamer highlight reel",
-      views: 320000,
-      daysAgo: 2,
-      bg: "#0d1a2e",
-      initials: "VN",
-      avatarColor: "#854F0B",
-    },
-    {
-      id: 6,
-      streamerName: "SkyKing",
-      streamTitle: "SkyKing top 10 plays",
-      views: 180000,
-      daysAgo: 5,
-      bg: "#1a0d2e",
-      initials: "SK",
-      avatarColor: "#534AB7",
-    },
-    {
-      id: 7,
-      streamerName: "GalaxyX",
-      streamTitle: "GalaxyX esport recap",
-      views: 95000,
-      daysAgo: 7,
-      bg: "#0d2e1a",
-      initials: "GX",
-      avatarColor: "#0F6E56",
-    },
-    {
-      id: 8,
-      streamerName: "MixGaming",
-      streamTitle: "MixGaming clutch moments",
-      views: 210000,
-      daysAgo: 3,
-      bg: "#2e0d1a",
-      initials: "MX",
-      avatarColor: "#993556",
-    },
-  ];
+  const navigate = useNavigate();
+  const { data: videos, isLoading } = useGetVideosQuery(undefined);
+
+  const recommended = videos
+    ? [...videos].sort((a: Video, b: Video) => b.views - a.views).slice(0, 8)
+    : [];
+
+  if (isLoading) {
+    return null;
+  }
+
+  if (!recommended.length) {
+    return null;
+  }
 
   return (
     <div className="recommended">
       {/* Header */}
       <div className="recommended__header">
         <span className="recommended__title">Recommended</span>
-        <button className="recommended__more">Xem tất cả</button>
+        <button
+          className="recommended__more"
+          onClick={() => navigate("/search")}
+        >
+          Xem tất cả
+        </button>
       </div>
 
       {/* List dọc */}
       <div className="recommended__list">
-        {recommended.map((item) => (
-          <div className="rec-card" key={item.id}>
-            <div className="rec-card__thumb" style={{ background: item.bg }}>
-              <Play size={16} color="rgba(255,255,255,0.6)" />
-            </div>
+        {recommended.map((video: Video) => {
+          const uploader =
+            typeof video.userId === "object" ? video.userId : null;
+          const uploaderName =
+            uploader?.displayName || uploader?.username || "Unknow";
 
-            <div className="rec-card__info">
-              <div className="rec-card__title">{item.streamTitle}</div>
-              <div className="rec-card__streamer">
-                <div
-                  className="rec-card__avatar"
-                  style={{ background: item.avatarColor }}
-                >
-                  {item.initials}
-                </div>
-                <span>{item.streamerName}</span>
+          return (
+            <div
+              className="rec-card"
+              key={video._id}
+              onClick={() => navigate(`/video${video._id}`)}
+            >
+              <div
+                className="rec-card__thumb"
+                style={{ background: "#0a1a2e" }}
+              >
+                {video.thumbnailUrl ? (
+                  <img
+                    src={video.thumbnailUrl}
+                    alt={video.title}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  <Play size={16} color="rgba(255,255,255,0.6)" />
+                )}
               </div>
-              <div className="rec-card__meta">
-                {formatViewers(item.views)} views · {item.daysAgo} ngày trước
+
+              <div className="rec-card__info">
+                <div className="rec_card__title">{video.title}</div>
+                <div className="rec_card__streamer">
+                  <div
+                    className="rec_card__avatar"
+                    style={{ background: generateColor(uploaderName) }}
+                  >
+                    {uploader?.avatar ? (
+                      <img
+                        src={uploader.avatar}
+                        alt=""
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          borderRadius: "50%",
+                        }}
+                      />
+                    ) : (
+                      uploaderName.slice(0, 2).toLocaleUpperCase()
+                    )}
+                  </div>
+                  <span>{uploaderName}</span>
+                </div>
+                <div className="rec-card__meta">
+                  {formatViewers(video.views)} views .{" "}
+                  {formatDaysAgo(video.createdAt)}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
