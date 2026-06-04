@@ -1,31 +1,77 @@
 import "./BrowseByGame.css";
 import { formatViewers } from "../../../../utils/format";
+import { useGetLiveStreamsQuery } from "../../../../store/api/streamApi";
+import { useNavigate } from "react-router-dom";
+import type { Stream } from "../../../../types/index";
+
+const GAME_COLORS: Record<string, string> = {
+  Valorant: "#1a0a2e",
+  LOL: "#0a1a2e",
+  PUBG: "#1a1a0a",
+  CS2: "#0a2a1a",
+  "Dota 2": "#2a0a1a",
+  FIFA: "#1a0a0a",
+  MLBB: "#0a1a1a",
+  COD: "#1a1a2a",
+};
 
 const BrowseByGame = () => {
-  const games = [
-    { id: 1, name: "Valorant", viewers: 24300, bg: "#1a0a2e" },
-    { id: 2, name: "LOL", viewers: 51200, bg: "#0a1a2e" },
-    { id: 3, name: "PUBG", viewers: 12800, bg: "#1a1a0a" },
-    { id: 4, name: "CS2", viewers: 38100, bg: "#0a2a1a" },
-    { id: 5, name: "Dota 2", viewers: 19400, bg: "#2a0a1a" },
-    { id: 6, name: "FIFA", viewers: 8700, bg: "#1a0a0a" },
-  ];
+  const navigate = useNavigate();
+  const { data: liveStreams } = useGetLiveStreamsQuery(undefined);
+
+  // Tính tổng viewers theo game từ live streams
+  const gameMap = new Map<string, number>();
+  (liveStreams || []).forEach((stream: Stream) => {
+    const game = stream.category;
+    if (!game) return;
+    gameMap.set(game, (gameMap.get(game) || 0) + stream.viewers);
+  });
+
+  // Convert sang array và sort theo viewers
+  const games = Array.from(gameMap.entries())
+    .map(([name, viewers]) => ({ name, viewers }))
+    .sort((a, b) => b.viewers - a.viewers)
+    .slice(0, 6);
+
+  // Nếu không có stream thật thì dùng data mặc định
+  const displayGames =
+    games.length > 0
+      ? games
+      : [
+          { name: "Valorant", viewers: 0 },
+          { name: "LOL", viewers: 0 },
+          { name: "PUBG", viewers: 0 },
+          { name: "CS2", viewers: 0 },
+          { name: "Dota 2", viewers: 0 },
+          { name: "FIFA", viewers: 0 },
+        ];
 
   return (
     <div className="browse">
       <div className="browse__header">
         <span className="browse__title">Browse by Game</span>
-        <button className="browse__more">Xem tất cả</button>
+        <button className="browse__more" onClick={() => navigate("/game")}>
+          Xem tất cả
+        </button>
       </div>
 
       <div className="browse__scroll">
-        {games.map((game) => (
-          <div className="game-card" key={game.id}>
-            {/* Poster dọc 3:4 */}
-            <div className="game-card__poster" style={{ background: game.bg }}>
+        {displayGames.map((game) => (
+          <div
+            className="game-card"
+            key={game.name}
+            onClick={() => navigate(`/search?q=${game.name}`)}
+            style={{ cursor: "pointer" }}
+          >
+            <div
+              className="game-card__poster"
+              style={{ background: GAME_COLORS[game.name] || "#1a1a2e" }}
+            >
               <span className="game-card__name">{game.name}</span>
               <span className="game-card__viewers">
-                {formatViewers(game.viewers)} viewers
+                {game.viewers > 0
+                  ? `${formatViewers(game.viewers)} viewers`
+                  : "No streams"}
               </span>
             </div>
           </div>
