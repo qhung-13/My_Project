@@ -27,6 +27,7 @@ import commentRoute from "./src/routes/CommentRoute.route.js";
 import streamRoute from "./src/routes/StreamRoute.route.js";
 import donateRoute from "./src/routes/DonateRoute.route.js";
 import coinRoute from "./src/routes/CoinRoute.route.js";
+import adminRoute from "./src/routes/AdminRoute.route.js";
 
 // ==========================================
 // Initialization & Database Connection
@@ -136,6 +137,7 @@ app.use("/api/comments", commentRoute);
 app.use("/api/streams", streamRoute);
 app.use("/api/donations", donateRoute);
 app.use("/api/coins", coinRoute);
+app.use("/api/admin", adminRoute);
 
 const serveHLS = (req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
