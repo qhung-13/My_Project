@@ -265,6 +265,7 @@ const verifyLoginOtp = asyncHandler(async (req, res) => {
     username: user.username,
     email: user.email,
     coins: user.coins,
+    role: user.role,
   });
 });
 

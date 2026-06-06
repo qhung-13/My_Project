@@ -133,3 +133,41 @@ export interface TopHoursUser {
   avatar?: string | null;
   totalHours: number;
 }
+
+export interface AdminUser {
+  _id: string;
+  username: string;
+  email: string;
+  avatar?: string | null;
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface AdminVideo {
+  _id: string;
+  title: string;
+  userId: { _id: string; username: string };
+  category: string;
+  views: number;
+  status: string;
+  createdAt: string;
+}
+
+export interface AdminStream {
+  _id: string;
+  title: string;
+  userId: { _id: string; username: string };
+  category: string;
+  viewers: number;
+  isLive: boolean;
+  createdAt: string;
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  totalVideos: number;
+  totalStreams: number;
+  totalDonations: number;
+  recentUsers: AdminUser[];
+}

@@ -1,0 +1,175 @@
+.admin {
+  display: flex;
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.admin__sidebar {
+  width: 220px;
+  background: #1e1e2e;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+}
+
+.admin__logo {
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #3f3f5e;
+}
+
+.admin__nav-btn {
+  width: 100%;
+  height: 40px;
+  background: none;
+  border: none;
+  color: #a1a1c2;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 8px;
+  text-align: left;
+  padding: 0 12px;
+  transition: all 0.2s;
+}
+
+.admin__nav-btn:hover {
+  background: #2e2e4e;
+  color: white;
+}
+
+.admin__nav-btn--active {
+  background: #6366f1;
+  color: white;
+}
+
+.admin__content {
+  margin-left: 220px;
+  padding: 32px;
+  flex: 1;
+}
+
+.admin__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 24px;
+}
+
+.admin__subtitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 24px 0 12px;
+}
+
+.admin__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.admin__stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.admin__stat-icon { font-size: 28px; }
+.admin__stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #6366f1;
+}
+.admin__stat-label {
+  font-size: 13px;
+  color: #888;
+}
+
+.admin__table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.admin__table th {
+  background: #f8f8ff;
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  border-bottom: 1px solid #eee;
+}
+
+.admin__table td {
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #333;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.admin__table tr:last-child td { border-bottom: none; }
+.admin__table tr:hover td { background: #fafafa; }
+
+.admin__role {
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.admin__role--admin { background: #fef3c7; color: #d97706; }
+.admin__role--streamer { background: #ede9fe; color: #7c3aed; }
+.admin__role--user { background: #f0f0f0; color: #666; }
+
+.admin__status {
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.admin__status--active { background: #dcfce7; color: #16a34a; }
+.admin__status--banned { background: #fee2e2; color: #dc2626; }
+
+.admin__btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.admin__btn--danger { background: #fee2e2; color: #dc2626; }
+.admin__btn--danger:hover { background: #fecaca; }
+.admin__btn--success { background: #dcfce7; color: #16a34a; }
+.admin__btn--success:hover { background: #bbf7d0; }
+
+.admin__select {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+}
