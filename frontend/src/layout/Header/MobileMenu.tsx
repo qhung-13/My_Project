@@ -1,7 +1,9 @@
 import { useSelector, useDispatch } from "react-redux";
+import { useState } from "react";
 import type { RootState, AppDispatch } from "../../store/store";
 import { clearUser } from "../../store/slices/authSlice";
 import { useLogoutMutation } from "../../store/api/userApi";
+import GoLiveModal from "../../components/GoLiveModal/GoLiveModal";
 import { useNavigate } from "react-router-dom";
 
 interface Props {
@@ -12,6 +14,7 @@ interface Props {
 }
 
 const MobileMenu = ({ darkMode, setDarkMode, onLogin, onRegister }: Props) => {
+  const [showGoLive, setShowGoLive] = useState(false);
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -26,7 +29,12 @@ const MobileMenu = ({ darkMode, setDarkMode, onLogin, onRegister }: Props) => {
     <div className="mobile-menu">
       <ul className="mobile-menu__list">
         <li className="mobile-menu__item">
-          <button className="mobile-menu__link">Go Live</button>
+          <button
+            className="mobile-menu__link"
+            onClick={() => setShowGoLive(true)}
+          >
+            Go Live
+          </button>
         </li>
         <li className="mobile-menu__item">
           <button
@@ -72,6 +80,7 @@ const MobileMenu = ({ darkMode, setDarkMode, onLogin, onRegister }: Props) => {
           </>
         )}
       </ul>
+      {showGoLive && <GoLiveModal onClose={() => setShowGoLive(false)} />}
     </div>
   );
 };

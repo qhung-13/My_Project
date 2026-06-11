@@ -155,7 +155,9 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
           <div className="header__actions">
             <button
               className="header__btn header__btn--live"
-              onClick={() => setShowGoLive(true)}
+              onClick={() => {
+                setShowGoLive(true);
+              }}
             >
               <TvMinimalPlay className="header__icon" />
               Go Live
