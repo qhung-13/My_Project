@@ -20,6 +20,7 @@ import { clearUser } from "../../store/slices/authSlice";
 import { useLogoutMutation } from "../../store/api/userApi";
 import "./Header.css";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import GoLiveModal from "../../components/GoLiveModal/GoLiveModal";
 
 // ============================================================
 // Types
@@ -56,6 +57,7 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showGoLive, setShowGoLive] = useState(false);
 
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -151,7 +153,10 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
 
           {/* Desktop Actions */}
           <div className="header__actions">
-            <button className="header__btn header__btn--live">
+            <button
+              className="header__btn header__btn--live"
+              onClick={() => setShowGoLive(true)}
+            >
               <TvMinimalPlay className="header__icon" />
               Go Live
             </button>
@@ -283,6 +288,8 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
           onSwitch={() => setActivePopup("Login")}
         />
       )}
+
+      {showGoLive && <GoLiveModal onClose={() => setShowGoLive(false)} />}
     </>
   );
 };

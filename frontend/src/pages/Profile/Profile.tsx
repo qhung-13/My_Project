@@ -13,6 +13,7 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
 import type { Video } from "../../types/index";
 import EditProfile from "../../components/EditProfile/EditProfile";
+import GoLiveModal from "../../components/GoLiveModal/GoLiveModal";
 import "./Profile.css";
 
 type TabType = "VODs" | "Clips" | "About";
@@ -21,6 +22,7 @@ const Profile = () => {
   const { userId } = useParams<{ userId: string }>();
   const [activeTab, setActiveTab] = useState<TabType>("VODs");
   const [showEdit, setShowEdit] = useState(false);
+  const [showGoLive, setShowGoLive] = useState(false);
   const [followUser] = useFollowUserMutation();
   const [unfollowUser] = useUnfollowUserMutation();
   const navigate = useNavigate();
@@ -113,7 +115,12 @@ const Profile = () => {
           </div>
 
           {isMyProfile ? (
-            <button className="profile__go-live-btn">Go Live</button>
+            <button
+              className="profile__go-live-btn"
+              onClick={() => setShowGoLive(true)}
+            >
+              Go Live
+            </button>
           ) : (
             <button
               className={`profile__follow-btn ${isFollowing ? "profile__follow-btn--following" : ""}`}
@@ -281,6 +288,8 @@ const Profile = () => {
       {showEdit && (
         <EditProfile profile={myProfile} onClose={() => setShowEdit(false)} />
       )}
+
+      {showGoLive && <GoLiveModal onClose={() => setShowGoLive(false)} />}
     </div>
   );
 };

@@ -2,7 +2,7 @@ import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
 import User from "../models/User.model.js";
 import Video from "../models/Video.model.js";
 import Stream from "../models/Stream.model.js";
-import Donation from "../models/Donate.model.js";
+import Donation from "../models/Donation.model.js";
 
 // ─────────────────────────────────────────────
 // @desc    Get dashboard stats
