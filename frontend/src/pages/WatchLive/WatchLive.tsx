@@ -1,18 +1,17 @@
 import { MessageSquare, Play, MoreHorizontal, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { formatViewers } from "../../utils/format";
+import { formatViewers, generateColor } from "../../utils/format";
 import "./WatchLive.css";
 import { useNavigate, useParams } from "react-router-dom";
-import { STREAMS } from "../../data/stream";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
-import type { ChatMessage } from "../../types/index";
-import type { DonationAlert } from "../../types/index";
+import type { ChatMessage, DonationAlert, Stream } from "../../types/index";
 import {
   useFollowUserMutation,
   useUnfollowUserMutation,
   useGetUserByIdQuery,
 } from "../../store/api/userApi";
+import { useGetStreamByIdQuery, useGetLiveStreamsQuery } from "../../store/api/streamApi";
 import socket from "../../utils/socket";
 import VideoPlayer from "./VideoPlayer/VideoPlayer";
 import DonateModal from "./DonateModal/DonateModal";
@@ -37,7 +36,12 @@ const WatchLive = () => {
   const [followUser] = useFollowUserMutation();
   const [unfollowUser] = useUnfollowUserMutation();
 
-  const currentStream = STREAMS.find((s) => s.id === id) || STREAMS[0];
+  const { data: currentStream, isLoading: isStreamLoading } = useGetStreamByIdQuery(
+    id!,
+    { skip: !id }
+  ) as { data: Stream | undefined; isLoading: boolean };
+
+  const { data: allStreams } = useGetLiveStreamsQuery(undefined);
 
   if (id !== prevId) {
     setPrevId(id);
@@ -53,9 +57,9 @@ const WatchLive = () => {
   }, [messages]);
 
   useEffect(() => {
-    const streamId = currentStream.id;
+    if (!id) return;
     socket.connect();
-    socket.emit("join-stream", streamId);
+    socket.emit("join-stream", id);
 
     socket.on("chat-message", (data: ChatMessage) => {
       setMessages((prev) => [...prev, data]);
@@ -67,23 +71,27 @@ const WatchLive = () => {
 
     socket.on("donation-received", (data: DonationAlert) => {
       setDonationAlerts((prev) => [...prev, data]);
-
       setTimeout(() => {
         setDonationAlerts((prev) => prev.filter((_, i) => i !== 0));
       }, 5000);
     });
 
     return () => {
-      socket.emit("leave-stream", streamId);
+      socket.emit("leave-stream", id);
       socket.off("chat-message");
       socket.off("viewer-count");
       socket.off("donation-received");
       socket.disconnect();
     };
-  }, [currentStream.id]);
+  }, [id]);
 
-  const { data: streamerData } = useGetUserByIdQuery(currentStream.userId, {
-    skip: !currentStream.userId,
+  const streamerId =
+    typeof currentStream?.userId === "object"
+      ? currentStream.userId._id
+      : currentStream?.userId;
+
+  const { data: streamerData } = useGetUserByIdQuery(streamerId!, {
+    skip: !streamerId,
   });
 
   const isFollowing =
@@ -92,28 +100,44 @@ const WatchLive = () => {
     ) ?? false;
 
   const handleFollow = async () => {
-    if (!currentStream.userId) return;
+    if (!streamerId) return;
     try {
-      if (isFollowing) await unfollowUser(currentStream.userId).unwrap();
-      else await followUser(currentStream.userId).unwrap();
+      if (isFollowing) await unfollowUser(streamerId).unwrap();
+      else await followUser(streamerId).unwrap();
     } catch (err) {
       console.log(err);
     }
   };
 
   const handleSendMessage = () => {
-    if (!inputMessage.trim()) return;
+    if (!inputMessage.trim() || !id) return;
     socket.emit("chat-message", {
-      streamId: currentStream.id,
+      streamId: id,
       message: inputMessage.trim(),
       user: authUser?.username || "Anonymous",
     });
     setInputMessage("");
   };
 
-  const suggestedStreams = STREAMS.filter(
-    (stream) => stream.id !== currentStream.id,
+  const suggestedStreams = (allStreams || []).filter(
+    (stream: Stream) => stream._id !== id,
   ).slice(0, 10);
+
+  if (isStreamLoading) {
+    return <div className="watch-live__loading">Loading...</div>;
+  }
+
+  if (!currentStream) {
+    return <div className="watch-live__loading">Stream không tồn tại hoặc đã kết thúc</div>;
+  }
+
+  const streamerName =
+    typeof currentStream.userId === "object"
+      ? currentStream.userId.displayName || currentStream.userId.username
+      : "Unknown";
+
+  const streamerAvatar =
+    typeof currentStream.userId === "object" ? currentStream.userId.avatar : null;
 
   return (
     <div className="watch-live">
@@ -123,12 +147,7 @@ const WatchLive = () => {
           <span className="badge-live">LIVE</span>
           <span className="badge-viewers">{formatViewers(viewerCount)}</span>
         </div>
-        <VideoPlayer
-          streamKey={currentStream.streamKey}
-          // src={"http://localhost:5000/live/omexlive/index.m3u8"}
-          // videoUrlSrc={("http://localhost:5000/live/omexlive/index.m3u8")}
-          // videoFile={null}
-        />
+        <VideoPlayer streamKey={currentStream.streamKey || ""} />
       </div>
 
       {/* ── Streamer info ── */}
@@ -136,32 +155,39 @@ const WatchLive = () => {
         <div className="info-header">
           <div
             className="info-avatar"
-            style={{ background: currentStream.avatarColor }}
+            style={{ background: generateColor(streamerName) }}
             onClick={() => {
-              if (currentStream.userId)
-                navigate(`/profile/${currentStream.userId}`);
+              if (streamerId) navigate(`/profile/${streamerId}`);
             }}
           >
-            {currentStream.initials}
+            {streamerAvatar ? (
+              <img src={streamerAvatar} alt={streamerName} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+            ) : (
+              streamerName.slice(0, 2).toUpperCase()
+            )}
           </div>
           <div className="info-details">
-            <h2 className="info-title">{currentStream.streamTitle}</h2>
+            <h2 className="info-title">{currentStream.title}</h2>
             <p className="info-meta">
               <span className="live-dot" />
-              {currentStream.streamerName} · {currentStream.game}
+              {streamerName} · {currentStream.category}
             </p>
           </div>
         </div>
         <div className="info-actions">
-          <button className="btn-follow" onClick={handleFollow}>
-            {isFollowing ? "Following" : "Follow"}
-          </button>
-          <button
-            className="btn-donate"
-            onClick={() => setIsDonateModalOpen(true)}
-          >
-            Donate
-          </button>
+          {streamerId !== authUser?._id && (
+            <button className="btn-follow" onClick={handleFollow}>
+              {isFollowing ? "Following" : "Follow"}
+            </button>
+          )}
+          {streamerId !== authUser?._id && (
+            <button
+              className="btn-donate"
+              onClick={() => setIsDonateModalOpen(true)}
+            >
+              Donate
+            </button>
+          )}
           <button className="btn-share">Share</button>
           <button className="btn-more">
             <MoreHorizontal size={18} />
@@ -196,7 +222,7 @@ const WatchLive = () => {
                 <div className="chat-msg" key={msg.id}>
                   <div
                     className="chat-msg__avatar"
-                    style={{ background: "#6366f1" }}
+                    style={{ background: generateColor(msg.user) }}
                   >
                     {msg.user.slice(0, 2).toUpperCase()}
                   </div>
@@ -229,38 +255,42 @@ const WatchLive = () => {
         >
           <h3 className="suggested__title">Stream khác</h3>
           <div className="suggested__list">
-            {suggestedStreams.map((stream) => (
-              <div
-                className="suggested-card"
-                key={stream.id}
-                onClick={() => navigate(`/stream/${stream.id}`)}
-              >
+            {suggestedStreams.map((stream: Stream) => {
+              const name =
+                typeof stream.userId === "object"
+                  ? stream.userId.displayName || stream.userId.username
+                  : "Unknown";
+              return (
                 <div
-                  className="suggested-card__thumb"
-                  style={{ background: stream.bg }}
+                  className="suggested-card"
+                  key={stream._id}
+                  onClick={() => navigate(`/stream/${stream._id}`)}
                 >
-                  <span className="suggested-card__badge">LIVE</span>
-                  <span className="suggested-card__viewers">
-                    {formatViewers(stream.viewers)}
-                  </span>
-                  <Play size={12} fill="rgba(255,255,255,0.4)" />
-                </div>
-                <div className="suggested-card__info">
-                  <div className="suggested-card__title">
-                    {stream.streamTitle}
+                  <div
+                    className="suggested-card__thumb"
+                    style={{ background: "#0a1a2e" }}
+                  >
+                    <span className="suggested-card__badge">LIVE</span>
+                    <span className="suggested-card__viewers">
+                      {formatViewers(stream.viewers)}
+                    </span>
+                    <Play size={12} fill="rgba(255,255,255,0.4)" />
                   </div>
-                  <div className="suggested-card__streamer">
-                    <div
-                      className="suggested-card__avatar"
-                      style={{ background: stream.avatarColor }}
-                    >
-                      {stream.initials}
+                  <div className="suggested-card__info">
+                    <div className="suggested-card__title">{stream.title}</div>
+                    <div className="suggested-card__streamer">
+                      <div
+                        className="suggested-card__avatar"
+                        style={{ background: generateColor(name) }}
+                      >
+                        {name.slice(0, 2).toUpperCase()}
+                      </div>
+                      <span>{name}</span>
                     </div>
-                    <span>{stream.streamerName}</span>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -288,10 +318,10 @@ const WatchLive = () => {
         ))}
       </div>
 
-      {isDonateModalOpen && (
+      {isDonateModalOpen && streamerId && (
         <DonateModal
-          streamerId={currentStream.userId}
-          streamerName={currentStream.streamerName}
+          streamerId={streamerId}
+          streamerName={streamerName}
           onClose={() => setIsDonateModalOpen(false)}
         />
       )}
