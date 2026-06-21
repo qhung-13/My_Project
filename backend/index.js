@@ -30,7 +30,7 @@ import coinRoute from "./src/routes/CoinRoute.route.js";
 import adminRoute from "./src/routes/AdminRoute.route.js";
 
 // AI Agent
-import { checkToxicComment } from "./src/service/ai.service.js";
+import { checkToxicComment } from "./src/services/ai.service.js";
 import { clearScreenDown } from "readline";
 
 // ==========================================
