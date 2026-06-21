@@ -70,6 +70,7 @@ const Register = ({ onClose, onSwitch }: RegisterProps) => {
           email: res.email,
           avatar: res.avatar || null,
           coins: res.coins || 0,
+          role: res.role || "user",
         }),
       );
       onClose();

@@ -50,6 +50,7 @@ const EditProfile = ({ profile, onClose }: EditProfileProps) => {
           email: res.email,
           avatar: res.avatar || null,
           coins: res.coins || 0,
+          role: res.role || "user",
         }),
       );
 
