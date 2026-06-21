@@ -29,6 +29,10 @@ import donateRoute from "./src/routes/DonateRoute.route.js";
 import coinRoute from "./src/routes/CoinRoute.route.js";
 import adminRoute from "./src/routes/AdminRoute.route.js";
 
+// AI Agent
+import { checkToxicComment } from "./src/service/ai.service.js";
+import { clearScreenDown } from "readline";
+
 // ==========================================
 // Initialization & Database Connection
 // ==========================================
@@ -113,7 +117,19 @@ io.on("connection", (socket) => {
 
   // Send chat
   // When user sent message, client sent event "chat-message"
-  socket.on("chat-message", ({ streamId, message, user }) => {
+  socket.on("chat-message", async ({ streamId, message, user }) => {
+    const aiCheck = await checkToxicComment(message);
+
+    if (aiCheck.isToxic) {
+      socket.emit("chat-warning", {
+        message: `Bình luận của bạn đã bị AI chặn tự động. Lý do: ${aiCheck.reason}`,
+      });
+
+      console.log(
+        `[AI Blocked] ${user?.username || "Unknown"}: "${message}" -> ${aiCheck.reason}`,
+      );
+      return;
+    }
     // Broadcast message sent all in room
     io.to(`stream:${streamId}`).emit("chat-message", {
       id: Date.now(),
