@@ -156,6 +156,11 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 userSchema.index({ googleId: 1 });
 userSchema.index({ facebookId: 1 });
 
+userSchema.index({ username: 1 }, { unique: true });
+userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ streamKey: 1 }, { sparse: true });
+userSchema.index({ followersCount: -1 });
+
 const User = mongoose.model("User", userSchema);
 
 export default User;

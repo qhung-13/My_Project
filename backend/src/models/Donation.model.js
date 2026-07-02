@@ -33,5 +33,8 @@ const donationSchema = new mongoose.Schema(
   },
 );
 
+donationSchema.index({ fromUserId: 1, createdAt: -1 });
+donationSchema.index({ toUserId: 1, createdAt: -1 });
+
 const Donation = mongoose.model("Donation", donationSchema);
 export default Donation;

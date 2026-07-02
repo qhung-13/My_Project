@@ -60,5 +60,11 @@ const videoSchema = new mongoose.Schema(
   },
 );
 
+videoSchema.index({ userId: 1, status: 1 });
+videoSchema.index({ views: -1 });
+videoSchema.index({ likesCount: -1 });
+videoSchema.index({ category: 1, status: 1 });
+videoSchema.index({ createdAt: -1 });
+
 const Video = mongoose.model("Video", videoSchema);
 export default Video;

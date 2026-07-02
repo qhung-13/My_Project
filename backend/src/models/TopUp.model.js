@@ -29,5 +29,8 @@ const topUpSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+topUpSchema.index({ userId: 1, createdAt: -1 });
+topUpSchema.index({ stripePaymentIntentId: 1 }, { unique: true });
+
 const TopUp = mongoose.model("TopUp", topUpSchema);
 export default TopUp;
