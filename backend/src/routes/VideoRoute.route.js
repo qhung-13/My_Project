@@ -15,6 +15,7 @@ import {
 } from "../controllers/VideoController.controller.js";
 import protect from "../middlewares/Auth.middleware.js";
 import { uploadVideo, uploadImage } from "../config/cloudinary.config.js";
+import { uploadLimiter } from "../middlewares/RateLimiting.middleware.js";
 
 const router = express.Router();
 
@@ -22,6 +23,7 @@ router.get("/", getVideos);
 router.post(
   "/",
   protect,
+  uploadLimiter,
   uploadVideo.single("video"), // Upload video file
   createVideo,
 );

@@ -13,6 +13,8 @@ import passport from "passport";
 import cors from "cors";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import helmet from "helmet";
+import { globalLimiter } from "./src/middlewares/RateLimiting.middleware.js";
 
 // Configurations & Utilities
 import connectDB from "./src/config/db.config.js";
@@ -33,22 +35,28 @@ import adminRoute from "./src/routes/AdminRoute.route.js";
 // Initialization & Database Connection
 // ==========================================
 dotenv.config();
-
 configurePassport();
 configureCloudinary();
 configureMediaServer();
 connectDB();
-console.log(process.env.STRIPE_SECRET_KEY);
+
 const app = express();
 const httpServer = createServer(app);
-
 const port = process.env.PORT || 5000;
+
+// ==========================================
+// Security Middlewares
+// ==========================================
+app.use(
+  helmet({
+    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: false,
+  }),
+);
 
 // ==========================================
 // Global Middlewares
 // ==========================================
-// app.use(express.json());
-// app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {
   if (req.originalUrl === "/api/coins/webhook") {
     next();
@@ -133,11 +141,11 @@ io.on("connection", (socket) => {
 // ==========================================
 app.use("/api/users", userRoute);
 app.use("/api/videos", videoRoute);
-app.use("/api/comments", commentRoute);
-app.use("/api/streams", streamRoute);
-app.use("/api/donations", donateRoute);
-app.use("/api/coins", coinRoute);
-app.use("/api/admin", adminRoute);
+app.use("/api/comments", globalLimiter, commentRoute);
+app.use("/api/streams", globalLimiter, streamRoute);
+app.use("/api/donations", globalLimiter, donateRoute);
+app.use("/api/coins", globalLimiter, coinRoute);
+app.use("/api/admin", globalLimiter, adminRoute);
 
 const serveHLS = (req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");

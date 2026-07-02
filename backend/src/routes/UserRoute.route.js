@@ -24,6 +24,7 @@ import {
   getFollowers,
   getFollowing,
 } from "../controllers/FollowController.controller.js";
+import { authLimiter } from "../middlewares/RateLimiting.middleware.js";
 
 const router = express.Router();
 
@@ -35,8 +36,8 @@ const router = express.Router();
 // ==========================================
 // 1. Local Authentication & Management
 // ==========================================
-router.post("/register", userRegister);
-router.post("/login", userLogin);
+router.post("/register", authLimiter, userRegister);
+router.post("/login", authLimiter, userLogin);
 router.post("/logout", logout);
 
 // ==========================================
