@@ -50,7 +50,10 @@ const streamSchema = new mongoose.Schema(
   },
 );
 
-
+streamSchema.index({ isLive: 1, viewers: -1 });
+streamSchema.index({ userId: 1 });
+streamSchema.index({ streamKey: 1 }, { unique: true, sparse: true });
+streamSchema.index({ createdAt: -1 });
 
 const Stream = mongoose.model("Stream", streamSchema);
 export default Stream;

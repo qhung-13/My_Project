@@ -17,11 +17,11 @@ const GAME_COLORS: Record<string, string> = {
 
 const BrowseByGame = () => {
   const navigate = useNavigate();
-  const { data: liveStreams } = useGetLiveStreamsQuery(undefined);
+  const { data: result } = useGetLiveStreamsQuery({});
 
   // Tính tổng viewers theo game từ live streams
   const gameMap = new Map<string, number>();
-  (liveStreams || []).forEach((stream: Stream) => {
+  (result?.streams || []).forEach((stream: Stream) => {
     const game = stream.category;
     if (!game) return;
     gameMap.set(game, (gameMap.get(game) || 0) + stream.viewers);

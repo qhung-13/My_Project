@@ -171,3 +171,35 @@ export interface AdminStats {
   totalDonations: number;
   recentUsers: AdminUser[];
 }
+
+export interface GetVideosParams {
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedVideos {
+  videos: Video[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
+}
+
+export interface GetLiveStreamsParams {
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedStreams {
+  streams: Stream[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
+}

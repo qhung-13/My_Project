@@ -20,7 +20,7 @@ function Leaderboard() {
   const [activeTab, setActiveTab] = useState<TabType>("Viewers");
   const navigate = useNavigate();
 
-  const { data: liveStreams } = useGetLiveStreamsQuery(undefined);
+  const { data: result } = useGetLiveStreamsQuery(undefined);
   const { data: topUsers } = useGetTopUsersQuery(undefined);
   const { data: topHours } = useGetTopStreamersByHoursQuery(undefined);
 
@@ -28,7 +28,7 @@ function Leaderboard() {
 
   const getCurrentData = () => {
     if (activeTab === "Viewers") {
-      return (liveStreams || []).slice(0, 5).map((s: Stream) => ({
+      return (result?.streams || []).slice(0, 5).map((s: Stream) => ({
         id: s._id,
         userId: s.userId?._id,
         name: s.userId?.displayName || s.userId?.username || "Unknown",

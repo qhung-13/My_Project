@@ -86,11 +86,29 @@ const endStream = asyncHandler(async (req, res) => {
 // @access  Public
 // ─────────────────────────────────────────────
 const getLiveStreams = asyncHandler(async (req, res) => {
-  const streams = await Stream.find({ isLive: true })
-    .populate("userId", "username displayName avatar")
-    .sort({ viewers: -1 }); // Sắp xếp theo viewers cao nhất
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 12;
+  const skip = (page - 1) * limit;
 
-  res.status(200).json(streams);
+  const [streams, total] = await Promise.all([
+    Stream.find({ isLive: true })
+      .populate("userId", "username displayName avatar")
+      .sort({ viewers: -1 })
+      .skip(skip)
+      .limit(limit),
+    Stream.countDocuments({ isLive: true }),
+  ]);
+
+  res.status(200).json({
+    streams,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page < Math.ceil(total / limit),
+    },
+  });
 });
 
 // ─────────────────────────────────────────────

@@ -20,10 +20,12 @@ const formatDaysAgo = (dateStr: string) => {
 
 const Recommended = () => {
   const navigate = useNavigate();
-  const { data: videos, isLoading } = useGetVideosQuery(undefined);
+  const { data: result, isLoading } = useGetVideosQuery({});
 
-  const recommended = videos
-    ? [...videos].sort((a: Video, b: Video) => b.views - a.views).slice(0, 8)
+  const recommended = result?.videos
+    ? [...result.videos]
+        .sort((a: Video, b: Video) => b.views - a.views)
+        .slice(0, 8)
     : [];
 
   if (isLoading) {
@@ -59,7 +61,7 @@ const Recommended = () => {
             <div
               className="rec-card"
               key={video._id}
-              onClick={() => navigate(`/video${video._id}`)}
+              onClick={() => navigate(`/video/${video._id}`)}
             >
               <div
                 className="rec-card__thumb"

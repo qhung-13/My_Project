@@ -7,13 +7,14 @@ import type { Stream } from "../../../../types/index";
 
 const LiveNow = () => {
   const navigate = useNavigate();
-  const { data: streams, isLoading } = useGetLiveStreamsQuery(undefined);
+  const { data: result, isLoading } = useGetLiveStreamsQuery(undefined);
+  const streams = result?.streams || [];
 
   if (isLoading) {
     return <div className="live-now__loading">Loading...</div>;
   }
 
-  if (!streams || streams.length === 0) {
+  if (!streams) {
     return null;
   }
 

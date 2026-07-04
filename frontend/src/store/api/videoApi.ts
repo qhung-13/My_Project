@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import type { GetVideosParams, PaginatedVideos } from "../../types/index";
 
 export const videoApi = createApi({
   reducerPath: "videoApi",
@@ -9,8 +10,9 @@ export const videoApi = createApi({
   tagTypes: ["Video", "Comment"],
   endpoints: (builder) => ({
     // Get all videos
-    getVideos: builder.query({
-      query: () => "/videos",
+    getVideos: builder.query<PaginatedVideos, GetVideosParams | void>({
+      query: ({ page = 1, limit = 12 } = {}) =>
+        `/videos?page=${page}&limit=${limit}`,
       providesTags: ["Video"],
     }),
 
@@ -22,14 +24,15 @@ export const videoApi = createApi({
 
     // Get videos by user
     getVideosByUser: builder.query({
-      query: (userId) => `/videos/user/${userId}`,
+      query: ({ userId, page = 1, limit = 12 }) =>
+        `/videos/user/${userId}?page=${page}&limit=${limit}`,
       providesTags: ["Video"],
     }),
 
     // Search videos
     searchVideos: builder.query({
-      query: ({ q, category, sort }) =>
-        `/videos/search?${q ? `q=${q}&` : ""}${category ? `category=${category}&` : ""}${sort ? `sort=${sort}` : ""}`,
+      query: ({ q, category, sort, page = 1, limit = 12 }) =>
+        `/videos/search?${q ? `q=${q}&` : ""}${category ? `category=${category}&` : ""}${sort ? `sort=${sort}&` : ""}page=${page}&limit=${limit}`,
       providesTags: ["Video"],
     }),
 

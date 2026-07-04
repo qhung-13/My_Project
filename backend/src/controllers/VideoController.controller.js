@@ -55,13 +55,30 @@ const createVideo = asyncHandler(async (req, res) => {
 // @access  Public
 // ─────────────────────────────────────────────
 const getVideos = asyncHandler(async (req, res) => {
-  const videos = await Video.find({ status: "public" })
-    .populate("userId", "username displayName avatar")
-    .sort({ createdAt: -1 });
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 12;
+  const skip = (page - 1) * limit;
 
-  res.status(200).json(videos);
+  const [videos, total] = await Promise.all([
+    Video.find({ status: "public" })
+      .populate("userId", "username displayName avatar")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Video.countDocuments({ status: "public" }),
+  ]);
+
+  res.status(200).json({
+    videos,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page < Math.ceil(total / limit),
+    },
+  });
 });
-
 // ─────────────────────────────────────────────
 // @desc    Get a single video by ID
 // @route   GET /api/videos/:id
@@ -106,12 +123,28 @@ const increaseView = asyncHandler(async (req, res) => {
 // @access  Public
 // ─────────────────────────────────────────────
 const getVideosByUser = asyncHandler(async (req, res) => {
-  const videos = await Video.find({
-    userId: req.params.userId,
-    status: "public",
-  }).sort({ createdAt: -1 });
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 12;
+  const skip = (page - 1) * limit;
 
-  res.status(200).json(videos);
+  const [videos, total] = await Promise.all([
+    Video.find({ userId: req.params.userId, status: "public" })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Video.countDocuments({ userId: req.params.userId, status: "public" }),
+  ]);
+
+  res.status(200).json({
+    videos,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page < Math.ceil(total / limit),
+    },
+  });
 });
 
 // ─────────────────────────────────────────────
@@ -233,34 +266,43 @@ const unlikeVideo = asyncHandler(async (req, res) => {
 // ─────────────────────────────────────────────
 const searchVideos = asyncHandler(async (req, res) => {
   const { q, category, sort } = req.query;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 12;
+  const skip = (page - 1) * limit;
 
-  // Build query
   const query = { status: "public" };
-
-  // Search by title hoặc description
   if (q) {
     query.$or = [
       { title: { $regex: q, $options: "i" } },
       { description: { $regex: q, $options: "i" } },
     ];
   }
+  if (category) query.category = category;
 
-  // Filter by category
-  if (category) {
-    query.category = category;
-  }
-
-  // Sort options
-  let sortOption = { createdAt: -1 }; // Mặc định mới nhất
+  let sortOption = { createdAt: -1 };
   if (sort === "views") sortOption = { views: -1 };
   if (sort === "likes") sortOption = { likesCount: -1 };
   if (sort === "oldest") sortOption = { createdAt: 1 };
 
-  const videos = await Video.find(query)
-    .populate("userId", "username displayName avatar")
-    .sort(sortOption);
+  const [videos, total] = await Promise.all([
+    Video.find(query)
+      .populate("userId", "username displayName avatar")
+      .sort(sortOption)
+      .skip(skip)
+      .limit(limit),
+    Video.countDocuments(query),
+  ]);
 
-  res.status(200).json(videos);
+  res.status(200).json({
+    videos,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      hasMore: page < Math.ceil(total / limit),
+    },
+  });
 });
 
 // ─────────────────────────────────────────────
