@@ -1,5 +1,6 @@
 import User from "../models/User.model.js";
 import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
+import { createNotification } from "./Notification.controller.js";
 
 // ─────────────────────────────────────────────
 // @desc    Follow a user
@@ -35,6 +36,14 @@ const followUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(myId, {
     $push: { following: targetId },
     $inc: { followingCount: 1 },
+  });
+
+  await createNotification({
+    userId: targetUser._id, 
+    fromUserId: myId, 
+    type: "follow",
+    message: `${req.user.username} đã follow bạn`,
+    link: `/profile/${myId}`,
   });
 
   res.status(200).json({ message: "Followed successfully" });

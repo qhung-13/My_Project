@@ -1,10 +1,11 @@
 import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
 import Donation from "../models/Donation.model.js";
 import Stripe from "stripe";
+import { createNotification } from "./Notification.controller.js";
 
 const createPayment = asyncHandler(async (req, res) => {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-  
+
   const { fromUserId, toUserId, amount, message } = req.body;
 
   if (!fromUserId || !toUserId || !amount) {
@@ -28,6 +29,14 @@ const createPayment = asyncHandler(async (req, res) => {
   });
 
   await newDonation.save();
+
+  await createNotification({
+    userId: toUserId,
+    fromUserId: fromUserId,
+    type: "donate",
+    message: `${sender.username} đã donate ${coins} xu cho bạn`,
+    link: `/profile/${fromUserId}`,
+  });
 
   res.status(200).json({
     clientSecret: paymentIntent.client_secret,

@@ -30,6 +30,7 @@ import streamRoute from "./src/routes/StreamRoute.route.js";
 import donateRoute from "./src/routes/DonateRoute.route.js";
 import coinRoute from "./src/routes/CoinRoute.route.js";
 import adminRoute from "./src/routes/AdminRoute.route.js";
+import notification from "./src/routes/Notification.route.js";
 
 // ==========================================
 // Initialization & Database Connection
@@ -146,6 +147,7 @@ app.use("/api/streams", globalLimiter, streamRoute);
 app.use("/api/donations", globalLimiter, donateRoute);
 app.use("/api/coins", globalLimiter, coinRoute);
 app.use("/api/admin", globalLimiter, adminRoute);
+app.use("/api/notification", notification);
 
 const serveHLS = (req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
