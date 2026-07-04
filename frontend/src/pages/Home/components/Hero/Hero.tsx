@@ -6,9 +6,9 @@ import { useGetLiveStreamsQuery } from "../../../../store/api/streamApi";
 
 const Hero = () => {
   const navigate = useNavigate();
-  const { data: streams } = useGetLiveStreamsQuery(undefined);
+  const { data: result } = useGetLiveStreamsQuery(undefined);
 
-  const featuredStream = streams?.[0];
+  const featuredStream = result?.streams?.[0];
 
   if (!featuredStream) {
     return null;
@@ -19,7 +19,7 @@ const Hero = () => {
       <div
         className="hero__video"
         style={{ background: "#0a1a2e" }}
-        onClick={() => navigate(`/stream/${featuredStream.id}`)}
+        onClick={() => navigate(`/stream/${featuredStream._id}`)}
       >
         <button className="hero__play-btn">
           <Play size={20} fill="white" />
