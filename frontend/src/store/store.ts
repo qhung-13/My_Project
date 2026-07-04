@@ -7,6 +7,7 @@ import { videoApi } from "./api/videoApi";
 import { donationApi } from "./api/donationApi";
 import { coinApi } from "./api/coinApi";
 import { streamApi } from "./api/streamApi";
+import { notificationApi } from "./api/notificationApi";
 
 export const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
     [donationApi.reducerPath]: donationApi.reducer,
     [coinApi.reducerPath]: coinApi.reducer,
     [streamApi.reducerPath]: streamApi.reducer,
+    [notificationApi.reducerPath]: notificationApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
@@ -23,7 +25,8 @@ export const store = configureStore({
       .concat(videoApi.middleware)
       .concat(donationApi.middleware)
       .concat(coinApi.middleware)
-      .concat(streamApi.middleware),
+      .concat(streamApi.middleware)
+      .concat(notificationApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

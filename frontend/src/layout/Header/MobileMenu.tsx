@@ -5,6 +5,7 @@ import { clearUser } from "../../store/slices/authSlice";
 import { useLogoutMutation } from "../../store/api/userApi";
 import GoLiveModal from "../../components/GoLiveModal/GoLiveModal";
 import { useNavigate } from "react-router-dom";
+import NotificationBell from "../../components/NotificationBell/NotificationBell";
 
 interface Props {
   darkMode: boolean;
@@ -43,6 +44,8 @@ const MobileMenu = ({ darkMode, setDarkMode, onLogin, onRegister }: Props) => {
           >
             {darkMode ? "Light Mode" : "Dark Mode"}
           </button>
+
+          {isAuthenticated && <NotificationBell />}
         </li>
 
         {isAuthenticated ? (

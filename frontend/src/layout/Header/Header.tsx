@@ -21,6 +21,7 @@ import { useLogoutMutation } from "../../store/api/userApi";
 import "./Header.css";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import GoLiveModal from "../../components/GoLiveModal/GoLiveModal";
+import NotificationBell from "../../components/NotificationBell/NotificationBell";
 
 // ============================================================
 // Types
@@ -174,6 +175,8 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
                 <Moon className="header__icon" />
               )}
             </button>
+
+            {isAuthenticated && <NotificationBell />}
 
             {/* Auth */}
             <div className="header__auth">
