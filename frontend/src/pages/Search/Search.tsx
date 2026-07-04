@@ -26,7 +26,6 @@ const Search = () => {
     cat.toLowerCase().includes(q.toLowerCase()),
   );
 
-  // ✅ Dùng API thật thay vì STREAMS mock
   const { data: streamsResult } = useGetLiveStreamsQuery({});
   const relatedStreams = (streamsResult?.streams || [])
     .filter(

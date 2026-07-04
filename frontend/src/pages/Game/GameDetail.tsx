@@ -22,7 +22,6 @@ const GameDetail = () => {
 
   const gameName = GAME_NAMES[gameId ?? ""] ?? gameId;
 
-  // ✅ Dùng API thật
   const { data: result, isLoading } = useGetLiveStreamsQuery({});
   const streams = (result?.streams || []).filter(
     (stream: Stream) =>
