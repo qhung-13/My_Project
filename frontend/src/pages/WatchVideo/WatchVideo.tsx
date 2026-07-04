@@ -41,7 +41,7 @@ const WatchVideo = () => {
   const { data: video, isLoading } = useGetVideoByIdQuery(videoId!, {
     skip: !videoId,
   }) as { data: Video | undefined; isLoading: boolean };
-  const { data: allVideos } = useGetVideosQuery(undefined);
+  const { data: result } = useGetVideosQuery(undefined);
   const { data: comments } = useGetCommentsQuery(videoId!, { skip: !videoId });
 
   const uploaderId =
@@ -133,7 +133,7 @@ const WatchVideo = () => {
   };
 
   const suggestedVideos =
-    allVideos?.filter((v: Video) => v._id !== videoId).slice(0, 10) || [];
+    result?.videos?.filter((v: Video) => v._id !== videoId).slice(0, 10) || [];
 
   if (isLoading) return <div className="watch-video__loading">Loading...</div>;
   if (!video)

@@ -19,9 +19,9 @@ const Live = () => {
   const [sortBy, setSortBy] = useState<"viewers" | "newest">("viewers");
   const navigate = useNavigate();
 
-  const { data: streams, isLoading } = useGetLiveStreamsQuery(undefined);
+  const { data: result, isLoading } = useGetLiveStreamsQuery(undefined);
 
-  const filteredStreams = (streams || [])
+  const filteredStreams = (result?.streams || [])
     .filter((s: Stream) => activeGame === "All" || s.category === activeGame)
     .slice()
     .sort((a: Stream, b: Stream) =>

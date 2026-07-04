@@ -41,7 +41,7 @@ const WatchLive = () => {
     { skip: !id }
   ) as { data: Stream | undefined; isLoading: boolean };
 
-  const { data: allStreams } = useGetLiveStreamsQuery(undefined);
+  const { data: result } = useGetLiveStreamsQuery(undefined);
 
   if (id !== prevId) {
     setPrevId(id);
@@ -119,7 +119,7 @@ const WatchLive = () => {
     setInputMessage("");
   };
 
-  const suggestedStreams = (allStreams || []).filter(
+  const suggestedStreams = (result?.streams || []).filter(
     (stream: Stream) => stream._id !== id,
   ).slice(0, 10);
 
