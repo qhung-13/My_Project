@@ -1,13 +1,11 @@
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useSearchVideosQuery } from "../../store/api/videoApi";
-import { useNavigate } from "react-router-dom";
-import { STREAMS } from "../../data/stream";
-import { formatViewers } from "../../utils/format";
+import { useGetLiveStreamsQuery } from "../../store/api/streamApi";
+import { formatViewers, generateColor } from "../../utils/format";
 import { Play } from "lucide-react";
-import type { Video } from "../../types/index";
+import type { Video, Stream } from "../../types/index";
 import "./Search.css";
 
-// Categories có sẵn
 const ALL_CATEGORIES = [
   "LOL",
   "PUBG",
@@ -24,21 +22,24 @@ const Search = () => {
   const navigate = useNavigate();
   const q = searchParams.get("q") || "";
 
-  // Filter categories liên quan
   const relatedCategories = ALL_CATEGORIES.filter((cat) =>
     cat.toLowerCase().includes(q.toLowerCase()),
   );
 
-  // Filter streams liên quan
-  const relatedStreams = STREAMS.filter(
-    (stream) =>
-      stream.streamerName.toLowerCase().includes(q.toLowerCase()) ||
-      stream.game.toLowerCase().includes(q.toLowerCase()) ||
-      stream.streamTitle.toLowerCase().includes(q.toLowerCase()),
-  ).slice(0, 6);
+  // ✅ Dùng API thật thay vì STREAMS mock
+  const { data: streamsResult } = useGetLiveStreamsQuery({});
+  const relatedStreams = (streamsResult?.streams || [])
+    .filter(
+      (stream: Stream) =>
+        stream.title?.toLowerCase().includes(q.toLowerCase()) ||
+        stream.category?.toLowerCase().includes(q.toLowerCase()) ||
+        (typeof stream.userId === "object" &&
+          stream.userId?.username?.toLowerCase().includes(q.toLowerCase())),
+    )
+    .slice(0, 6);
 
-  // Fetch videos liên quan từ API
-  const { data: videos, isLoading } = useSearchVideosQuery({ q });
+  const { data: videosResult, isLoading } = useSearchVideosQuery({ q });
+  const videos = videosResult?.videos || [];
 
   return (
     <div className="search-page">
@@ -69,40 +70,71 @@ const Search = () => {
         <section className="search-section">
           <h3 className="search-section__title">Streams đang live</h3>
           <div className="search-streams">
-            {relatedStreams.map((stream) => (
-              <div
-                key={stream.id}
-                className="search-stream-card"
-                onClick={() => navigate(`/stream/${stream.id}`)}
-              >
+            {relatedStreams.map((stream: Stream) => {
+              const name =
+                typeof stream.userId === "object"
+                  ? stream.userId?.displayName || stream.userId?.username
+                  : "Unknown";
+              return (
                 <div
-                  className="search-stream-card__thumb"
-                  style={{ background: stream.bg }}
+                  key={stream._id}
+                  className="search-stream-card"
+                  onClick={() => navigate(`/stream/${stream._id}`)}
                 >
-                  <span className="search-stream-card__live">LIVE</span>
-                  <span className="search-stream-card__viewers">
-                    {formatViewers(stream.viewers)}
-                  </span>
-                  <Play size={20} fill="white" />
-                </div>
-                <div className="search-stream-card__info">
                   <div
-                    className="search-stream-card__avatar"
-                    style={{ background: stream.avatarColor }}
+                    className="search-stream-card__thumb"
+                    style={{ background: "#0a1a2e" }}
                   >
-                    {stream.initials}
+                    {stream.thumbnailUrl && (
+                      <img
+                        src={stream.thumbnailUrl}
+                        alt={stream.title}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
+                      />
+                    )}
+                    <span className="search-stream-card__live">LIVE</span>
+                    <span className="search-stream-card__viewers">
+                      {formatViewers(stream.viewers)}
+                    </span>
+                    <Play size={20} fill="white" />
                   </div>
-                  <div>
-                    <p className="search-stream-card__title">
-                      {stream.streamTitle}
-                    </p>
-                    <p className="search-stream-card__meta">
-                      {stream.streamerName} · {stream.game}
-                    </p>
+                  <div className="search-stream-card__info">
+                    <div
+                      className="search-stream-card__avatar"
+                      style={{ background: generateColor(name || "") }}
+                    >
+                      {typeof stream.userId === "object" &&
+                      stream.userId?.avatar ? (
+                        <img
+                          src={stream.userId.avatar}
+                          alt=""
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            borderRadius: "50%",
+                            objectFit: "cover",
+                          }}
+                        />
+                      ) : (
+                        name?.slice(0, 2).toUpperCase()
+                      )}
+                    </div>
+                    <div>
+                      <p className="search-stream-card__title">
+                        {stream.title}
+                      </p>
+                      <p className="search-stream-card__meta">
+                        {name} · {stream.category}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
@@ -112,7 +144,7 @@ const Search = () => {
         <h3 className="search-section__title">Videos</h3>
         {isLoading ? (
           <div className="search-loading">Loading...</div>
-        ) : videos && videos.length > 0 ? (
+        ) : videos.length > 0 ? (
           <div className="search-videos">
             {videos.map((video: Video) => (
               <div
