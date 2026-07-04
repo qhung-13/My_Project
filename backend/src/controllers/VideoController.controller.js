@@ -98,12 +98,18 @@ const getVideoById = asyncHandler(async (req, res) => {
   res.status(200).json(video);
 });
 
+const viewedSessions = new Set();
 const increaseView = asyncHandler(async (req, res) => {
-  const video = await Video.findById(req.params.id).populate(
-    "userId",
-    "username displayName avatar",
-  );
+  const videoId = req.params.id;
 
+  const identifier = req.user?._id
+    ? `${req.user._id}:${videoId}`
+    : `${req.ip}:${videoId}`;
+  if (viewedSessions.has(identifier)) {
+    return res.status(200).json({ success: true, skipped: true });
+  }
+
+  const video = await Video.findById(videoId);
   if (!video) {
     res.status(404);
     throw new Error("Video not found");
@@ -112,9 +118,10 @@ const increaseView = asyncHandler(async (req, res) => {
   video.views += 1;
   await video.save();
 
-  res.status(200).json({
-    success: true,
-  });
+  viewedSessions.add(identifier);
+  setTimeout(() => viewedSessions.delete(identifier), 24 * 60 * 60 * 1000);
+
+  res.status(200).json({ success: true });
 });
 
 // ─────────────────────────────────────────────
