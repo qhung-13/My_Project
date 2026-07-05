@@ -1,0 +1,83 @@
+/* ── Global mobile fixes ── */
+@media (max-width: 768px) {
+
+  /* Admin sidebar — ẩn trên mobile, dùng top bar */
+  .admin {
+    flex-direction: column;
+  }
+
+  .admin__sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 12px;
+    gap: 4px;
+  }
+
+  .admin__content {
+    margin-left: 0;
+    padding: 16px;
+  }
+
+  .admin__table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  /* Dashboard input row */
+  .dashboard__input-row {
+    flex-wrap: wrap;
+  }
+
+  .dashboard__input {
+    width: 100%;
+  }
+
+  /* TopUp packages */
+  .topup__packages {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Profile stats */
+  .profile__stats {
+    gap: 12px;
+  }
+
+  /* GoLive modal */
+  .golive-modal__card {
+    padding: 20px 16px;
+  }
+
+  .golive-modal__row {
+    flex-wrap: wrap;
+  }
+
+  .golive-modal__btn {
+    flex: 1;
+    min-width: 60px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* TopUp packages — 1 cột trên màn nhỏ */
+  .topup__packages {
+    grid-template-columns: 1fr;
+  }
+
+  /* Donate modal */
+  .donate-modal__card {
+    padding: 16px;
+  }
+
+  .donate-modal__presets {
+    gap: 6px;
+  }
+
+  .donate-modal__preset {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+}
