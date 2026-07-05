@@ -283,6 +283,7 @@ const getProfile = asyncHandler(async (req, res) => {
       isVerified: user.isVerified,
       followersCount: user.followersCount,
       followingCount: user.followingCount,
+      bannerImage: user.bannerImage,
     });
   } else {
     res.status(404);
@@ -296,6 +297,7 @@ const updateProfile = asyncHandler(async (req, res) => {
     user.displayName = req.body.displayName || user.displayName;
     user.bio = req.body.bio || user.bio;
     user.avatar = req.body.avatar || user.avatar;
+    user.bannerImage = req.body.bannerImage || user.bannerImage;
 
     if (req.body.password) {
       if (!req.body.currentPassword) {
@@ -321,6 +323,7 @@ const updateProfile = asyncHandler(async (req, res) => {
       bio: updatedUser.bio,
       avatar: updatedUser.avatar,
       role: updatedUser.role,
+      bannerImage: updatedUser.bannerImage,
     });
   } else {
     res.status(404);
@@ -408,6 +411,22 @@ const getTopUsers = asyncHandler(async (req, res) => {
   res.status(200).json(users);
 });
 
+const updateBanner = asyncHandler(async (req, res) => {
+  const bannerUrl = req.file?.path;
+  if (!bannerUrl) {
+    res.status(400);
+    throw new Error("Please upload an image");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    { bannerImage: bannerUrl },
+    { new: true },
+  );
+
+  res.status(200).json({ bannerImage: user.bannerImage });
+});
+
 export {
   userRegister,
   userLogin,
@@ -423,4 +442,5 @@ export {
   getStreamKey,
   resetStreamKey,
   getTopUsers,
+  updateBanner,
 };

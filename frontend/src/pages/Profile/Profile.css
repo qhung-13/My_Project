@@ -385,6 +385,26 @@
   color: #888;
 }
 
+.profile__banner-edit {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.profile__banner-edit:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
 /* ============================================================
    6. THEMING (DARK / LIGHT)
    ============================================================ */

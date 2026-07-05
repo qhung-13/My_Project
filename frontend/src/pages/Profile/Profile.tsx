@@ -1,12 +1,14 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
+import { useRef } from "react";
 
 import {
   useGetProfileQuery,
   useGetUserByIdQuery,
   useFollowUserMutation,
   useUnfollowUserMutation,
+  useUpdateBannerMutation,
 } from "../../store/api/userApi";
 import { useGetVideosByUserQuery } from "../../store/api/videoApi";
 import { useSelector } from "react-redux";
@@ -26,6 +28,8 @@ const Profile = () => {
   const [followUser] = useFollowUserMutation();
   const [unfollowUser] = useUnfollowUserMutation();
   const navigate = useNavigate();
+  const [updateBanner] = useUpdateBannerMutation();
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const { user: authUser } = useSelector((state: RootState) => state.auth);
   const isMyProfile = !userId || userId === "me" || userId === authUser?._id;
@@ -80,6 +84,16 @@ const Profile = () => {
     }
   };
 
+  const handleBannerChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    const formData = new FormData();
+    formData.append("banner", file);
+    await updateBanner(formData).unwrap();
+  };
+
   const vodVideos = videos?.filter((v: Video) => v.type === "vod") || [];
 
   const clipVideos = videos?.filter((v: Video) => v.type === "clip") || [];
@@ -87,7 +101,34 @@ const Profile = () => {
   return (
     <div className="profile">
       {/* Banner */}
-      <div className="profile__banner">
+      <div
+        className="profile__banner"
+        style={{
+          backgroundImage:
+            myProfile?.bannerImage || otherProfile?.bannerImage
+              ? `url(${myProfile?.bannerImage || otherProfile?.bannerImage})`
+              : undefined,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
+        {isMyProfile && (
+          <>
+            <input
+              ref={bannerInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handleBannerChange}
+            />
+            <button
+              className="profile__banner-edit"
+              onClick={() => bannerInputRef.current?.click()}
+            >
+              📷 Đổi ảnh bìa
+            </button>
+          </>
+        )}
         <div className="profile__avatar">
           {avatar ? (
             <img src={avatar} alt={displayName} />

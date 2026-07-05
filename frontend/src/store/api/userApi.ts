@@ -125,6 +125,15 @@ export const userApi = createApi({
       query: () => "/users/top",
       providesTags: ["UserById"],
     }),
+
+    updateBanner: builder.mutation({
+      query: (formData) => ({
+        url: "/users/profile/banner",
+        method: "PUT",
+        body: formData,
+      }),
+      invalidatesTags: ["Profile"],
+    }),
   }),
 });
 
@@ -145,4 +154,5 @@ export const {
   useGetStreamKeyQuery,
   useResetStreamKeyMutation,
   useGetTopUsersQuery,
+  useUpdateBannerMutation,
 } = userApi;
