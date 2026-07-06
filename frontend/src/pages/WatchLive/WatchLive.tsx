@@ -44,8 +44,8 @@ const WatchLive = () => {
   const [timeoutUser] = useTimeoutUserMutation();
   const [banUser] = useBanUserMutation();
   const [selectedUser, setSelectedUser] = useState<{
-    id: String;
-    name: String;
+    id: string;
+    name: string;
   } | null>(null);
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockMessage, setBlockMessage] = useState("");
@@ -374,19 +374,6 @@ const WatchLive = () => {
                 </div>
               )}
               <div ref={messageEndRef} />
-            </div>
-
-            <div className="chat-panel__input">
-              <input
-                type="text"
-                placeholder="Hãy nói điều gì đó..."
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-              />
-              <button className="chat-panel__send" onClick={handleSendMessage}>
-                <Send size={14} />
-              </button>
             </div>
           </div>
         </div>
