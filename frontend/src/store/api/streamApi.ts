@@ -44,6 +44,19 @@ export const streamApi = createApi({
         body: { userId, streamId },
       }),
     }),
+    scheduleStream: builder.mutation({
+      query: (data) => ({
+        url: "/streams/schedule",
+        method: "POST",
+        body: data,
+      }),
+    }),
+    getScheduledStreams: builder.query({
+      query: () => "/streams/scheduled",
+    }),
+    getScheduledStreamsByUser: builder.query({
+      query: (userId) => `/streams/scheduled/${userId}`,
+    }),
   }),
 });
 
@@ -54,4 +67,7 @@ export const {
   useTimeoutUserMutation,
   useBanUserMutation,
   useUnbanUserMutation,
-} = streamApi;
+  useScheduleStreamMutation,
+  useGetScheduledStreamsQuery,
+  useGetScheduledStreamsByUserQuery,
+} = streamApi;  
