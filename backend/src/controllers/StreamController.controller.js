@@ -1,6 +1,8 @@
 import Stream from "../models/Stream.model.js";
 import User from "../models/User.model.js";
 import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
+import { createNotification } from "./NotificationController.controller.js";
+import User from "../models/User.model.js";
 import { v4 as uuidv4 } from "uuid";
 
 // ─────────────────────────────────────────────
@@ -205,6 +207,89 @@ const getTopStreamersByHours = asyncHandler(async (req, res) => {
   res.status(200).json(result);
 });
 
+// ─────────────────────────────────────────────
+// @desc    Schedule a stream
+// @route   POST /api/streams/schedule
+// @access  Private
+// ─────────────────────────────────────────────
+const scheduleStream = asyncHandler(async (req, res) => {
+  const { title, description, category, tags, scheduledAt } = req.body;
+  const userId = req.user._id;
+
+  if (!title || !scheduledAt) {
+    res.status(400);
+    throw new Error("Title and scheduled time are required");
+  }
+
+  const scheduledDate = new Date(scheduledAt);
+  if (scheduledDate < new Date()) {
+    res.status(400);
+    throw new Error("Scheduled time must be in the future");
+  }
+
+  const stream = new Stream({
+    userId,
+    title,
+    description: description || "",
+    category: category || "Other",
+    tags: tags || [],
+    isLive: false,
+    isScheduled: true,
+    scheduledAt: scheduledDate,
+  });
+
+  await stream.save();
+
+  // Notify tất cả followers
+  const user = await User.findById(userId).populate("followers");
+  const notificationPromises = (user.followers || []).map((followerId) =>
+    createNotification({
+      userId: followerId,
+      fromUserId: userId,
+      type: "stream_live",
+      message: `${user.username} sẽ livestream "${title}" vào ${scheduledDate.toLocaleString("vi-VN")}`,
+      link: `/profile/${userId}`,
+    }),
+  );
+  await Promise.all(notificationPromises);
+
+  res.status(201).json(stream);
+});
+
+// ─────────────────────────────────────────────
+// @desc    Get scheduled streams
+// @route   GET /api/streams/scheduled
+// @access  Public
+// ─────────────────────────────────────────────
+const getScheduledStreams = asyncHandler(async (req, res) => {
+  const streams = await Stream.find({
+    isScheduled: true,
+    isLive: false,
+    scheduledAt: { $gte: new Date() },
+  })
+    .populate("userId", "username displayName avatar")
+    .sort({ scheduledAt: 1 })
+    .limit(20);
+
+  res.status(200).json(streams);
+});
+
+// ─────────────────────────────────────────────
+// @desc    Get scheduled streams by user
+// @route   GET /api/streams/scheduled/:userId
+// @access  Public
+// ─────────────────────────────────────────────
+const getScheduledStreamsByUser = asyncHandler(async (req, res) => {
+  const streams = await Stream.find({
+    userId: req.params.userId,
+    isScheduled: true,
+    isLive: false,
+    scheduledAt: { $gte: new Date() },
+  }).sort({ scheduledAt: 1 });
+
+  res.status(200).json(streams);
+});
+
 export {
   startStream,
   endStream,
@@ -213,4 +298,7 @@ export {
   getStreamsByUser,
   updateViewers,
   getTopStreamersByHours,
+  scheduleStream,
+  getScheduledStreams,
+  getScheduledStreamsByUser
 };
