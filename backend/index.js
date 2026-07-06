@@ -15,6 +15,10 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import helmet from "helmet";
 import { globalLimiter } from "./src/middlewares/RateLimiting.middleware.js";
+import {
+  isUserBanned,
+  isUserTimedOut,
+} from "./src/controllers/ModerationController.controller.js";
 
 // Configurations & Utilities
 import connectDB from "./src/config/db.config.js";
@@ -31,6 +35,7 @@ import donateRoute from "./src/routes/DonateRoute.route.js";
 import coinRoute from "./src/routes/CoinRoute.route.js";
 import adminRoute from "./src/routes/AdminRoute.route.js";
 import notification from "./src/routes/Notification.route.js";
+import moderationRoute from "./src/routes/ModerationRoute.route.js";
 
 // ==========================================
 // Initialization & Database Connection
@@ -122,7 +127,21 @@ io.on("connection", (socket) => {
 
   // Send chat
   // When user sent message, client sent event "chat-message"
-  socket.on("chat-message", async ({ streamId, message, user }) => {
+  socket.on("chat-message", async ({ streamId, message, user, userId }) => {
+    if (userId && isUserBanned(userId, streamId)) {
+      socket.emit("chat-blocked", {
+        message: "Bạn đã bị ban khỏi stream này.",
+      });
+      return;
+    }
+
+    if (userId && isUserTimedOut(userId, streamId)) {
+      socket.emit("chat-blocked", {
+        message: "Bạn đang bị timeout, vui lòng đợi.",
+      });
+      return;
+    }
+    
     // Broadcast message sent all in room
     io.to(`stream:${streamId}`).emit("chat-message", {
       id: Date.now(),
@@ -148,6 +167,7 @@ app.use("/api/donations", globalLimiter, donateRoute);
 app.use("/api/coins", globalLimiter, coinRoute);
 app.use("/api/admin", globalLimiter, adminRoute);
 app.use("/api/notification", notification);
+app.use("/api/moderation", moderationRoute);
 
 const serveHLS = (req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");

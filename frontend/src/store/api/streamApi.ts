@@ -23,6 +23,27 @@ export const streamApi = createApi({
     getTopStreamersByHours: builder.query({
       query: () => "/streams/top-hours",
     }),
+    timeoutUser: builder.mutation({
+      query: ({ userId, streamId, durationSeconds }) => ({
+        url: "/moderation/timeout",
+        method: "POST",
+        body: { userId, streamId, durationSeconds },
+      }),
+    }),
+    banUser: builder.mutation({
+      query: ({ userId, streamId, reason }) => ({
+        url: "/moderation/ban",
+        method: "POST",
+        body: { userId, streamId, reason },
+      }),
+    }),
+    unbanUser: builder.mutation({
+      query: ({ userId, streamId }) => ({
+        url: "/moderation/unban",
+        method: "POST",
+        body: { userId, streamId },
+      }),
+    }),
   }),
 });
 
@@ -30,4 +51,7 @@ export const {
   useGetLiveStreamsQuery,
   useGetStreamByIdQuery,
   useGetTopStreamersByHoursQuery,
+  useTimeoutUserMutation,
+  useBanUserMutation,
+  useUnbanUserMutation,
 } = streamApi;

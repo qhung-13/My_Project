@@ -63,6 +63,7 @@ export interface Comment {
 export interface ChatMessage {
   id: number;
   user: string;
+  userId: string;
   message: string;
   timestamp: Date;
 }

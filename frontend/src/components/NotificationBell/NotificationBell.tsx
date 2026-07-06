@@ -6,7 +6,7 @@ import {
   useMarkAsReadMutation,
 } from "../../store/api/notificationApi";
 import { useNavigate } from "react-router-dom";
-import "./NotificationBell.css";
+import "./Notification.css";
 
 interface NotificationItem {
   _id: string;

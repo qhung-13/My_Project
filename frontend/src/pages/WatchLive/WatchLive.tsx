@@ -11,7 +11,12 @@ import {
   useUnfollowUserMutation,
   useGetUserByIdQuery,
 } from "../../store/api/userApi";
-import { useGetStreamByIdQuery, useGetLiveStreamsQuery } from "../../store/api/streamApi";
+import {
+  useGetStreamByIdQuery,
+  useGetLiveStreamsQuery,
+  useBanUserMutation,
+  useTimeoutUserMutation,
+} from "../../store/api/streamApi";
 import socket from "../../utils/socket";
 import VideoPlayer from "./VideoPlayer/VideoPlayer";
 import DonateModal from "./DonateModal/DonateModal";
@@ -36,10 +41,20 @@ const WatchLive = () => {
   const [followUser] = useFollowUserMutation();
   const [unfollowUser] = useUnfollowUserMutation();
 
-  const { data: currentStream, isLoading: isStreamLoading } = useGetStreamByIdQuery(
-    id!,
-    { skip: !id }
-  ) as { data: Stream | undefined; isLoading: boolean };
+  const [timeoutUser] = useTimeoutUserMutation();
+  const [banUser] = useBanUserMutation();
+  const [selectedUser, setSelectedUser] = useState<{
+    id: String;
+    name: String;
+  } | null>(null);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockMessage, setBlockMessage] = useState("");
+
+  const { data: currentStream, isLoading: isStreamLoading } =
+    useGetStreamByIdQuery(id!, { skip: !id }) as {
+      data: Stream | undefined;
+      isLoading: boolean;
+    };
 
   const { data: result } = useGetLiveStreamsQuery(undefined);
 
@@ -85,6 +100,56 @@ const WatchLive = () => {
     };
   }, [id]);
 
+  useEffect(() => {
+    socket.on("chat-blocked", ({ message }: { message: string }) => {
+      setIsBlocked(true);
+      setBlockMessage(message);
+    });
+
+    socket.on(
+      "user-moderated",
+      ({
+        userId,
+        action,
+        message,
+      }: {
+        userId: string;
+        action: string;
+        message: string;
+      }) => {
+        if (userId === authUser?._id) {
+          setIsBlocked(action === "ban");
+          setBlockMessage(message);
+        }
+      },
+    );
+
+    return () => {
+      socket.off("chat-blocked");
+      socket.off("user-moderated");
+    };
+  }, [authUser?._id]);
+
+  const handleTimeout = async (seconds: number) => {
+    if (!selectedUser || !id) return;
+    await timeoutUser({
+      userId: selectedUser.id,
+      streamId: id,
+      durationSeconds: seconds,
+    }).unwrap();
+    setSelectedUser(null);
+  };
+
+  const handleBan = async () => {
+    if (!selectedUser || !id) return;
+    await banUser({
+      userId: selectedUser.id,
+      streamId: id,
+      reason: "Vi phạm nội quy",
+    }).unwrap();
+    setSelectedUser(null);
+  };
+
   const streamerId =
     typeof currentStream?.userId === "object"
       ? currentStream.userId._id
@@ -115,20 +180,25 @@ const WatchLive = () => {
       streamId: id,
       message: inputMessage.trim(),
       user: authUser?.username || "Anonymous",
+      userId: authUser?._id || null, // ✅ Thêm userId
     });
     setInputMessage("");
   };
 
-  const suggestedStreams = (result?.streams || []).filter(
-    (stream: Stream) => stream._id !== id,
-  ).slice(0, 10);
+  const suggestedStreams = (result?.streams || [])
+    .filter((stream: Stream) => stream._id !== id)
+    .slice(0, 10);
 
   if (isStreamLoading) {
     return <div className="watch-live__loading">Loading...</div>;
   }
 
   if (!currentStream) {
-    return <div className="watch-live__loading">Stream không tồn tại hoặc đã kết thúc</div>;
+    return (
+      <div className="watch-live__loading">
+        Stream không tồn tại hoặc đã kết thúc
+      </div>
+    );
   }
 
   const streamerName =
@@ -137,7 +207,9 @@ const WatchLive = () => {
       : "Unknown";
 
   const streamerAvatar =
-    typeof currentStream.userId === "object" ? currentStream.userId.avatar : null;
+    typeof currentStream.userId === "object"
+      ? currentStream.userId.avatar
+      : null;
 
   return (
     <div className="watch-live">
@@ -161,7 +233,16 @@ const WatchLive = () => {
             }}
           >
             {streamerAvatar ? (
-              <img src={streamerAvatar} alt={streamerName} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+              <img
+                src={streamerAvatar}
+                alt={streamerName}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                }}
+              />
             ) : (
               streamerName.slice(0, 2).toUpperCase()
             )}
@@ -227,11 +308,71 @@ const WatchLive = () => {
                     {msg.user.slice(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <span className="chat-msg__user">{msg.user} </span>
+                    <span
+                      className="chat-msg__user"
+                      style={{
+                        cursor:
+                          streamerId === authUser?._id ? "pointer" : "default",
+                      }}
+                      onClick={() => {
+                        // Chỉ streamer mới thấy moderation menu
+                        if (
+                          streamerId === authUser?._id &&
+                          msg.userId !== authUser?._id
+                        ) {
+                          setSelectedUser({ id: msg.userId, name: msg.user });
+                        }
+                      }}
+                    >
+                      {msg.user}{" "}
+                    </span>
                     <span className="chat-msg__text">{msg.message}</span>
                   </div>
                 </div>
               ))}
+
+              {/* Moderation menu */}
+              {selectedUser && streamerId === authUser?._id && (
+                <div className="moderation-menu">
+                  <div className="moderation-menu__header">
+                    <span>⚙️ {selectedUser.name}</span>
+                    <button onClick={() => setSelectedUser(null)}>✕</button>
+                  </div>
+                  <button onClick={() => handleTimeout(60)}>
+                    ⏱ Timeout 1 phút
+                  </button>
+                  <button onClick={() => handleTimeout(300)}>
+                    ⏱ Timeout 5 phút
+                  </button>
+                  <button onClick={handleBan} className="moderation-menu__ban">
+                    🚫 Ban
+                  </button>
+                </div>
+              )}
+
+              {/* Blocked message */}
+              {isBlocked && (
+                <div className="chat-blocked">🚫 {blockMessage}</div>
+              )}
+
+              {/* Input — ẩn nếu bị block */}
+              {!isBlocked && (
+                <div className="chat-panel__input">
+                  <input
+                    type="text"
+                    placeholder="Hãy nói điều gì đó..."
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                  />
+                  <button
+                    className="chat-panel__send"
+                    onClick={handleSendMessage}
+                  >
+                    <Send size={14} />
+                  </button>
+                </div>
+              )}
               <div ref={messageEndRef} />
             </div>
 

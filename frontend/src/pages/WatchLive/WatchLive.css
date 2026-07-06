@@ -482,6 +482,65 @@
   font-style: italic;
 }
 
+.moderation-menu {
+  position: absolute;
+  bottom: 60px;
+  left: 12px;
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 8px;
+  z-index: 100;
+  min-width: 180px;
+}
+
+.moderation-menu__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 4px;
+}
+
+.moderation-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.moderation-menu button:hover {
+  background: #f5f5f5;
+}
+
+.moderation-menu__ban {
+  color: #ef4444 !important;
+}
+
+.moderation-menu__ban:hover {
+  background: #fee2e2 !important;
+}
+
+.chat-blocked {
+  text-align: center;
+  padding: 12px;
+  color: #ef4444;
+  font-size: 13px;
+  background: #fee2e2;
+  border-radius: 8px;
+  margin: 8px;
+}
+
 /* ============================================================
    3. THEMING (DARK / LIGHT)
    ============================================================ */
