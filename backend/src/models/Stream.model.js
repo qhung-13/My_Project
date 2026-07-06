@@ -44,6 +44,14 @@ const streamSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    scheduledAt: {
+      type: Date,
+      default: null,
+    },
+    isScheduled: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
