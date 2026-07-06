@@ -3,6 +3,7 @@ import {
   useGetStreamKeyQuery,
   useResetStreamKeyMutation,
 } from "../../store/api/userApi";
+import ScheduleModal from "../ScheduleModal/ScheduleModal";
 import "./GoLiveModal.css";
 
 const GoLiveModal = ({ onClose }: { onClose: () => void }) => {
@@ -10,6 +11,7 @@ const GoLiveModal = ({ onClose }: { onClose: () => void }) => {
   const [copied, setCopied] = useState<"server" | "key" | null>(null);
 
   const { data, isLoading } = useGetStreamKeyQuery(undefined);
+  const [showSchedule, setShowSchedule] = useState(false);
   const [resetStreamKey, { isLoading: isResetting }] =
     useResetStreamKeyMutation();
 
@@ -117,6 +119,24 @@ const GoLiveModal = ({ onClose }: { onClose: () => void }) => {
                 </li>
               </ol>
             </div>
+
+            <button
+              className="golive-modal__btn"
+              style={{
+                width: "100%",
+                marginTop: "12px",
+                background: "#f0f0ff",
+                color: "#6366f1",
+                borderColor: "#c7d2fe",
+              }}
+              onClick={() => setShowSchedule(true)}
+            >
+              📅 Đặt lịch livestream
+            </button>
+
+            {showSchedule && (
+              <ScheduleModal onClose={() => setShowSchedule(false)} />
+            )}
           </>
         )}
       </div>
