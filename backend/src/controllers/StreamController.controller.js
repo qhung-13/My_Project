@@ -290,6 +290,39 @@ const getScheduledStreamsByUser = asyncHandler(async (req, res) => {
   res.status(200).json(streams);
 });
 
+// ─────────────────────────────────────────────
+// @desc    Update stream info khi đang live
+// @route   PUT /api/streams/live/update
+// @access  Private
+// ─────────────────────────────────────────────
+const updateLiveStream = asyncHandler(async (req, res) => {
+  const { title, description, category, tags } = req.body;
+  const userId = req.user._id;
+
+  const stream = await Stream.findOne({ userId, isLive: true });
+  if (!stream) {
+    res.status(404);
+    throw new Error("No active stream found");
+  }
+
+  stream.title = title || stream.title;
+  stream.description = description || stream.description;
+  stream.category = category || stream.category;
+  stream.tags = tags || stream.tags;
+
+  await stream.save();
+
+  // Notify viewers realtime qua Socket.io
+  const { io } = await import("../../index.js");
+  io.to(`stream:${stream._id}`).emit("stream-info-updated", {
+    title: stream.title,
+    description: stream.description,
+    category: stream.category,
+  });
+
+  res.status(200).json(stream);
+});
+
 export {
   startStream,
   endStream,
@@ -300,5 +333,6 @@ export {
   getTopStreamersByHours,
   scheduleStream,
   getScheduledStreams,
-  getScheduledStreamsByUser
+  getScheduledStreamsByUser,
+  updateLiveStream,
 };

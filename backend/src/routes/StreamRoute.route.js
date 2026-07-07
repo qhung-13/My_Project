@@ -10,6 +10,7 @@ import {
   scheduleStream,
   getScheduledStreams,
   getScheduledStreamsByUser,
+  updateLiveStream,
 } from "../controllers/StreamController.controller.js";
 import protect from "../middlewares/Auth.middleware.js";
 
@@ -19,6 +20,7 @@ router.get("/", getLiveStreams);
 router.get("/top-hours", getTopStreamersByHours);
 router.post("/start", protect, startStream);
 router.post("/end", protect, endStream);
+router.put("/live/update", protect, updateLiveStream);
 router.get("/user/:userId", getStreamsByUser);
 router.post("/schedule", protect, scheduleStream);
 router.get("/scheduled", getScheduledStreams);
