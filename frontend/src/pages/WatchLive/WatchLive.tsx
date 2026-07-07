@@ -126,9 +126,19 @@ const WatchLive = () => {
       },
     );
 
+    socket.on(
+      "stream-info-updated",
+      (data: { title: string; description: string; category: string }) => {
+        // RTK Query tự refetch khi có update
+        // Chỉ cần toast notification là đủ
+        console.log("Stream info updated:", data);
+      },
+    );
+
     return () => {
       socket.off("chat-blocked");
       socket.off("user-moderated");
+      socket.off("stream-info-updated");
     };
   }, [authUser?._id]);
 
