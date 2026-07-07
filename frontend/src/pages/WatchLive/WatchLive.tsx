@@ -20,6 +20,7 @@ import {
 import socket from "../../utils/socket";
 import VideoPlayer from "./VideoPlayer/VideoPlayer";
 import DonateModal from "./DonateModal/DonateModal";
+import UpdateStreamModal from "../../components/UpdateStreamModal/UpdateStreamModal";
 
 // ============================================================
 // Component
@@ -36,6 +37,7 @@ const WatchLive = () => {
   const [prevId, setPrevId] = useState(id);
   const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
   const [donationAlerts, setDonationAlerts] = useState<DonationAlert[]>([]);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
 
   const { user: authUser } = useSelector((state: RootState) => state.auth);
   const [followUser] = useFollowUserMutation();
@@ -273,6 +275,14 @@ const WatchLive = () => {
           <button className="btn-more">
             <MoreHorizontal size={18} />
           </button>
+          {streamerId === authUser?._id && (
+            <button
+              className="btn-share"
+              onClick={() => setShowUpdateModal(true)}
+            >
+              ✏️ Edit
+            </button>
+          )}
         </div>
       </div>
 
@@ -451,6 +461,13 @@ const WatchLive = () => {
           streamerId={streamerId}
           streamerName={streamerName}
           onClose={() => setIsDonateModalOpen(false)}
+        />
+      )}
+
+      {showUpdateModal && currentStream && (
+        <UpdateStreamModal
+          currentStream={currentStream}
+          onClose={() => setShowUpdateModal(false)}
         />
       )}
     </div>
