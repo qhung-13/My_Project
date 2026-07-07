@@ -16,9 +16,11 @@ import type { RootState } from "../../store/store";
 import type { Video } from "../../types/index";
 import EditProfile from "../../components/EditProfile/EditProfile";
 import GoLiveModal from "../../components/GoLiveModal/GoLiveModal";
+import { useGetScheduledStreamsByUserQuery } from "../../store/api/streamApi";
+import type { Stream } from "../../types/index";
 import "./Profile.css";
 
-type TabType = "VODs" | "Clips" | "About";
+type TabType = "VODs" | "Clips" | "About" | "Schedule";
 
 const Profile = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -51,6 +53,11 @@ const Profile = () => {
   const profileUserId = isMyProfile ? authUser?._id : otherProfile?._id;
   const { data: videos, isLoading: isVideosLoading } = useGetVideosByUserQuery(
     profileUserId,
+    { skip: !profileUserId },
+  );
+
+  const { data: scheduledStreams } = useGetScheduledStreamsByUserQuery(
+    profileUserId!,
     { skip: !profileUserId },
   );
 
@@ -322,6 +329,34 @@ const Profile = () => {
         {activeTab === "About" && (
           <div className="profile__about">
             <p>{bio || "Chưa có thông tin"}</p>
+          </div>
+        )}
+
+        {activeTab === "Schedule" && (
+          <div className="profile__content">
+            {scheduledStreams && scheduledStreams.length > 0 ? (
+              <div className="schedule-list">
+                {scheduledStreams.map((stream: Stream) => (
+                  <div className="schedule-item" key={stream._id}>
+                    <div className="schedule-item__time">
+                      📅 {new Date(stream.scheduledAt).toLocaleString("vi-VN")}
+                    </div>
+                    <div className="schedule-item__title">{stream.title}</div>
+                    <div className="schedule-item__category">
+                      {stream.category}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="profile__empty">
+                <span>📅</span>
+                <p>Chưa có lịch stream nào</p>
+                {isMyProfile && (
+                  <span>Đặt lịch để thông báo cho followers!</span>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

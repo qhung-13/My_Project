@@ -108,6 +108,7 @@ export interface Stream {
   vodUrl?: string | null;
   createdAt: string;
   updatedAt: string;
+  scheduledAt: string;
 }
 
 export interface LeaderboardItem {
