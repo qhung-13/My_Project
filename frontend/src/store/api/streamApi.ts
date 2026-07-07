@@ -57,6 +57,13 @@ export const streamApi = createApi({
     getScheduledStreamsByUser: builder.query({
       query: (userId) => `/streams/scheduled/${userId}`,
     }),
+    updateLiveStream: builder.mutation({
+      query: (data) => ({
+        url: "/streams/live/update",
+        method: "PUT",
+        body: data,
+      }),
+    }),
   }),
 });
 
@@ -70,4 +77,5 @@ export const {
   useScheduleStreamMutation,
   useGetScheduledStreamsQuery,
   useGetScheduledStreamsByUserQuery,
+  useUpdateLiveStreamMutation,
 } = streamApi;  
