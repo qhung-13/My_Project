@@ -323,6 +323,22 @@ const updateLiveStream = asyncHandler(async (req, res) => {
   res.status(200).json(stream);
 });
 
+// ─────────────────────────────────────────────
+// @desc    Get viewer list trong stream
+// @route   GET /api/streams/:id/viewers
+// @access  Public
+// ─────────────────────────────────────────────
+const getViewerList = asyncHandler(async (req, res) => {
+  const streamId = req.params.id;
+
+  // Lấy danh sách socket IDs trong room
+  const { io } = await import("../../index.js");
+  const room = io.sockets.adapter.rooms.get(`stream:${streamId}`);
+  const viewerCount = room?.size || 0;
+
+  res.status(200).json({ viewerCount });
+});
+
 export {
   startStream,
   endStream,
@@ -335,4 +351,5 @@ export {
   getScheduledStreams,
   getScheduledStreamsByUser,
   updateLiveStream,
+  getViewerList,
 };

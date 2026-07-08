@@ -99,30 +99,49 @@ const io = new Server(httpServer, {
   },
 });
 
+const socketUsers = new Map();
+
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
   // -- Join stream room --
   // When user join stream, client sent event "join-stream"
-  socket.on("join-stream", (streamId) => {
+  socket.on("join-stream", (streamId, userData) => {
     socket.join(`stream:${streamId}`);
     console.log(`User ${socket.id} joined stream: ${streamId}`);
+
+    if (userData) {
+      socketUsers.set(socket.id, { ...userData, streamId });
+    }
+
+    const viewers = Array.from(socketUsers.values()).filter(
+      (u) => u.streamId === streamId,
+    );
 
     // Announce the current number of viewers in the room
     const viewerCount =
       io.sockets.adapter.rooms.get(`stream:${streamId}`)?.size || 0;
     io.to(`stream:${streamId}`).emit("viewer-count", viewerCount);
+
+    io.to(`stream:${streamId}`).emit("viewer-list", viewers);
   });
 
   // Leave stream room
   socket.on("leave-stream", (streamId) => {
     socket.leave(`stream:${streamId}`);
     console.log(`User ${socket.id} left stream: ${streamId}`);
+    
+    socketUsers.delete(socket.id);
 
     // Update the number of viewers after
     const viewerCount =
       io.sockets.adapter.rooms.get(`stream:${streamId}`)?.size || 0;
     io.to(`stream:${streamId}`).emit("viewer-count", viewerCount);
+
+    const viewers = Array.from(socketUsers.values()).filter(
+      (u) => u.streamId === streamId,
+    );
+    io.to(`stream:${streamId}`).emit("viewer-list", viewers);
   });
 
   // Send chat
@@ -141,7 +160,7 @@ io.on("connection", (socket) => {
       });
       return;
     }
-    
+
     // Broadcast message sent all in room
     io.to(`stream:${streamId}`).emit("chat-message", {
       id: Date.now(),
@@ -152,6 +171,20 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
+    const userData = socketUsers.get(socket.id);
+    if (userData) {
+      const { streamId } = userData;
+      socketUsers.delete(socket.id);
+
+      const viewerCount =
+        io.sockets.adapter.rooms.get(`stream:${streamId}`)?.size || 0;
+      io.to(`stream:${streamId}`).emit("viewer-count", viewerCount);
+
+      const viewers = Array.from(socketUsers.values()).filter(
+        (u) => u.streamId === streamId,
+      );
+      io.to(`stream:${streamId}`).emit("viewer-list", viewers);
+    }
     console.log("User disconnected:", socket.id);
   });
 });
