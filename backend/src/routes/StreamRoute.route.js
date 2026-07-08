@@ -11,6 +11,7 @@ import {
   getScheduledStreams,
   getScheduledStreamsByUser,
   updateLiveStream,
+  getViewerList,
 } from "../controllers/StreamController.controller.js";
 import protect from "../middlewares/Auth.middleware.js";
 
@@ -27,5 +28,6 @@ router.get("/scheduled", getScheduledStreams);
 router.get("/scheduled/:userId", getScheduledStreamsByUser);
 router.get("/:id", getStreamById);
 router.put("/:id/viewers", protect, updateViewers);
+router.get("/:id/viewers", getViewerList);
 
 export default router;
