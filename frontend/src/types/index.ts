@@ -205,3 +205,10 @@ export interface PaginatedStreams {
     hasMore: boolean;
   };
 }
+
+export interface Viewer {
+  userId: string;
+  username: string;
+  avatar?: string | null;
+  streamId: string;
+}

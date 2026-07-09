@@ -5,7 +5,12 @@ import "./WatchLive.css";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
-import type { ChatMessage, DonationAlert, Stream } from "../../types/index";
+import type {
+  ChatMessage,
+  DonationAlert,
+  Stream,
+  Viewer,
+} from "../../types/index";
 import {
   useFollowUserMutation,
   useUnfollowUserMutation,
@@ -21,6 +26,7 @@ import socket from "../../utils/socket";
 import VideoPlayer from "./VideoPlayer/VideoPlayer";
 import DonateModal from "./DonateModal/DonateModal";
 import UpdateStreamModal from "../../components/UpdateStreamModal/UpdateStreamModal";
+import ViewerList from "../../components/ViewerList/ViewerList";
 
 // ============================================================
 // Component
@@ -38,6 +44,11 @@ const WatchLive = () => {
   const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
   const [donationAlerts, setDonationAlerts] = useState<DonationAlert[]>([]);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [viewers, setViewers] = useState<Viewer[]>([]);
+  const [showViewerList, setShowViewerList] = useState(false);
+  const [reactions, setReactions] = useState<{ id: string; emoji: string }[]>(
+    [],
+  );
 
   const { user: authUser } = useSelector((state: RootState) => state.auth);
   const [followUser] = useFollowUserMutation();
@@ -76,7 +87,11 @@ const WatchLive = () => {
   useEffect(() => {
     if (!id) return;
     socket.connect();
-    socket.emit("join-stream", id);
+    socket.emit("join-stream", id, {
+      userId: authUser?._id || "anonymous",
+      username: authUser?.username || "Anonymous",
+      avatar: authUser?.avatar || null,
+    });
 
     socket.on("chat-message", (data: ChatMessage) => {
       setMessages((prev) => [...prev, data]);
@@ -93,11 +108,28 @@ const WatchLive = () => {
       }, 5000);
     });
 
+    socket.on("viewer-list", (data: Viewer[]) => {
+      setViewers(data);
+    });
+
+    socket.on(
+      "reaction-received",
+      ({ reaction, userId }: { reaction: string; userId: string }) => {
+        const id = `${userId}-${Date.now()}`;
+        setReactions((prev) => [...prev, { id, emoji: reaction }]);
+        setTimeout(() => {
+          setReactions((prev) => prev.filter((r) => r.id !== id));
+        }, 3000);
+      },
+    );
+
     return () => {
       socket.emit("leave-stream", id);
       socket.off("chat-message");
       socket.off("viewer-count");
       socket.off("donation-received");
+      socket.off("viewer-list");
+      socket.off("reaction-received");
       socket.disconnect();
     };
   }, [id]);
@@ -192,9 +224,13 @@ const WatchLive = () => {
       streamId: id,
       message: inputMessage.trim(),
       user: authUser?.username || "Anonymous",
-      userId: authUser?._id || null, // ✅ Thêm userId
+      userId: authUser?._id || null,
     });
     setInputMessage("");
+  };
+
+  const handleReaction = (emoji: string) => {
+    socket.emit("send-reaction", { streamId: id, reaction: emoji });
   };
 
   const suggestedStreams = (result?.streams || [])
@@ -223,15 +259,42 @@ const WatchLive = () => {
       ? currentStream.userId.avatar
       : null;
 
+  const handleShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      // Native share trên mobile
+      await navigator.share({
+        title: currentStream.title,
+        text: `Đang xem ${streamerName} live trên OmexLive!`,
+        url,
+      });
+    } else {
+      // Fallback: copy link
+      navigator.clipboard.writeText(url);
+      alert("Đã copy link stream!");
+    }
+  };
+
   return (
     <div className="watch-live">
       {/* ── Video ── */}
       <div className="watch-live__video">
         <div className="video-badges">
           <span className="badge-live">LIVE</span>
-          <span className="badge-viewers">{formatViewers(viewerCount)}</span>
+          <span
+            className="badge-viewers"
+            style={{ cursor: "pointer" }}
+            onClick={() => setShowViewerList(true)}
+          >
+            {formatViewers(viewerCount)} 👥
+          </span>
         </div>
         <VideoPlayer streamKey={currentStream.streamKey || ""} />
+        <ViewerList
+          viewers={viewers}
+          isOpen={showViewerList}
+          onClose={() => setShowViewerList(false)}
+        />
       </div>
 
       {/* ── Streamer info ── */}
@@ -281,7 +344,9 @@ const WatchLive = () => {
               Donate
             </button>
           )}
-          <button className="btn-share">Share</button>
+          <button className="btn-share" onClick={handleShare}>
+            Share
+          </button>
           <button className="btn-more">
             <MoreHorizontal size={18} />
           </button>
@@ -462,6 +527,27 @@ const WatchLive = () => {
                 <p className="donation-alert__message">{alert.message}</p>
               )}
             </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="reaction-bar">
+        {["❤️", "😂", "😮", "🔥", "👏", "💰"].map((emoji) => (
+          <button
+            key={emoji}
+            className="reaction-btn"
+            onClick={() => handleReaction(emoji)}
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+
+      {/* Floating reactions */}
+      <div className="floating-reactions">
+        {reactions.map((r) => (
+          <div key={r.id} className="floating-reaction">
+            {r.emoji}
           </div>
         ))}
       </div>
