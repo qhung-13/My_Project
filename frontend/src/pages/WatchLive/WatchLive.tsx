@@ -46,6 +46,9 @@ const WatchLive = () => {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [viewers, setViewers] = useState<Viewer[]>([]);
   const [showViewerList, setShowViewerList] = useState(false);
+  const [reactions, setReactions] = useState<{ id: string; emoji: string }[]>(
+    [],
+  );
 
   const { user: authUser } = useSelector((state: RootState) => state.auth);
   const [followUser] = useFollowUserMutation();
@@ -109,12 +112,24 @@ const WatchLive = () => {
       setViewers(data);
     });
 
+    socket.on(
+      "reaction-received",
+      ({ reaction, userId }: { reaction: string; userId: string }) => {
+        const id = `${userId}-${Date.now()}`;
+        setReactions((prev) => [...prev, { id, emoji: reaction }]);
+        setTimeout(() => {
+          setReactions((prev) => prev.filter((r) => r.id !== id));
+        }, 3000);
+      },
+    );
+
     return () => {
       socket.emit("leave-stream", id);
       socket.off("chat-message");
       socket.off("viewer-count");
       socket.off("donation-received");
       socket.off("viewer-list");
+      socket.off("reaction-received");
       socket.disconnect();
     };
   }, [id]);
@@ -209,9 +224,13 @@ const WatchLive = () => {
       streamId: id,
       message: inputMessage.trim(),
       user: authUser?.username || "Anonymous",
-      userId: authUser?._id || null, // ✅ Thêm userId
+      userId: authUser?._id || null,
     });
     setInputMessage("");
+  };
+
+  const handleReaction = (emoji: string) => {
+    socket.emit("send-reaction", { streamId: id, reaction: emoji });
   };
 
   const suggestedStreams = (result?.streams || [])
@@ -490,6 +509,27 @@ const WatchLive = () => {
                 <p className="donation-alert__message">{alert.message}</p>
               )}
             </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="reaction-bar">
+        {["❤️", "😂", "😮", "🔥", "👏", "💰"].map((emoji) => (
+          <button
+            key={emoji}
+            className="reaction-btn"
+            onClick={() => handleReaction(emoji)}
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+
+      {/* Floating reactions */}
+      <div className="floating-reactions">
+        {reactions.map((r) => (
+          <div key={r.id} className="floating-reaction">
+            {r.emoji}
           </div>
         ))}
       </div>
