@@ -130,7 +130,7 @@ io.on("connection", (socket) => {
   socket.on("leave-stream", (streamId) => {
     socket.leave(`stream:${streamId}`);
     console.log(`User ${socket.id} left stream: ${streamId}`);
-    
+
     socketUsers.delete(socket.id);
 
     // Update the number of viewers after
@@ -186,6 +186,13 @@ io.on("connection", (socket) => {
       io.to(`stream:${streamId}`).emit("viewer-list", viewers);
     }
     console.log("User disconnected:", socket.id);
+  });
+
+  socket.on("send-reaction", ({ streamId, reaction }) => {
+    io.to(`stream:${streamId}`).emit("reaction-received", {
+      reaction,
+      userId: socket.id,
+    });
   });
 });
 
