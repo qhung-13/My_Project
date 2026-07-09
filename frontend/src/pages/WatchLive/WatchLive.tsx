@@ -259,6 +259,22 @@ const WatchLive = () => {
       ? currentStream.userId.avatar
       : null;
 
+  const handleShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      // Native share trên mobile
+      await navigator.share({
+        title: currentStream.title,
+        text: `Đang xem ${streamerName} live trên OmexLive!`,
+        url,
+      });
+    } else {
+      // Fallback: copy link
+      navigator.clipboard.writeText(url);
+      alert("Đã copy link stream!");
+    }
+  };
+
   return (
     <div className="watch-live">
       {/* ── Video ── */}
@@ -328,7 +344,9 @@ const WatchLive = () => {
               Donate
             </button>
           )}
-          <button className="btn-share">Share</button>
+          <button className="btn-share" onClick={handleShare}>
+            Share
+          </button>
           <button className="btn-more">
             <MoreHorizontal size={18} />
           </button>
