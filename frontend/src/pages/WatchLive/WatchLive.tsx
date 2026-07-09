@@ -5,7 +5,12 @@ import "./WatchLive.css";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
-import type { ChatMessage, DonationAlert, Stream } from "../../types/index";
+import type {
+  ChatMessage,
+  DonationAlert,
+  Stream,
+  Viewer,
+} from "../../types/index";
 import {
   useFollowUserMutation,
   useUnfollowUserMutation,
@@ -21,6 +26,7 @@ import socket from "../../utils/socket";
 import VideoPlayer from "./VideoPlayer/VideoPlayer";
 import DonateModal from "./DonateModal/DonateModal";
 import UpdateStreamModal from "../../components/UpdateStreamModal/UpdateStreamModal";
+import ViewerList from "../../components/ViewerList/ViewerList";
 
 // ============================================================
 // Component
@@ -38,6 +44,8 @@ const WatchLive = () => {
   const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
   const [donationAlerts, setDonationAlerts] = useState<DonationAlert[]>([]);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [viewers, setViewers] = useState<Viewer[]>([]);
+  const [showViewerList, setShowViewerList] = useState(false);
 
   const { user: authUser } = useSelector((state: RootState) => state.auth);
   const [followUser] = useFollowUserMutation();
@@ -76,7 +84,11 @@ const WatchLive = () => {
   useEffect(() => {
     if (!id) return;
     socket.connect();
-    socket.emit("join-stream", id);
+    socket.emit("join-stream", id, {
+      userId: authUser?._id || "anonymous",
+      username: authUser?.username || "Anonymous",
+      avatar: authUser?.avatar || null,
+    });
 
     socket.on("chat-message", (data: ChatMessage) => {
       setMessages((prev) => [...prev, data]);
@@ -93,11 +105,16 @@ const WatchLive = () => {
       }, 5000);
     });
 
+    socket.on("viewer-list", (data: Viewer[]) => {
+      setViewers(data);
+    });
+
     return () => {
       socket.emit("leave-stream", id);
       socket.off("chat-message");
       socket.off("viewer-count");
       socket.off("donation-received");
+      socket.off("viewer-list");
       socket.disconnect();
     };
   }, [id]);
@@ -229,9 +246,20 @@ const WatchLive = () => {
       <div className="watch-live__video">
         <div className="video-badges">
           <span className="badge-live">LIVE</span>
-          <span className="badge-viewers">{formatViewers(viewerCount)}</span>
+          <span
+            className="badge-viewers"
+            style={{ cursor: "pointer" }}
+            onClick={() => setShowViewerList(true)}
+          >
+            {formatViewers(viewerCount)} 👥
+          </span>
         </div>
         <VideoPlayer streamKey={currentStream.streamKey || ""} />
+        <ViewerList
+          viewers={viewers}
+          isOpen={showViewerList}
+          onClose={() => setShowViewerList(false)}
+        />
       </div>
 
       {/* ── Streamer info ── */}
