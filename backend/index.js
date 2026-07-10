@@ -36,6 +36,7 @@ import coinRoute from "./src/routes/CoinRoute.route.js";
 import adminRoute from "./src/routes/AdminRoute.route.js";
 import notification from "./src/routes/Notification.route.js";
 import moderationRoute from "./src/routes/ModerationRoute.route.js";
+import clipRoute from "./src/routes/ClipRoute.route.js";
 
 // ==========================================
 // Initialization & Database Connection
@@ -208,6 +209,7 @@ app.use("/api/coins", globalLimiter, coinRoute);
 app.use("/api/admin", globalLimiter, adminRoute);
 app.use("/api/notification", notification);
 app.use("/api/moderation", moderationRoute);
+app.use("/api/clips", clipRoute);
 
 const serveHLS = (req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
