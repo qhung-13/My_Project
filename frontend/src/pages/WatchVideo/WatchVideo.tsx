@@ -27,6 +27,7 @@ import {
   useUnfollowUserMutation,
   useGetUserByIdQuery,
 } from "../../store/api/userApi";
+import ClipCreator from "../../components/ClipCreator/ClipCreator";
 import "./WatchVideo.css";
 
 const WatchVideo = () => {
@@ -34,6 +35,7 @@ const WatchVideo = () => {
   const navigate = useNavigate();
   const [isCommentOpen, setIsCommentOpen] = useState(false);
   const [commentText, setCommentText] = useState("");
+  const [showClipCreator, setShowClipCreator] = useState(false);
   const hasViewed = useRef(false);
 
   const { user: authUser } = useSelector((state: RootState) => state.auth);
@@ -239,6 +241,13 @@ const WatchVideo = () => {
             <ThumbsDown size={16} />
             {video.dislikesCount}
           </button>
+          <button
+            className="btn-follow"
+            onClick={() => setShowClipCreator(true)}
+            style={{ display: "flex", alignItems: "center", gap: "4px" }}
+          >
+            ✂️ Clip
+          </button>
           <button className="btn-more">
             <MoreHorizontal size={18} />
           </button>
@@ -404,6 +413,13 @@ const WatchVideo = () => {
           </div>
         </div>
       </div>
+      {showClipCreator && (
+        <ClipCreator
+          videoId={video._id}
+          videoDuration={video.duration}
+          onClose={() => setShowClipCreator(false)}
+        />
+      )}
     </div>
   );
 };

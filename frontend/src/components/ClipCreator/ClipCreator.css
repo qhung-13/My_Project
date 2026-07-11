@@ -1,0 +1,131 @@
+.clip-creator {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clip-creator__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+}
+
+.clip-creator__card {
+  position: relative;
+  background: white;
+  border-radius: 16px;
+  padding: 28px;
+  width: 90%;
+  max-width: 460px;
+  z-index: 1;
+}
+
+.clip-creator__close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: #666;
+}
+
+.clip-creator__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.clip-creator__desc {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 20px;
+}
+
+.clip-creator__error {
+  color: #ef4444;
+  font-size: 13px;
+  background: #fee2e2;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.clip-creator__field {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.clip-creator__field label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+}
+
+.clip-creator__field input[type="text"] {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  outline: none;
+}
+
+.clip-creator__field input[type="text"]:focus {
+  border-color: #6366f1;
+}
+
+.clip-creator__field input[type="range"] {
+  width: 100%;
+  accent-color: #6366f1;
+}
+
+.clip-creator__preview {
+  background: #f0f0ff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 16px;
+}
+
+.clip-creator__btn {
+  width: 100%;
+  height: 44px;
+  background: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.clip-creator__btn:hover { background: #4f46e5; }
+.clip-creator__btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.clip-creator__success {
+  text-align: center;
+  padding: 20px;
+}
+
+.clip-creator__success span { font-size: 48px; display: block; margin-bottom: 12px; }
+.clip-creator__success h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+.clip-creator__success p { color: #666; margin-bottom: 20px; }
+
+/* Dark mode */
+.dark-mode .clip-creator__card { background: #27272a; }
+.dark-mode .clip-creator__title { color: #e4e4e7; }
+.dark-mode .clip-creator__field label { color: #a1a1aa; }
+.dark-mode .clip-creator__field input[type="text"] {
+  background: #3f3f46;
+  border-color: #52525b;
+  color: #e4e4e7;
+}
