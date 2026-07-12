@@ -339,6 +339,67 @@ const getViewerList = asyncHandler(async (req, res) => {
   res.status(200).json({ viewerCount });
 });
 
+// ─────────────────────────────────────────────
+// @desc    Get stream analytics for streamer
+// @route   GET /api/streams/analytics/:userId
+// @access  Private
+// ─────────────────────────────────────────────
+const getStreamAnalytics = asyncHandler(async (req, res) => {
+  const userId = req.params.userId;
+
+  const streams = await Stream.find({ userId })
+    .sort({ createdAt: -1 })
+    .limit(30);
+
+  const totalStreams = streams.length;
+  const totalHours = streams.reduce((acc, s) => {
+    if (!s.startedAt || !s.endedAt) return acc;
+    return (
+      acc + (new Date(s.endedAt) - new Date(s.startedAt)) / (1000 * 60 * 60)
+    );
+  }, 0);
+
+  const avgViewers = streams.length
+    ? Math.round(
+        streams.reduce((acc, s) => acc + (s.viewers || 0), 0) / streams.length,
+      )
+    : 0;
+
+  const peakViewers = streams.reduce(
+    (max, s) => Math.max(max, s.peakViewers || 0),
+    0,
+  );
+
+  // Data cho chart — viewers theo từng stream
+  const viewerHistory = streams
+    .slice(0, 10)
+    .reverse()
+    .map((s) => ({
+      date: new Date(s.startedAt || s.createdAt).toLocaleDateString("vi-VN"),
+      viewers: s.peakViewers || 0,
+      duration:
+        s.startedAt && s.endedAt
+          ? Math.round(
+              (new Date(s.endedAt) - new Date(s.startedAt)) / (1000 * 60),
+            )
+          : 0,
+    }));
+
+  // Donations nhận được
+  const Donation = (await import("../models/Donate.model.js")).default;
+  const donations = await Donation.find({ toUserId: userId });
+  const totalCoinsReceived = donations.reduce((acc, d) => acc + d.coins, 0);
+
+  res.status(200).json({
+    totalStreams,
+    totalHours: Math.round(totalHours * 10) / 10,
+    avgViewers,
+    peakViewers,
+    totalCoinsReceived,
+    viewerHistory,
+  });
+});
+
 export {
   startStream,
   endStream,
@@ -352,4 +413,5 @@ export {
   getScheduledStreamsByUser,
   updateLiveStream,
   getViewerList,
+  getStreamAnalytics,
 };
