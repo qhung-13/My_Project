@@ -64,6 +64,9 @@ export const streamApi = createApi({
         body: data,
       }),
     }),
+    getStreamAnalytics: builder.query({
+      query: (userId) => `/streams/analytics/${userId}`,
+    }),
   }),
 });
 
@@ -78,4 +81,5 @@ export const {
   useGetScheduledStreamsQuery,
   useGetScheduledStreamsByUserQuery,
   useUpdateLiveStreamMutation,
-} = streamApi;  
+  useGetStreamAnalyticsQuery,
+} = streamApi;
