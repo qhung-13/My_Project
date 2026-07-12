@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Home from "./pages/Home/Home";
 import Game from "./pages/Game/Game";
 import Live from "./pages/Live/Live";
@@ -18,7 +18,20 @@ import Admin from "./pages/Admin/Admin";
 import Channel from "./pages/Channel/Channel";
 
 function App() {
-  const [darkMode, setDarkMode] = useState<boolean>(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem("darkMode") === "true";
+  });
+
+  useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add("dark-mode");
+      localStorage.setItem("darkMode", "true");
+    } else {
+      document.body.classList.remove("dark-mode");
+      localStorage.setItem("darkMode", "false");
+    }
+  }, [darkMode]);
+
   return (
     <main className={darkMode ? "dark-mode" : "light-mode"}>
       <Header darkMode={darkMode} setDarkMode={setDarkMode} />

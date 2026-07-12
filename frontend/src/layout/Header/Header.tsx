@@ -167,7 +167,9 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
             <button
               className="header__btn-icon"
               onClick={() => setDarkMode(!darkMode)}
-              title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              title={
+                darkMode ? "Chuyển sang Light Mode" : "Chuyển sang Dark Mode"
+              }
             >
               {darkMode ? (
                 <Sun className="header__icon" />

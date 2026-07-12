@@ -21,8 +21,9 @@
     border 0.25s ease;
 }
 
-html, body {
-  overscroll-behavior-x: none; 
+html,
+body {
+  overscroll-behavior-x: none;
 }
 
 html::-webkit-scrollbar,
@@ -34,6 +35,234 @@ body::-webkit-scrollbar,
 html,
 body,
 .watch-live {
-  scrollbar-width: none; 
-  -ms-overflow-style: none; 
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* ── Light mode (default) ── */
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f8f8;
+  --bg-card: #ffffff;
+  --bg-hover: #f5f5f5;
+
+  --text-primary: #1a1a1a;
+  --text-secondary: #555555;
+  --text-muted: #999999;
+
+  --border-color: #eeeeee;
+  --border-hover: #dddddd;
+
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --accent-light: #f0f0ff;
+  --accent-border: #c7d2fe;
+
+  --danger: #ef4444;
+  --danger-light: #fee2e2;
+  --success: #22c55e;
+  --success-light: #dcfce7;
+
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.12);
+
+  --header-height: 60px;
+}
+
+/* ── Dark mode ── */
+.dark-mode {
+  --bg-primary: #18181b;
+  --bg-secondary: #27272a;
+  --bg-card: #27272a;
+  --bg-hover: #3f3f46;
+
+  --text-primary: #e4e4e7;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+
+  --border-color: #3f3f46;
+  --border-hover: #52525b;
+
+  --accent: #818cf8;
+  --accent-hover: #6366f1;
+  --accent-light: #1e1b4b;
+  --accent-border: #3730a3;
+
+  --danger: #f87171;
+  --danger-light: #450a0a;
+  --success: #4ade80;
+  --success-light: #052e16;
+
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Base styles dùng variables ── */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+
+/* ── Global Dark Mode Overrides ── */
+.dark-mode {
+  /* Cards */
+  .profile__card,
+  .dashboard__card,
+  .admin__table,
+  .topup__package,
+  .topup__payment,
+  .donate-modal__card,
+  .golive-modal__card,
+  .schedule-modal__card,
+  .update-stream-modal__card,
+  .clip-creator__card,
+  .notification-bell__dropdown,
+  .channel__video-card,
+  .channel__schedule-item,
+  .viewer-list__panel {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+  }
+
+  /* Text */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: var(--text-primary);
+  }
+
+  p,
+  span,
+  label {
+    color: var(--text-secondary);
+  }
+
+  /* Inputs */
+  input,
+  select,
+  textarea {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    border-color: var(--accent);
+  }
+
+  /* Buttons */
+  .header__btn-icon,
+  .notification-bell__btn {
+    color: var(--text-primary);
+  }
+
+  .notification-bell__btn:hover,
+  .header__btn-icon:hover {
+    background: var(--bg-hover);
+  }
+
+  /* Tables */
+  .admin__table th {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border-color: var(--border-color);
+  }
+
+  .admin__table td {
+    color: var(--text-primary);
+    border-color: var(--border-color);
+  }
+
+  .admin__table tr:hover td {
+    background: var(--bg-hover);
+  }
+
+  /* Moderation menu */
+  .moderation-menu {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+  }
+
+  .moderation-menu button:hover {
+    background: var(--bg-hover);
+  }
+
+  /* Search */
+  .search-stream-card,
+  .search-video-card {
+    border-color: var(--border-color);
+  }
+
+  .search-stream-card__title,
+  .search-video-card__title {
+    color: var(--text-primary);
+  }
+
+  /* Live page */
+  .live-card {
+    border-color: var(--border-color);
+  }
+
+  .live-card__title {
+    color: var(--text-primary);
+  }
+
+  /* Leaderboard */
+  .leaderboard {
+    background: var(--bg-card);
+  }
+
+  /* Recommended */
+  .rec-card__title {
+    color: var(--text-primary);
+  }
+
+  /* Chat panel */
+  .chat-panel {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+  }
+
+  .chat-msg__text {
+    color: var(--text-primary);
+  }
+
+  .chat-panel__input input {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+  }
+
+  /* Upload video */
+  .upload-video {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+  }
+
+  /* Profile */
+  .profile__stat-value {
+    color: var(--text-primary);
+  }
+
+  /* Footer dropdowns */
+  .header__user-menu {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+  }
+
+  .header__user-menu-item {
+    color: var(--text-primary);
+  }
+
+  .header__user-menu-item:hover {
+    background: var(--bg-hover);
+  }
 }
