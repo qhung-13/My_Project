@@ -212,3 +212,8 @@ export interface Viewer {
   avatar?: string | null;
   streamId: string;
 }
+
+export interface ViewerHistory {
+  date: string;
+  viewers: number;
+}
