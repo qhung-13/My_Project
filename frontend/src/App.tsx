@@ -15,6 +15,7 @@ import Search from "./pages/Search/Search";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import TopUp from "./pages/TopUp/TopUp";
 import Admin from "./pages/Admin/Admin";
+import Channel from "./pages/Channel/Channel";
 
 function App() {
   const [darkMode, setDarkMode] = useState<boolean>(false);
@@ -37,6 +38,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/topup" element={<TopUp />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/channel" element={<Channel />} />
       </Routes>
 
       <Footer />
