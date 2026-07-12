@@ -48,6 +48,7 @@ const WatchVideo = () => {
 
   const uploaderId =
     typeof video?.userId === "object" ? video?.userId?._id : video?.userId;
+  const streamerId = uploaderId;
   const uploaderPopulated =
     typeof video?.userId === "object" ? video?.userId : null;
 
@@ -170,7 +171,9 @@ const WatchVideo = () => {
           <div
             className="info-avatar"
             style={{ background: "#6366f1", cursor: "pointer" }}
-            onClick={() => uploaderId && navigate(`/profile/${uploaderId}`)}
+            onClick={() => {
+              if (streamerId) navigate(`/channel/${streamerId}`);
+            }}
           >
             {uploaderData?.avatar ? (
               <img
