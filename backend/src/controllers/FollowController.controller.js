@@ -1,6 +1,6 @@
 import User from "../models/User.model.js";
 import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
-import { createNotification } from "./Notification.controller.js";
+import { createNotification } from "./NotificationController.controller.js";
 
 // ─────────────────────────────────────────────
 // @desc    Follow a user
