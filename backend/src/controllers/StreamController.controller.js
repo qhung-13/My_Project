@@ -2,7 +2,6 @@ import Stream from "../models/Stream.model.js";
 import User from "../models/User.model.js";
 import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
 import { createNotification } from "./NotificationController.controller.js";
-import User from "../models/User.model.js";
 import { v4 as uuidv4 } from "uuid";
 
 // ─────────────────────────────────────────────
