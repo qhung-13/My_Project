@@ -66,7 +66,9 @@ const userLogin = asyncHandler(async (req, res) => {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   await Otp.deleteMany({ email: existingUser.email, type: "login" });
   await Otp.create({ email: existingUser.email, otp, type: "login" });
-  await sendOtpEmail(existingUser.email, otp, "login");
+  await sendOtpEmail(existingUser.email, otp, "login").catch(err => {
+    console.error("Background email sending error");
+  });
 
   res.status(200).json({
     message: "OTP has been sent to your email",

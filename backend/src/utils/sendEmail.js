@@ -5,6 +5,8 @@ const sendOtpEmail = async (email, otp, type) => {
     host: "smtp-relay.brevo.com",
     port: 587,
     secure: false,
+    connectionTimeout: 5000,
+    greetingTimeout: 5000,
     auth: {
       user: process.env.BREVO_SMTP_USER,
       pass: process.env.BREVO_SMTP_PASS,
