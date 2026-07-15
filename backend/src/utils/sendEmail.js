@@ -1,15 +1,13 @@
 import nodemailer from "nodemailer";
 
 const sendOtpEmail = async (email, otp, type) => {
-  // Move transporter inside function — dotenv đã load rồi khi function chạy
   const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
+    host: "smtp-relay.brevo.com",
     port: 587,
     secure: false,
-    family: 4,
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      user: process.env.BREVO_SMTP_USER,
+      pass: process.env.BREVO_SMTP_PASS,
     },
   });
 
@@ -28,7 +26,7 @@ const sendOtpEmail = async (email, otp, type) => {
         : `<h2>Reset mật khẩu</h2><p>Mã OTP: <b>${otp}</b></p><p>Hết hạn sau 5 phút.</p>`;
 
   await transporter.sendMail({
-    from: `"OmexLive" <${process.env.EMAIL_USER}>`,
+    from: `"OmexLive" <${process.env.BREVO_SMTP_USER}>`,
     to: email,
     subject,
     html,
