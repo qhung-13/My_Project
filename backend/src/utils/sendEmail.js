@@ -3,7 +3,6 @@ import nodemailer from "nodemailer";
 const sendOtpEmail = async (email, otp, type) => {
   // Move transporter inside function — dotenv đã load rồi khi function chạy
   const transporter = nodemailer.createTransport({
-    service: "gmail",
     host: "smtp.gmail.com",
     port: 587,
     secure: false,
