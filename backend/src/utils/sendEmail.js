@@ -4,6 +4,10 @@ const sendOtpEmail = async (email, otp, type) => {
   // Move transporter inside function — dotenv đã load rồi khi function chạy
   const transporter = nodemailer.createTransport({
     service: "gmail",
+    host: "omex.stream@gmail.com",
+    port: 587,
+    secure: false,
+    family: 4,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
