@@ -66,7 +66,7 @@ const userLogin = asyncHandler(async (req, res) => {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   await Otp.deleteMany({ email: existingUser.email, type: "login" });
   await Otp.create({ email: existingUser.email, otp, type: "login" });
-  await sendOtpEmail(existingUser.email, otp, "login").catch(err => {
+  await sendOtpEmail(existingUser.email, otp, "login").catch((err) => {
     console.error("Background email sending error");
   });
 
@@ -226,6 +226,7 @@ const logout = asyncHandler(async (req, res) => {
   // Clear JWT cookie by setting it to empty with past expiry
   res.cookie("jwt", "", {
     httpOnly: true,
+    sameSite: "none",
     expires: new Date(0),
   });
 
