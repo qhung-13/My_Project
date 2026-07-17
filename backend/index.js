@@ -272,10 +272,15 @@ start();
 // Graceful shutdown helpers
 const shutdown = async (signal) => {
   console.log(`Received ${signal}. Shutting down gracefully...`);
+
+  // Decide exit code: non-zero for error-like signals
+  const errorSignals = new Set(["uncaughtException", "unhandledRejection"]);
+  const exitCode = errorSignals.has(signal) ? 1 : 0;
+
   try {
     httpServer.close(() => {
       console.log("HTTP server closed.");
-      process.exit(0);
+      process.exit(exitCode);
     });
 
     // Attempt to close mongoose connection if present
@@ -286,6 +291,12 @@ const shutdown = async (signal) => {
     } catch (e) {
       // ignore if mongoose not available
     }
+
+    // If server.close does not call the callback in a timely manner, force exit
+    setTimeout(() => {
+      console.warn("Forcing process exit.");
+      process.exit(exitCode);
+    }, 5000);
   } catch (e) {
     console.error("Error during shutdown:", e);
     process.exit(1);
