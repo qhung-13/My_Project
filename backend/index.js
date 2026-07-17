@@ -45,7 +45,7 @@ dotenv.config();
 configurePassport();
 configureCloudinary();
 configureMediaServer();
-// connectDB will be awaited during startup to allow graceful handling
+// connectDB();
 
 const app = express();
 const httpServer = createServer(app);
@@ -243,17 +243,15 @@ app.use(
 // ==========================================
 // Server Startup
 // ==========================================
-
-// Centralized error handler for the API
 app.use((err, req, res, next) => {
-  const statusCode = res.statusCode && res.statusCode !== 200 ? res.statusCode : 500;
+  const statusCode =
+    res.statusCode && res.statusCode !== 200 ? res.statusCode : 500;
   res.status(statusCode).json({
     message: err.message,
     ...(process.env.NODE_ENV === "development" ? { stack: err.stack } : {}),
   });
 });
 
-// Start function to connect to DB and start the HTTP server
 const start = async () => {
   try {
     await connectDB();
@@ -269,25 +267,21 @@ const start = async () => {
 
 start();
 
-// Graceful shutdown helpers
-const shutdown = async (signal) => {
-  console.log(`Received ${signal}. Shutting down gracefully...`);
+const shutdown = async (single) => {
+  console.log(`Received ${single}. Shutting down gracefully...`);
   try {
     httpServer.close(() => {
       console.log("HTTP server closed.");
       process.exit(0);
     });
 
-    // Attempt to close mongoose connection if present
     try {
       const mongoose = (await import("mongoose")).default;
       await mongoose.connection.close();
       console.log("MongoDB connection closed.");
-    } catch (e) {
-      // ignore if mongoose not available
-    }
-  } catch (e) {
-    console.error("Error during shutdown:", e);
+    } catch (error) {}
+  } catch (error) {
+    console.error("Error during shutdown:", error);
     process.exit(1);
   }
 };
@@ -298,8 +292,8 @@ process.on("unhandledRejection", (reason) => {
   console.error("Unhandled Rejection:", reason);
   shutdown("unhandledRejection");
 });
-process.on("uncaughtException", (err) => {
-  console.error("Uncaught Exception:", err);
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught Exception:", error);
   shutdown("uncaughtException");
 });
 
