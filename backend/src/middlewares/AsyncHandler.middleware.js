@@ -6,11 +6,7 @@
  * @returns {Function} Express middleware function
  */
 const asyncHandler = (fn) => (req, res, next) => {
-  Promise.resolve(fn(req, res, next)).catch((error) => {
-    res.status(res.statusCode !== 200 ? res.statusCode : 500).json({
-      message: error.message,
-    });
-  });
+  Promise.resolve(fn(req, res, next)).catch(next);
 };
 
 export default asyncHandler;
