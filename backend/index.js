@@ -45,7 +45,7 @@ dotenv.config();
 configurePassport();
 configureCloudinary();
 configureMediaServer();
-connectDB();
+// connectDB();
 
 const app = express();
 const httpServer = createServer(app);
@@ -243,8 +243,58 @@ app.use(
 // ==========================================
 // Server Startup
 // ==========================================
-httpServer.listen(port, () => {
-  console.log(`Server is running on port ${port}...`);
+app.use((err, req, res, next) => {
+  const statusCode =
+    res.statusCode && res.statusCode !== 200 ? res.statusCode : 500;
+  res.status(statusCode).json({
+    message: err.message,
+    ...(process.env.NODE_ENV === "development" ? { stack: err.stack } : {}),
+  });
+});
+
+const start = async () => {
+  try {
+    await connectDB();
+
+    httpServer.listen(port, () => {
+      console.log(`Server is running on port ${port}...`);
+    });
+  } catch (error) {
+    console.error("Failed to start server:", error);
+    process.exit(1);
+  }
+};
+
+start();
+
+const shutdown = async (single) => {
+  console.log(`Received ${single}. Shutting down gracefully...`);
+  try {
+    httpServer.close(() => {
+      console.log("HTTP server closed.");
+      process.exit(0);
+    });
+
+    try {
+      const mongoose = (await import("mongoose")).default;
+      await mongoose.connection.close();
+      console.log("MongoDB connection closed.");
+    } catch (error) {}
+  } catch (error) {
+    console.error("Error during shutdown:", error);
+    process.exit(1);
+  }
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled Rejection:", reason);
+  shutdown("unhandledRejection");
+});
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught Exception:", error);
+  shutdown("uncaughtException");
 });
 
 export { io };
