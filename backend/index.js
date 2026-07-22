@@ -45,7 +45,7 @@ dotenv.config();
 configurePassport();
 configureCloudinary();
 configureMediaServer();
-// connectDB();
+// connectDB will be awaited during startup to allow graceful handling
 
 const app = express();
 const httpServer = createServer(app);
@@ -243,15 +243,17 @@ app.use(
 // ==========================================
 // Server Startup
 // ==========================================
+
+// Centralized error handler for the API
 app.use((err, req, res, next) => {
-  const statusCode =
-    res.statusCode && res.statusCode !== 200 ? res.statusCode : 500;
+  const statusCode = res.statusCode && res.statusCode !== 200 ? res.statusCode : 500;
   res.status(statusCode).json({
     message: err.message,
     ...(process.env.NODE_ENV === "development" ? { stack: err.stack } : {}),
   });
 });
 
+// Start function to connect to DB and start the HTTP server
 const start = async () => {
   try {
     await connectDB();
@@ -267,21 +269,36 @@ const start = async () => {
 
 start();
 
-const shutdown = async (single) => {
-  console.log(`Received ${single}. Shutting down gracefully...`);
+// Graceful shutdown helpers
+const shutdown = async (signal) => {
+  console.log(`Received ${signal}. Shutting down gracefully...`);
+
+  // Decide exit code: non-zero for error-like signals
+  const errorSignals = new Set(["uncaughtException", "unhandledRejection"]);
+  const exitCode = errorSignals.has(signal) ? 1 : 0;
+
   try {
     httpServer.close(() => {
       console.log("HTTP server closed.");
-      process.exit(0);
+      process.exit(exitCode);
     });
 
+    // Attempt to close mongoose connection if present
     try {
       const mongoose = (await import("mongoose")).default;
       await mongoose.connection.close();
       console.log("MongoDB connection closed.");
-    } catch (error) {}
-  } catch (error) {
-    console.error("Error during shutdown:", error);
+    } catch (e) {
+      // ignore if mongoose not available
+    }
+
+    // If server.close does not call the callback in a timely manner, force exit
+    setTimeout(() => {
+      console.warn("Forcing process exit.");
+      process.exit(exitCode);
+    }, 5000);
+  } catch (e) {
+    console.error("Error during shutdown:", e);
     process.exit(1);
   }
 };
@@ -292,8 +309,8 @@ process.on("unhandledRejection", (reason) => {
   console.error("Unhandled Rejection:", reason);
   shutdown("unhandledRejection");
 });
-process.on("uncaughtException", (error) => {
-  console.error("Uncaught Exception:", error);
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
   shutdown("uncaughtException");
 });
 
