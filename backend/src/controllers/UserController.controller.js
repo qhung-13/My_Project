@@ -29,6 +29,12 @@ const userRegister = asyncHandler(async (req, res) => {
     throw new Error("User already exists");
   }
 
+  const emailExist = await User.findOne({ email });
+  if (emailExist) {
+    res.status(400);
+    throw new Error("Email already exists");
+  }
+
   const newUser = new User({ username, email, password });
   await newUser.save();
 
@@ -66,8 +72,8 @@ const userLogin = asyncHandler(async (req, res) => {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   await Otp.deleteMany({ email: existingUser.email, type: "login" });
   await Otp.create({ email: existingUser.email, otp, type: "login" });
-  await sendOtpEmail(existingUser.email, otp, "login").catch((err) => {
-    console.error("Background email sending error");
+  sendOtpEmail(existingUser.email, otp, "login").catch((err) => {
+    console.error("Background email sending error:", err.message);
   });
 
   res.status(200).json({
@@ -101,7 +107,9 @@ const sendOtp = asyncHandler(async (req, res) => {
   await Otp.create({ email, otp, type: "verify_email" });
 
   // Send OTP via email
-  await sendOtpEmail(email, otp, "verify_email");
+  sendOtpEmail(email, otp, "verify_email").catch((err) => {
+    console.error("Lỗi gửi email xác thực:", err.message);
+  });
 
   res.status(200).json({ message: "OTP has been sent to your email" });
 });
@@ -172,7 +180,9 @@ const forgotPassword = asyncHandler(async (req, res) => {
   await Otp.create({ email, otp, type: "reset_password" });
 
   // Send OTP via email
-  await sendOtpEmail(email, otp, "reset_password");
+  endOtpEmail(email, otp, "reset_password").catch((err) => {
+    console.error("Lỗi gửi email reset password:", err.message);
+  });
 
   res
     .status(200)
