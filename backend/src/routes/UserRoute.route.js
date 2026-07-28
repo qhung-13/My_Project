@@ -72,11 +72,13 @@ router.get(
     failureRedirect: "/login",
   }),
   (req, res) => {
-    // Generate JWT token and set it in cookies via utility function
     createToken(res, req.user._id);
 
-    // Redirect to the frontend application
-    res.redirect("http://localhost:5173");
+    const frontendURL =
+      process.env.NODE_ENV === "production"
+        ? "https://my-project-omega-roan.vercel.app"
+        : "http://localhost:5173";
+    res.redirect(frontendURL);
   },
 );
 
