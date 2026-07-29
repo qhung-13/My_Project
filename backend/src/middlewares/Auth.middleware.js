@@ -12,27 +12,27 @@ import asyncHandler from "./AsyncHandler.middleware.js";
  * @throws {Error} 401 - If token is missing, invalid, or the user is not found in the database
  */
 const protect = asyncHandler(async (req, res, next) => {
-  const token = req.cookies.jwt;
+  let token;
+
+  token = req.cookies.jwt;
+
+  if (!token && req.headers.authorization?.startsWith("Bearer")) {
+    token = req.headers.authorization.split(" ")[1];
+  }
 
   if (!token) {
     res.status(401);
     throw new Error("Not authorized, no token");
   }
 
-  // Verify token
-  const decode = jwt.verify(token, process.env.JWT_SECRET);
-
-  // Find user in database and exclude the password field
-  const user = await User.findById(decode.userId).select("-password");
-
-  if (!user) {
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = await User.findById(decoded.userId).select("-password");
+    next();
+  } catch (error) {
     res.status(401);
-    throw new Error("Not authorized, user not found");
+    throw new Error("Not authorized, token failed");
   }
-
-  // Attach the authenticated user to the request object
-  req.user = user;
-  next();
 });
 
 const authorizeAdmin = (req, res, next) => {
