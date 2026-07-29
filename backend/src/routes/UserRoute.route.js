@@ -18,6 +18,7 @@ import {
   updateBanner,
 } from "../controllers/UserController.controller.js";
 import createToken from "../utils/createToken.js";
+import generateToken from "../utils/createToken.js";
 import protect from "../middlewares/Auth.middleware.js";
 import {
   followUser,
@@ -69,16 +70,20 @@ router.get(
   "/auth/google/callback",
   passport.authenticate("google", {
     session: false,
-    failureRedirect: "/login",
+    failureRedirect:
+      process.env.NODE_ENV === "production"
+        ? "https://my-project-omega-roan.vercel.app/home"
+        : "http://localhost:5173/home",
   }),
   (req, res) => {
-    createToken(res, req.user._id);
+    // createToken(res, req.user._id);
+    const token = generateToken(req.user._id);
 
     const frontendURL =
       process.env.NODE_ENV === "production"
         ? "https://my-project-omega-roan.vercel.app"
         : "http://localhost:5173";
-    res.redirect(frontendURL);
+    res.redirect(`${frontendURL}/auth/callback?token=${token}`);
   },
 );
 

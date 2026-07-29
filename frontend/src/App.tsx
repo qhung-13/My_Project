@@ -19,6 +19,7 @@ import Dashboard from "./pages/Dashboard/Dashboard";
 import TopUp from "./pages/TopUp/TopUp";
 import Admin from "./pages/Admin/Admin";
 import Channel from "./pages/Channel/Channel";
+import AuthCallback from "./pages/AuthCallback/AuthCallback";
 import "./index.css";
 
 function App() {
@@ -66,6 +67,7 @@ function App() {
         <Route path="/topup" element={<TopUp />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/channel" element={<Channel />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
       </Routes>
 
       <Footer />
