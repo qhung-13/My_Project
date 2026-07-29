@@ -24,15 +24,27 @@ const configurePassport = () => {
 
           // If not, create a new user with Google profile data
           if (!user) {
+            // 1. Calculate base username
+            const baseUsername = profile.displayName
+              .replace(/[^a-zA-Z0-9_]/g, "_")
+              .toLowerCase();
+
+            let username = baseUsername;
+            let count = 0;
+
+            // 2. Ensure it is unique
+            while (await User.findOne({ username })) {
+              count++;
+              username = `${baseUsername}_${count}`;
+            }
+
+            // 3. Create the user using the unique 'username' variable
             user = await User.create({
               googleId: profile.id,
-              // Sanitize display name: remove special chars, replace with "_"
-              username: profile.displayName
-                .replace(/[^a-zA-Z0-9_]/g, "_")
-                .toLowerCase(),
+              username: username, // 
               email: profile.emails[0].value,
               avatar: profile.photos[0].value,
-              isVerified: true, // Google accounts are already verified
+              isVerified: true,
             });
           }
 
