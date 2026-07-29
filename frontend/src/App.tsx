@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { useGetProfileQuery } from "./store/api/userApi";
+import { setUser } from "./store/slices/authSlice";
+import { Route, Routes, Navigate } from "react-router-dom";
+
 import Home from "./pages/Home/Home";
 import Game from "./pages/Game/Game";
 import Live from "./pages/Live/Live";
 import GameDetail from "./pages/Game/GameDetail";
-import "./index.css";
 import Header from "./layout/Header/Header";
-import { Route, Routes, Navigate } from "react-router-dom";
 import Footer from "./layout/Footer/Footer";
 import WatchLive from "./pages/WatchLive/WatchLive";
 import Profile from "./pages/Profile/Profile";
@@ -16,11 +19,22 @@ import Dashboard from "./pages/Dashboard/Dashboard";
 import TopUp from "./pages/TopUp/TopUp";
 import Admin from "./pages/Admin/Admin";
 import Channel from "./pages/Channel/Channel";
+import "./index.css";
 
 function App() {
+  const dispatch = useDispatch();
+
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem("darkMode") === "true";
   });
+
+  const { data: profile } = useGetProfileQuery(undefined, {});
+
+  useEffect(() => {
+    if (profile) {
+      dispatch(setUser(profile));
+    }
+  }, [profile, dispatch]);
 
   useEffect(() => {
     if (darkMode) {
