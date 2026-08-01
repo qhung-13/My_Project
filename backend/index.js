@@ -48,6 +48,7 @@ configureMediaServer();
 // connectDB will be awaited during startup to allow graceful handling
 
 const app = express();
+app.set("trust proxy", 1);
 const httpServer = createServer(app);
 const port = process.env.PORT || 5000;
 
@@ -246,7 +247,8 @@ app.use(
 
 // Centralized error handler for the API
 app.use((err, req, res, next) => {
-  const statusCode = res.statusCode && res.statusCode !== 200 ? res.statusCode : 500;
+  const statusCode =
+    res.statusCode && res.statusCode !== 200 ? res.statusCode : 500;
   res.status(statusCode).json({
     message: err.message,
     ...(process.env.NODE_ENV === "development" ? { stack: err.stack } : {}),
