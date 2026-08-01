@@ -18,7 +18,7 @@ import {
   updateBanner,
 } from "../controllers/UserController.controller.js";
 import createToken from "../utils/createToken.js";
-import generateToken from "../utils/createToken.js";
+import { generateToken } from "../utils/createToken.js";
 import protect from "../middlewares/Auth.middleware.js";
 import {
   followUser,
@@ -100,7 +100,8 @@ router.put("/profile", protect, updateProfile);
 router.put(
   "/profile/banner",
   protect,
-  uploadImage.single("banner", updateBanner),
+  uploadImage.single("banner"),
+  updateBanner,
 );
 router.get("/stream-key", protect, getStreamKey);
 router.post("/stream-key/reset", protect, resetStreamKey);
