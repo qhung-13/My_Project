@@ -76,13 +76,19 @@ router.get(
         : "http://localhost:5173/home",
   }),
   (req, res) => {
-    // createToken(res, req.user._id);
     const token = generateToken(req.user._id);
 
     const frontendURL =
       process.env.NODE_ENV === "production"
         ? "https://my-project-omega-roan.vercel.app"
         : "http://localhost:5173";
+
+    console.log("NODE_ENV:", process.env.NODE_ENV);
+    console.log(
+      "Redirecting to:",
+      `${frontendURL}/auth/callback?token=${token}`,
+    );
+
     res.redirect(`${frontendURL}/auth/callback?token=${token}`);
   },
 );
