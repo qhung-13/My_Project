@@ -61,7 +61,9 @@ const DonateModal = ({
     <div className="donate-modal">
       <div className="donate-modal__overlay" onClick={onClose} />
       <div className="donate-modal__card">
-        <button className="donate-modal__close" onClick={onClose}>&times;</button>
+        <button className="donate-modal__close" onClick={onClose}>
+          &times;
+        </button>
 
         {step === "donate" && (
           <>
@@ -75,7 +77,10 @@ const DonateModal = ({
               Số dư: <strong>{balance?.coins || 0} xu</strong>
               <button
                 className="donate-modal__topup-link"
-                onClick={() => { onClose(); navigate("/topup"); }}
+                onClick={() => {
+                  onClose();
+                  navigate("/topup");
+                }}
               >
                 + Nạp thêm
               </button>
@@ -112,7 +117,9 @@ const DonateModal = ({
             <div className="donate-modal__field">
               <label className="donate-modal__label">
                 Lời nhắn{" "}
-                <span className="donate-modal__count">{message.length}/200</span>
+                <span className="donate-modal__count">
+                  {message.length}/200
+                </span>
               </label>
               <textarea
                 className="donate-modal__textarea"
@@ -138,9 +145,15 @@ const DonateModal = ({
           <div className="donate-modal__success">
             <span>🎉</span>
             <h2>Donate thành công!</h2>
-            <p>Bạn đã gửi <strong>🪙 {coins} xu</strong> cho {streamerName}</p>
-            {message && <p className="donate-modal__success-msg">"{message}"</p>}
-            <button className="donate-modal__btn" onClick={onClose}>Đóng</button>
+            <p>
+              Bạn đã gửi <strong>🪙 {coins} xu</strong> cho {streamerName}
+            </p>
+            {message && (
+              <p className="donate-modal__success-msg">"{message}"</p>
+            )}
+            <button className="donate-modal__btn" onClick={onClose}>
+              Đóng
+            </button>
           </div>
         )}
       </div>

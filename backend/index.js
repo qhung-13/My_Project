@@ -12,19 +12,19 @@ import cookieParser from "cookie-parser";
 import passport from "passport";
 import cors from "cors";
 import { createServer } from "http";
-import { Server } from "socket.io";
 import helmet from "helmet";
 import { globalLimiter } from "./src/middlewares/RateLimiting.middleware.js";
-import {
-  isUserBanned,
-  isUserTimedOut,
-} from "./src/controllers/ModerationController.controller.js";
 
 // Configurations & Utilities
 import connectDB from "./src/config/db.config.js";
 import configurePassport from "./src/config/passport.config.js";
 import configureCloudinary from "./src/config/cloudinary.config.js";
 import configureMediaServer from "./src/config/mediaServer.config.js";
+import {
+  assertRequiredEnv,
+  getAllowedOrigins,
+} from "./src/config/env.config.js";
+import createSocketServer from "./src/sockets/index.js";
 
 // Routes
 import userRoute from "./src/routes/UserRoute.route.js";
@@ -42,6 +42,7 @@ import clipRoute from "./src/routes/ClipRoute.route.js";
 // Initialization & Database Connection
 // ==========================================
 dotenv.config();
+assertRequiredEnv();
 configurePassport();
 configureCloudinary();
 configureMediaServer();
@@ -51,6 +52,7 @@ const app = express();
 app.set("trust proxy", 1);
 const httpServer = createServer(app);
 const port = process.env.PORT || 5000;
+const allowedOrigins = getAllowedOrigins();
 
 // ==========================================
 // Security Middlewares
@@ -77,11 +79,7 @@ app.use(cookieParser());
 
 app.use(
   cors({
-    origin: [
-      "https://my-project-omega-roan.vercel.app",
-      "http://localhost:5173",
-      "http://localhost",
-    ],
+    origin: allowedOrigins,
     credentials: true,
   }),
 );
@@ -89,114 +87,9 @@ app.use(
 app.use(passport.initialize());
 
 // ==========================================
-// Socket.IO
+// Socket.IO (see ./src/sockets for handlers)
 // ==========================================
-const io = new Server(httpServer, {
-  cors: {
-    origin: [
-      "https://my-project-omega-roan.vercel.app",
-      "http://localhost:5173",
-    ],
-    credentials: true,
-  },
-});
-
-const socketUsers = new Map();
-
-io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
-
-  // -- Join stream room --
-  // When user join stream, client sent event "join-stream"
-  socket.on("join-stream", (streamId, userData) => {
-    socket.join(`stream:${streamId}`);
-    console.log(`User ${socket.id} joined stream: ${streamId}`);
-
-    if (userData) {
-      socketUsers.set(socket.id, { ...userData, streamId });
-    }
-
-    const viewers = Array.from(socketUsers.values()).filter(
-      (u) => u.streamId === streamId,
-    );
-
-    // Announce the current number of viewers in the room
-    const viewerCount =
-      io.sockets.adapter.rooms.get(`stream:${streamId}`)?.size || 0;
-    io.to(`stream:${streamId}`).emit("viewer-count", viewerCount);
-
-    io.to(`stream:${streamId}`).emit("viewer-list", viewers);
-  });
-
-  // Leave stream room
-  socket.on("leave-stream", (streamId) => {
-    socket.leave(`stream:${streamId}`);
-    console.log(`User ${socket.id} left stream: ${streamId}`);
-
-    socketUsers.delete(socket.id);
-
-    // Update the number of viewers after
-    const viewerCount =
-      io.sockets.adapter.rooms.get(`stream:${streamId}`)?.size || 0;
-    io.to(`stream:${streamId}`).emit("viewer-count", viewerCount);
-
-    const viewers = Array.from(socketUsers.values()).filter(
-      (u) => u.streamId === streamId,
-    );
-    io.to(`stream:${streamId}`).emit("viewer-list", viewers);
-  });
-
-  // Send chat
-  // When user sent message, client sent event "chat-message"
-  socket.on("chat-message", async ({ streamId, message, user, userId }) => {
-    if (userId && isUserBanned(userId, streamId)) {
-      socket.emit("chat-blocked", {
-        message: "Bạn đã bị ban khỏi stream này.",
-      });
-      return;
-    }
-
-    if (userId && isUserTimedOut(userId, streamId)) {
-      socket.emit("chat-blocked", {
-        message: "Bạn đang bị timeout, vui lòng đợi.",
-      });
-      return;
-    }
-
-    // Broadcast message sent all in room
-    io.to(`stream:${streamId}`).emit("chat-message", {
-      id: Date.now(),
-      user,
-      message,
-      timestamp: new Date(),
-    });
-  });
-
-  socket.on("disconnect", () => {
-    const userData = socketUsers.get(socket.id);
-    if (userData) {
-      const { streamId } = userData;
-      socketUsers.delete(socket.id);
-
-      const viewerCount =
-        io.sockets.adapter.rooms.get(`stream:${streamId}`)?.size || 0;
-      io.to(`stream:${streamId}`).emit("viewer-count", viewerCount);
-
-      const viewers = Array.from(socketUsers.values()).filter(
-        (u) => u.streamId === streamId,
-      );
-      io.to(`stream:${streamId}`).emit("viewer-list", viewers);
-    }
-    console.log("User disconnected:", socket.id);
-  });
-
-  socket.on("send-reaction", ({ streamId, reaction }) => {
-    io.to(`stream:${streamId}`).emit("reaction-received", {
-      reaction,
-      userId: socket.id,
-    });
-  });
-});
+const io = createSocketServer(httpServer, allowedOrigins);
 
 // ==========================================
 // API Routes
@@ -211,15 +104,6 @@ app.use("/api/admin", globalLimiter, adminRoute);
 app.use("/api/notification", notification);
 app.use("/api/moderation", moderationRoute);
 app.use("/api/clips", clipRoute);
-
-const serveHLS = (req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "*");
-  res.header("Cache-Control", "no-cache, no-store, must-revalidate");
-  res.header("Pragma", "no-cache");
-  next();
-};
 
 app.use(
   "/live",
@@ -245,12 +129,25 @@ app.use(
 // Server Startup
 // ==========================================
 
+// 404 handler for unknown routes (must come after all real routes)
+app.use((req, res) => {
+  res.status(404).json({ message: `Route not found: ${req.originalUrl}` });
+});
+
 // Centralized error handler for the API
+// BUG FIX: this used to derive the status code from `res.statusCode`, which
+// Express defaults to 200. Controllers that call `res.status(400)` *before*
+// `throw new Error(...)` worked by accident, but any error thrown without
+// first setting a status code (e.g. a raw `throw` inside asyncHandler, or an
+// unexpected exception) was reported to the client as HTTP 200 with an error
+// message in the body — very easy to misread as success.
 app.use((err, req, res, next) => {
   const statusCode =
-    res.statusCode && res.statusCode !== 200 ? res.statusCode : 500;
+    err.statusCode ||
+    (res.statusCode && res.statusCode !== 200 ? res.statusCode : 500);
+
   res.status(statusCode).json({
-    message: err.message,
+    message: err.message || "Internal Server Error",
     ...(process.env.NODE_ENV === "development" ? { stack: err.stack } : {}),
   });
 });

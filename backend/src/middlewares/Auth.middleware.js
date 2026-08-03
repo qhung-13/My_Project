@@ -27,11 +27,22 @@ const protect = asyncHandler(async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await User.findById(decoded.userId).select("-password");
+    const user = await User.findById(decoded.userId).select("-password");
+
+    // BUG FIX: previously req.user could be `null` here (e.g. account
+    // deleted after the token was issued) and the request was still allowed
+    // through, letting downstream code crash on `req.user._id` or silently
+    // treat the request as authenticated with no user.
+    if (!user) {
+      res.status(401);
+      throw new Error("Not authorized, user no longer exists");
+    }
+
+    req.user = user;
     next();
   } catch (error) {
     res.status(401);
-    throw new Error("Not authorized, token failed");
+    throw new Error(error.message || "Not authorized, token failed");
   }
 });
 
