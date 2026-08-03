@@ -39,8 +39,8 @@ const followUser = asyncHandler(async (req, res) => {
   });
 
   await createNotification({
-    userId: targetUser._id, 
-    fromUserId: myId, 
+    userId: targetUser._id,
+    fromUserId: myId,
     type: "follow",
     message: `${req.user.username} đã follow bạn`,
     link: `/profile/${myId}`,
