@@ -168,9 +168,20 @@ const configureMediaServer = () => {
       console.log("ffmpeg stopped for:", path);
     }
 
-    const user = await User.findOne({ streamKey });
-    if (user) {
-      await User.findByIdAndUpdate(user._id, { isLive: false });
+    try {
+      // BUG FIX: `streamKey` was undefined in this scope (ReferenceError),
+      // which threw an unhandled promise rejection on every stream end and
+      // crashed the whole process (see the global "unhandledRejection"
+      // handler in index.js). Derive it from the RTMP path instead.
+      const streamKey = path?.split("/").pop();
+      if (!streamKey) return;
+
+      const user = await User.findOne({ streamKey });
+      if (user) {
+        await User.findByIdAndUpdate(user._id, { isLive: false });
+      }
+    } catch (error) {
+      console.error("Error while finalizing donePublish:", error);
     }
   });
 
