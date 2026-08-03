@@ -41,7 +41,7 @@ const configurePassport = () => {
             // 3. Create the user using the unique 'username' variable
             user = await User.create({
               googleId: profile.id,
-              username: username, // 
+              username: username, //
               email: profile.emails[0].value,
               avatar: profile.photos[0].value,
               isVerified: true,
