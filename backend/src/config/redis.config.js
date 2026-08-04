@@ -20,19 +20,23 @@ export const isRedisEnabled = () => Boolean(process.env.REDIS_URL);
  * publishing, one dedicated to subscribing).
  * Returns `null` if REDIS_URL isn't configured.
  */
+const retryStrategy = (times) => Math.min(times * 200, 5000);
+
 export const getRedisClients = () => {
   if (!isRedisEnabled()) return null;
-
   if (!pubClient) {
     pubClient = new Redis(process.env.REDIS_URL, {
-      maxRetriesPerRequest: 3,
+      maxRetriesPerRequest: null, 
+      retryStrategy,
     });
     subClient = pubClient.duplicate();
-
-    pubClient.on("error", (err) => console.error("Redis (pub) error:", err));
-    subClient.on("error", (err) => console.error("Redis (sub) error:", err));
+    pubClient.on("error", (err) =>
+      console.error("Redis (pub) error:", err.message),
+    );
+    subClient.on("error", (err) =>
+      console.error("Redis (sub) error:", err.message),
+    );
   }
-
   return { pubClient, subClient };
 };
 
