@@ -1,21 +1,29 @@
 import nodemailer from "nodemailer";
 
-const transporter = nodemailer.createTransport({
-  host: "smtp-relay.brevo.com",
-  port: 587,
-  secure: false,
-  connectionTimeout: 5000,
-  greetingTimeout: 5000,
-  auth: {
-    user: process.env.BREVO_SMTP_USER,
-    pass: process.env.BREVO_SMTP_PASS,
-  },
-});
+let transporter = null;
 
-transporter
-  .verify()
-  .then(() => console.log("Brevo SMTP connection OK"))
-  .catch((err) => console.error("Brevo SMTP verify failed:", err.message));
+const getTransporter = () => {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      host: "smtp-relay.brevo.com",
+      port: 587,
+      secure: false,
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      auth: {
+        user: process.env.BREVO_SMTP_USER,
+        pass: process.env.BREVO_SMTP_PASS,
+      },
+    });
+
+    transporter
+      .verify()
+      .then(() => console.log("Brevo SMTP connection OK"))
+      .catch((err) => console.error("Brevo SMTP verify failed:", err.message));
+  }
+
+  return transporter;
+};
 
 const sendOtpEmail = async (email, otp, type) => {
   const subject =
@@ -33,7 +41,7 @@ const sendOtpEmail = async (email, otp, type) => {
         : `<h2>Reset mật khẩu</h2><p>Mã OTP: <b>${otp}</b></p><p>Hết hạn sau 5 phút.</p>`;
 
   try {
-    const info = await transporter.sendMail({
+    const info = await getTransporter().sendMail({
       from: `"OmexLive" <${process.env.BREVO_SMTP_USER}>`,
       to: email,
       subject,
