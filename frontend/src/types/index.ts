@@ -99,6 +99,7 @@ export interface Stream {
   category: string;
   tags?: string[];
   streamKey?: string;
+  hlsUrl?: string | null;
   thumbnailUrl?: string | null;
   isLive: boolean;
   viewers: number;

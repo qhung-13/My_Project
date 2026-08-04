@@ -18,7 +18,6 @@ import {
   updateBanner,
 } from "../controllers/UserController.controller.js";
 import createToken from "../utils/createToken.js";
-import { generateToken } from "../utils/createToken.js";
 import protect from "../middlewares/Auth.middleware.js";
 import {
   followUser,
@@ -76,20 +75,23 @@ router.get(
         : "http://localhost:5173/home",
   }),
   (req, res) => {
-    const token = generateToken(req.user._id);
+    // AUTH FIX: previously this used `generateToken` (no cookie) and put
+    // the raw JWT in the redirect URL query string
+    // (`/auth/callback?token=...`), which the frontend then read out of
+    // the URL and stored in localStorage — a second, less secure auth
+    // mechanism living alongside the httpOnly cookie used by normal
+    // login/register (see createToken.js / axios.ts). Using createToken()
+    // here sets the same httpOnly cookie, so OAuth login now behaves
+    // identically to normal login and the token never touches the URL or
+    // client-side JS.
+    createToken(res, req.user._id);
 
     const frontendURL =
       process.env.NODE_ENV === "production"
         ? "https://my-project-omega-roan.vercel.app"
         : "http://localhost:5173";
 
-    console.log("NODE_ENV:", process.env.NODE_ENV);
-    console.log(
-      "Redirecting to:",
-      `${frontendURL}/auth/callback?token=${token}`,
-    );
-
-    res.redirect(`${frontendURL}/auth/callback?token=${token}`);
+    res.redirect(`${frontendURL}/auth/callback`);
   },
 );
 

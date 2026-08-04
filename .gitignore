@@ -17,3 +17,5 @@ agent-service/venv/
 agent-service/__pycache__/
 agent-service/*.pyc
 agent-service/.env
+
+media-service/.env.example

@@ -5,9 +5,8 @@
  */
 
 // Core & Third-party Packages
-import path from "path";
-import express from "express";
 import dotenv from "dotenv";
+import express from "express";
 import cookieParser from "cookie-parser";
 import passport from "passport";
 import cors from "cors";
@@ -19,7 +18,6 @@ import { globalLimiter } from "./src/middlewares/RateLimiting.middleware.js";
 import connectDB from "./src/config/db.config.js";
 import configurePassport from "./src/config/passport.config.js";
 import configureCloudinary from "./src/config/cloudinary.config.js";
-import configureMediaServer from "./src/config/mediaServer.config.js";
 import {
   assertRequiredEnv,
   getAllowedOrigins,
@@ -45,7 +43,8 @@ dotenv.config();
 assertRequiredEnv();
 configurePassport();
 configureCloudinary();
-configureMediaServer();
+// media ingest/transcoding lives in the separate media-service (see
+// ../media-service) — this process no longer runs NodeMediaServer/ffmpeg.
 // connectDB will be awaited during startup to allow graceful handling
 
 const app = express();
@@ -94,36 +93,31 @@ const io = createSocketServer(httpServer, allowedOrigins);
 // ==========================================
 // API Routes
 // ==========================================
-app.use("/api/users", userRoute);
-app.use("/api/videos", videoRoute);
-app.use("/api/comments", globalLimiter, commentRoute);
-app.use("/api/streams", globalLimiter, streamRoute);
-app.use("/api/donations", globalLimiter, donateRoute);
-app.use("/api/coins", globalLimiter, coinRoute);
-app.use("/api/admin", globalLimiter, adminRoute);
-app.use("/api/notification", notification);
-app.use("/api/moderation", moderationRoute);
-app.use("/api/clips", clipRoute);
+// Versioned under /api/v1 so a future breaking change can be introduced as
+// /api/v2 without forcing every existing client to update at the same
+// time. The unversioned /api/* aliases are kept temporarily for backward
+// compatibility with any client still pointing at the old paths and
+// should be removed in a future release once nothing depends on them.
+const v1 = express.Router();
+v1.use("/users", userRoute);
+v1.use("/videos", videoRoute);
+v1.use("/comments", globalLimiter, commentRoute);
+v1.use("/streams", globalLimiter, streamRoute);
+v1.use("/donations", globalLimiter, donateRoute);
+v1.use("/coins", globalLimiter, coinRoute);
+v1.use("/admin", globalLimiter, adminRoute);
+v1.use("/notification", notification);
+v1.use("/moderation", moderationRoute);
+v1.use("/clips", clipRoute);
 
-app.use(
-  "/live",
-  (req, res, next) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    next();
-  },
-  express.static(path.join(process.cwd(), "media/live"), {
-    setHeaders: (res, filePath) => {
-      const ext = path.extname(filePath).toLowerCase();
-      if (ext === ".m3u8") {
-        res.setHeader("Content-Type", "application/vnd.apple.mpegurl");
-        res.setHeader("Cache-Control", "no-cache");
-      } else if (ext === ".ts") {
-        res.setHeader("Content-Type", "video/MP2T"); // Giữ nguyên
-      }
-    },
-  }),
-);
+app.use("/api/v1", v1);
+app.use("/api", v1); // TODO(deprecate): remove once all clients use /api/v1
+
+// NOTE: HLS playback (`/live/...`) used to be served directly from this
+// process's local disk. That has moved to the standalone media-service
+// (see ../media-service), and playback URLs are now returned by the API
+// itself (StreamController -> buildHlsUrl()) so the frontend never needs
+// to know this backend's host for video playback.
 
 // ==========================================
 // Server Startup

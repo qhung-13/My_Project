@@ -1,26 +1,27 @@
 import NodeMediaServer from "node-media-server";
-import { mkdirSync } from "fs";
+import { mkdirSync, writeFileSync } from "fs";
 import { spawn } from "child_process";
-import { writeFileSync } from "fs";
+import path from "path";
 import User from "../models/User.model.js";
-
-// const FFMPEG_PATH =
-//   "C:/Users/LENOVO/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/ffmpeg.exe";
+import { startHlsUploader } from "../services/hlsUploader.service.js";
 
 const ffmpegProcesses = new Map();
+const MEDIA_ROOT = path.resolve("./media");
+const HTTP_PORT = Number(process.env.MEDIA_HTTP_PORT || 8000);
+const RTMP_PORT = Number(process.env.MEDIA_RTMP_PORT || 1935);
 
 const config = {
   logType: 3,
   rtmp: {
-    port: 1935,
+    port: RTMP_PORT,
     chunk_size: 60000,
     gop_cache: true,
     ping: 30,
     ping_timeout: 60,
   },
   http: {
-    port: 8000,
-    mediaroot: "./media",
+    port: HTTP_PORT,
+    mediaroot: MEDIA_ROOT,
     allow_origin: "*",
   },
 };
@@ -29,13 +30,16 @@ const configureMediaServer = () => {
   const nms = new NodeMediaServer(config);
   nms.run();
 
-  //   Log when have stream connection
-  nms.on("prePublish", async (id, StreamPath, args) => {
-    const path = typeof id === "object" ? id.streamPath : StreamPath;
-    const streamKey = path?.split("/").pop();
-    console.log("Stream started:", path);
+  // Sync HLS output to object storage/CDN as segments are written (no-op
+  // if S3_BUCKET isn't configured — see hlsUploader.service.js).
+  startHlsUploader(path.join(MEDIA_ROOT, "live"));
 
-    if (!path) return;
+  nms.on("prePublish", async (id, StreamPath, args) => {
+    const streamPath = typeof id === "object" ? id.streamPath : StreamPath;
+    const streamKey = streamPath?.split("/").pop();
+    console.log("Stream started:", streamPath);
+
+    if (!streamPath) return;
     const user = await User.findOne({ streamKey });
     if (!user) {
       console.log("Invalid stream key:", streamKey);
@@ -43,9 +47,9 @@ const configureMediaServer = () => {
       if (session) session.reject();
       return;
     }
-    console.log(`Valid stream key for user: ${user.username}`);
+    console.log(`Valid stream key for user: ${user.username || user._id}`);
 
-    const folderPath = `./media${path}`;
+    const folderPath = path.join(MEDIA_ROOT, streamPath);
     mkdirSync(folderPath, { recursive: true });
     mkdirSync(`${folderPath}/1080p`, { recursive: true });
     mkdirSync(`${folderPath}/720p`, { recursive: true });
@@ -64,7 +68,7 @@ const configureMediaServer = () => {
 
     const ffmpeg = spawn("ffmpeg", [
       "-i",
-      `rtmp://localhost:1935${path}`,
+      `rtmp://localhost:${RTMP_PORT}${streamPath}`,
 
       // ── 1080p ──
       "-map",
@@ -148,32 +152,27 @@ const configureMediaServer = () => {
 
     ffmpeg.on("close", (code) => {
       console.log("ffmpeg closed:", code);
-      ffmpegProcesses.delete(path);
+      ffmpegProcesses.delete(streamPath);
     });
 
-    ffmpegProcesses.set(path, ffmpeg);
-    console.log("ffmpeg started for:", path);
+    ffmpegProcesses.set(streamPath, ffmpeg);
+    console.log("ffmpeg started for:", streamPath);
 
     await User.findByIdAndUpdate(user._id, { isLive: true });
   });
 
-  //   Log when streamer disconnection
   nms.on("donePublish", async (id, StreamPath, args) => {
-    const path = typeof id === "object" ? id.streamPath : StreamPath;
-    console.log("Stream ended", path);
+    const streamPath = typeof id === "object" ? id.streamPath : StreamPath;
+    console.log("Stream ended", streamPath);
 
-    if (path && ffmpegProcesses.has(path)) {
-      ffmpegProcesses.get(path).kill();
-      ffmpegProcesses.delete(path);
-      console.log("ffmpeg stopped for:", path);
+    if (streamPath && ffmpegProcesses.has(streamPath)) {
+      ffmpegProcesses.get(streamPath).kill();
+      ffmpegProcesses.delete(streamPath);
+      console.log("ffmpeg stopped for:", streamPath);
     }
 
     try {
-      // BUG FIX: `streamKey` was undefined in this scope (ReferenceError),
-      // which threw an unhandled promise rejection on every stream end and
-      // crashed the whole process (see the global "unhandledRejection"
-      // handler in index.js). Derive it from the RTMP path instead.
-      const streamKey = path?.split("/").pop();
+      const streamKey = streamPath?.split("/").pop();
       if (!streamKey) return;
 
       const user = await User.findOne({ streamKey });
@@ -185,13 +184,14 @@ const configureMediaServer = () => {
     }
   });
 
-  //   Log when viewer connection
   nms.on("prePlay", (id, StreamPath, args) => {
-    const path = typeof id === "object" ? id.streamPath : StreamPath;
-    console.log("Viewer joined", path);
+    const streamPath = typeof id === "object" ? id.streamPath : StreamPath;
+    console.log("Viewer joined", streamPath);
   });
 
-  console.log("Media server running on RTMP port 1935, HTTP port 5000");
+  console.log(
+    `[media-service] RTMP ingest on :${RTMP_PORT}, HLS HTTP on :${HTTP_PORT}`,
+  );
 };
 
 export default configureMediaServer;
