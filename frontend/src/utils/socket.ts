@@ -1,6 +1,9 @@
 import { io } from "socket.io-client";
+import { API_BASE_URL } from "../config/api";
 
-const socket = io(import.meta.env.VITE_API_URL?.replace("/api", ""), {
+const socketBaseUrl = new URL(API_BASE_URL).origin;
+
+const socket = io(socketBaseUrl, {
   withCredentials: true,
   autoConnect: false, // Don't auto connect - just connect when need
 });
