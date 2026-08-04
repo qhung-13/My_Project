@@ -5,8 +5,8 @@
  */
 
 // Core & Third-party Packages
-import express from "express";
 import dotenv from "dotenv";
+import express from "express";
 import cookieParser from "cookie-parser";
 import passport from "passport";
 import cors from "cors";
