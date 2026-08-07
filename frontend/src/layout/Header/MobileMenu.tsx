@@ -22,7 +22,11 @@ const MobileMenu = ({ darkMode, setDarkMode, onLogin, onRegister }: Props) => {
   const [logout] = useLogoutMutation();
 
   const handleLogout = async () => {
-    await logout(undefined).unwrap();
+    try {
+      await logout(undefined).unwrap();
+    } catch (error) {
+      console.error("Logout request failed:", error);
+    }
     dispatch(clearUser());
   };
 
@@ -32,7 +36,13 @@ const MobileMenu = ({ darkMode, setDarkMode, onLogin, onRegister }: Props) => {
         <li className="mobile-menu__item">
           <button
             className="mobile-menu__link"
-            onClick={() => setShowGoLive(true)}
+            onClick={() => {
+              if (isAuthenticated) {
+                setShowGoLive(true);
+              } else {
+                onLogin();
+              }
+            }}
           >
             Go Live
           </button>
