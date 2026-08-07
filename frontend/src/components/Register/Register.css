@@ -1,6 +1,13 @@
-/* ===============================
-   REGISTER MODAL CONTAINER
-   =============================== */
+/* ============================================================
+   REGISTER MODAL
+   Rebuilt on the shared design system (index.css). Previously
+   used a generic Bootstrap green (#28a745) unrelated to the
+   brand's signal color, and hardcoded white/black colors that
+   ignored dark mode entirely in the base rules (only patched
+   via a separate ".dark-mode" override block). Now uses the
+   same tokens as Login.css / the rest of the app, so light and
+   dark mode both look intentional and on-brand automatically.
+   ============================================================ */
 
 .register {
   position: fixed;
@@ -11,91 +18,65 @@
   z-index: 1000;
 }
 
-
-/* Overlay phía sau popup */
-
 .register__overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(6px);
+  background: rgba(4, 6, 12, 0.6);
+  backdrop-filter: blur(8px);
 }
 
-
-/* ===============================
-   REGISTER CARD
-   =============================== */
-
+/* ── Card ── */
 .register__card {
   position: relative;
-
   width: 92%;
   max-width: 380px;
-
-  padding: 1.9rem 1.6rem;
-
-  background: #ffffff;
-  border-radius: 14px;
-
-  box-shadow: 0 20px 50px rgba(0,0,0,0.25);
-
+  padding: 2.1rem 1.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   align-items: center;
-
-  animation: fadeIn 0.25s ease;
+  animation: register-in var(--duration) var(--ease);
   z-index: 1001;
 }
 
-
-/* ===============================
-   CLOSE BUTTON
-   =============================== */
-
 .register__close {
   position: absolute;
-  top: 12px;
+  top: 14px;
   right: 14px;
-
   background: none;
   border: none;
-
-  font-size: 1.6rem;
+  font-size: 1.4rem;
+  line-height: 1;
   cursor: pointer;
-
-  color: #777;
-  transition: 0.2s;
+  color: var(--text-muted);
+  transition: color var(--duration-fast) var(--ease);
 }
 
 .register__close:hover {
-  color: #111;
+  color: var(--text-primary);
 }
 
-
-/* ===============================
-   TITLE + SUBTITLE
-   =============================== */
-
+/* ── Title ── */
 .register__title {
-  font-size: 1.55rem;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
   font-weight: 600;
   margin-bottom: 0.4rem;
-  color: #222;
+  color: var(--text-primary);
   text-align: center;
 }
 
 .register__subtitle {
   font-size: 0.9rem;
-  margin-bottom: 1.4rem;
-  color: #666;
+  margin-bottom: 1.5rem;
+  color: var(--text-secondary);
   text-align: center;
 }
 
-
-/* ===============================
-   FORM
-   =============================== */
-
+/* ── Form ── */
 .register__form {
   width: 100%;
   display: flex;
@@ -103,104 +84,101 @@
   gap: 12px;
 }
 
-
-/* ===============================
-   INPUT
-   =============================== */
-
 .register__input,
 .otp-input {
   width: 100%;
-
   padding: 0.7rem 0.9rem;
   font-size: 0.95rem;
-
-  border: 1px solid #dcdcdc;
-  border-radius: 8px;
-
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
   outline: none;
-  transition: 0.2s;
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
+}
+
+.register__input::placeholder,
+.otp-input::placeholder {
+  color: var(--text-muted);
 }
 
 .register__input:focus,
 .otp-input:focus {
-  border-color: #28a745;
-  box-shadow: 0 0 0 3px rgba(40,167,69,0.2);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
 }
 
-
-/* ===============================
-   REGISTER BUTTON
-   =============================== */
-
+/* ── Primary button ── */
 .register__button {
-  padding: 0.75rem;
-
-  background: #28a745;
+  padding: 0.8rem;
+  background: var(--accent);
   border: none;
-
-  color: white;
-
-  border-radius: 8px;
+  color: #fff;
+  border-radius: var(--radius-md);
   font-size: 0.95rem;
-  font-weight: 500;
-
+  font-weight: 600;
   cursor: pointer;
-  transition: 0.2s;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
 }
 
 .register__button:hover {
-  background: #218838;
+  background: var(--accent-hover);
   transform: translateY(-1px);
 }
 
+.register__button:active {
+  transform: translateY(0);
+}
 
-/* ===============================
-   SOCIAL LOGIN
-   =============================== */
-
+/* ── Social login ── */
 .register__social {
   width: 100%;
   display: flex;
   gap: 12px;
-  margin: 14px 0;
+  margin: 16px 0;
 }
 
 .register__social-btn {
   flex: 1;
-  padding: 0.6rem;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  background: #fff;
+  padding: 0.65rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: 0.2s;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease);
 }
 
 .register__social-btn:hover {
-  background: #f7f7f7;
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
 }
 
-/* Google */
-
+/* Google — keeps its brand-required white pill even in dark mode,
+   that's the one exception where an external brand mark should stay
+   recognizable rather than reskinned. */
 .register__social-btn--google {
-  background: #fff;
+  background: #ffffff;
   border: 1px solid #e5e7eb;
-  color: #333;
+  color: #1f2937;
 }
 
 .register__social-btn--google:hover {
   background: #f9fafb;
 }
 
-
-/* Facebook */
-
+/* Facebook — same reasoning: keep the recognizable brand blue. */
 .register__social-btn--facebook {
   background: #1877f2;
-  color: white;
+  color: #ffffff;
   border: none;
 }
 
@@ -208,127 +186,52 @@
   background: #166fe5;
 }
 
-/* ===============================
-   OTP TEXT
-   =============================== */
-
+/* ── OTP ── */
 .otp-info {
   font-size: 0.8rem;
-  color: #666;
+  color: var(--text-secondary);
   text-align: center;
 }
 
-/* ===============================
-   FOOTER
-   =============================== */
-
+/* ── Footer ── */
 .register__footer {
   margin-top: 1rem;
   font-size: 0.9rem;
-  color: #555;
+  color: var(--text-secondary);
 }
 
 .register__link {
   background: none;
   border: none;
-
-  color: #28a745;
-
+  color: var(--accent);
   cursor: pointer;
-  font-weight: 500;
-
-  text-decoration: underline;
+  font-weight: 600;
 }
 
 .register__link:hover {
-  color: #1e7e34;
+  color: var(--accent-hover);
+  text-decoration: underline;
 }
 
-
-/* ===============================
-   DARK MODE
-   =============================== */
-
-.dark-mode .register__overlay {
-  background: rgba(0,0,0,0.75);
-}
-
-.dark-mode .register__card {
-  background: #27272a;
-  color: #e4e4e7;
-  border: 1px solid #3f3f46;
-  box-shadow: 0 25px 60px rgba(0,0,0,0.6);
-}
-
-.dark-mode .register__title {
-  color: #ffffff;
-}
-
-.dark-mode .register__input,
-.dark-mode .otp-input {
-  background: #18181b;
-  border: 1px solid #3f3f46;
-  color: #f4f4f5;
-}
-
-.dark-mode .register__input::placeholder {
-  color: #9ca3af;
-}
-
-.dark-mode .register__social-btn--google {
-  background: #18181b;
-  border: 1px solid #3f3f46;
-}
-
-.dark-mode .register__social-btn--google:hover {
-  background: #3f3f46;
-}
-
-.dark-mode .register__button {
-  background: #6366f1;
-}
-
-.dark-mode .register__button:hover {
-  background: #4f46e5;
-}
-
-.dark-mode .register__close {
-  color: #a1a1aa;
-}
-
-.dark-mode .register__close:hover {
-  color: white;
-}
-
-
-/* ===============================
-   ANIMATION
-   =============================== */
-
-@keyframes fadeIn {
+/* ── Animation ── */
+@keyframes register-in {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-8px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
-
-/* ===============================
-   MOBILE
-   =============================== */
-
+/* ── Mobile ── */
 @media (max-width: 480px) {
-
   .register__card {
-    padding: 1.6rem;
+    padding: 1.75rem 1.25rem;
   }
 
   .register__title {
-    font-size: 1.4rem;
+    font-size: 1.35rem;
   }
-
 }
