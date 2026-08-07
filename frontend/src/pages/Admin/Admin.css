@@ -1,12 +1,23 @@
+/* ============================================================
+   ADMIN PANEL
+   Rebuilt on the shared design tokens. Previously the sidebar
+   was hardcoded to a one-off navy (#1e1e2e) that didn't match
+   the dark palette used everywhere else, and the stat cards /
+   table were hardcoded `white` with NO dark-mode override at
+   all — meaning dark mode showed glaring white cards floating
+   on the dark page background.
+   ============================================================ */
+
 .admin {
   display: flex;
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--bg-primary);
 }
 
 .admin__sidebar {
   width: 220px;
-  background: #1e1e2e;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
   padding: 24px 16px;
   display: flex;
   flex-direction: column;
@@ -18,12 +29,13 @@
 }
 
 .admin__logo {
+  font-family: var(--font-display);
   font-size: 18px;
   font-weight: 700;
-  color: white;
+  color: var(--text-primary);
   margin-bottom: 16px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #3f3f5e;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .admin__nav-btn {
@@ -31,24 +43,26 @@
   height: 40px;
   background: none;
   border: none;
-  color: #a1a1c2;
+  color: var(--text-secondary);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   text-align: left;
   padding: 0 12px;
-  transition: all 0.2s;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 }
 
 .admin__nav-btn:hover {
-  background: #2e2e4e;
-  color: white;
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .admin__nav-btn--active {
-  background: #6366f1;
-  color: white;
+  background: var(--accent);
+  color: #fff;
 }
 
 .admin__content {
@@ -58,16 +72,17 @@
 }
 
 .admin__title {
+  font-family: var(--font-display);
   font-size: 20px;
   font-weight: 700;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 24px;
 }
 
 .admin__subtitle {
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   margin: 24px 0 12px;
 }
 
@@ -79,96 +94,147 @@
 }
 
 .admin__stat-card {
-  background: white;
-  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   padding: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow);
 }
 
-.admin__stat-icon { font-size: 28px; }
+.admin__stat-icon {
+  font-size: 28px;
+}
+
 .admin__stat-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: 28px;
   font-weight: 700;
-  color: #6366f1;
+  color: var(--accent);
 }
+
 .admin__stat-label {
   font-size: 13px;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .admin__table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
-  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow);
 }
 
 .admin__table th {
-  background: #f8f8ff;
+  background: var(--bg-secondary);
   padding: 12px 16px;
   text-align: left;
   font-size: 13px;
   font-weight: 600;
-  color: #555;
-  border-bottom: 1px solid #eee;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .admin__table td {
   padding: 12px 16px;
   font-size: 14px;
-  color: #333;
-  border-bottom: 1px solid #f0f0f0;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
 }
 
-.admin__table tr:last-child td { border-bottom: none; }
-.admin__table tr:hover td { background: #fafafa; }
+.admin__table tr:last-child td {
+  border-bottom: none;
+}
 
+.admin__table tr:hover td {
+  background: var(--bg-hover);
+}
+
+/* ── Badges — reuse the same semantic tokens as the rest of the app
+   (gold = economy/privilege, cyan = telemetry/role, success/danger =
+   status) instead of one-off ad-hoc colors. ── */
 .admin__role {
-  padding: 2px 8px;
-  border-radius: 20px;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
   font-size: 12px;
   font-weight: 600;
 }
 
-.admin__role--admin { background: #fef3c7; color: #d97706; }
-.admin__role--streamer { background: #ede9fe; color: #7c3aed; }
-.admin__role--user { background: #f0f0f0; color: #666; }
+.admin__role--admin {
+  background: var(--gold-light);
+  color: var(--gold);
+}
+
+.admin__role--streamer {
+  background: var(--cyan-light);
+  color: var(--cyan);
+}
+
+.admin__role--user {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
 
 .admin__status {
-  padding: 2px 8px;
-  border-radius: 20px;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
   font-size: 12px;
   font-weight: 600;
 }
 
-.admin__status--active { background: #dcfce7; color: #16a34a; }
-.admin__status--banned { background: #fee2e2; color: #dc2626; }
+.admin__status--active {
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.admin__status--banned {
+  background: var(--danger-light);
+  color: var(--danger);
+}
 
 .admin__btn {
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   border: none;
-  transition: all 0.2s;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    filter var(--duration-fast) var(--ease);
 }
 
-.admin__btn--danger { background: #fee2e2; color: #dc2626; }
-.admin__btn--danger:hover { background: #fecaca; }
-.admin__btn--success { background: #dcfce7; color: #16a34a; }
-.admin__btn--success:hover { background: #bbf7d0; }
+.admin__btn--danger {
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+.admin__btn--danger:hover {
+  filter: brightness(0.95);
+}
+
+.admin__btn--success {
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.admin__btn--success:hover {
+  filter: brightness(0.95);
+}
 
 .admin__select {
   padding: 4px 8px;
-  border-radius: 6px;
-  border: 1px solid #ddd;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
   font-size: 13px;
   outline: none;
   cursor: pointer;

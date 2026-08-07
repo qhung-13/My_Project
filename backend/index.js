@@ -106,7 +106,7 @@ v1.use("/streams", globalLimiter, streamRoute);
 v1.use("/donations", globalLimiter, donateRoute);
 v1.use("/coins", globalLimiter, coinRoute);
 v1.use("/admin", globalLimiter, adminRoute);
-v1.use("/notification", notification);
+v1.use("/notifications", notification);
 v1.use("/moderation", moderationRoute);
 v1.use("/clips", clipRoute);
 

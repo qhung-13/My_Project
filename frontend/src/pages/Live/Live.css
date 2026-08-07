@@ -24,7 +24,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #e24b4a;
+  background: var(--accent);
   flex-shrink: 0;
   animation: pulseLive 2s infinite; 
 }
@@ -32,7 +32,7 @@
 .live-page__count {
   font-size: 13px;
   font-weight: 500;
-  color: #888;
+  color: var(--text-muted);
   margin-left: 4px;
 }
 
@@ -91,13 +91,13 @@
 .live-page__sort-label {
   font-size: 12px;
   font-weight: 500;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .live-page__sort-btn {
   font-size: 12px;
   font-weight: 600;
-  color: #9147ff;
+  color: var(--accent);
   background: transparent;
   border: 1px solid rgba(145, 71, 255, 0.3);
   border-radius: 6px;
@@ -111,7 +111,7 @@
 
 .live-page__sort-btn:hover {
   background: rgba(145, 71, 255, 0.1);
-  border-color: #9147ff;
+  border-color: var(--accent);
 }
 
 /* ============================================================
@@ -170,7 +170,7 @@
   position: absolute;
   top: 6px;
   left: 6px;
-  background: #e24b4a;
+  background: var(--accent);
   color: white;
   font-size: 9px;
   font-weight: 700;
@@ -246,46 +246,46 @@
 
 .live-page__empty-icon { font-size: 48px; }
 .live-page__empty p { font-size: 16px; font-weight: 600; }
-.live-page__empty span { font-size: 13px; color: #888; }
+.live-page__empty span { font-size: 13px; color: var(--text-muted); }
 
 /* ============================================================
    3. THEMING (DARK / LIGHT)
    ============================================================ */
 /* --- Light Mode --- */
-.light-mode .live-page__title { color: #111; }
+.light-mode .live-page__title { color: var(--text-primary); }
 
-.light-mode .live-pill { border-color: #ddd; color: #555; background: #fff; }
-.light-mode .live-pill:hover { background: #f5f5f5; border-color: #bbb; }
-.light-mode .live-pill--active { background: #9147ff; color: white; border-color: #9147ff; }
+.light-mode .live-pill { border-color: var(--border-color); color: var(--text-secondary); background: #fff; }
+.light-mode .live-pill:hover { background: var(--bg-hover); border-color: #bbb; }
+.light-mode .live-pill--active { background: var(--accent); color: white; border-color: var(--accent); }
 
-.light-mode .game-pill { border-color: #ddd; color: #555; background: #fff; }
-.light-mode .game-pill:hover { background: #f5f5f5; border-color: #bbb; }
-.light-mode .game-pill--active { background: #111; color: white; border-color: #111; }
+.light-mode .game-pill { border-color: var(--border-color); color: var(--text-secondary); background: #fff; }
+.light-mode .game-pill:hover { background: var(--bg-hover); border-color: #bbb; }
+.light-mode .game-pill--active { background: var(--text-primary); color: white; border-color: var(--text-primary); }
 
 .light-mode .live-card { background: #ffffff; border-color: #eaeaea; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-.light-mode .live-card:hover { background: #fdfdfd; border-color: #ddd; box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
-.light-mode .live-card__title { color: #555; }
-.light-mode .live-card__name { color: #111; }
+.light-mode .live-card:hover { background: #fdfdfd; border-color: var(--border-color); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
+.light-mode .live-card__title { color: var(--text-secondary); }
+.light-mode .live-card__name { color: var(--text-primary); }
 .light-mode .live-card__game { color: #777; }
 .light-mode .live-card__thumb { background: #e0e0e0; }
 
 /* --- Dark Mode --- */
-.dark-mode .live-page__title { color: #e4e4e7; }
+.dark-mode .live-page__title { color: var(--text-primary); }
 
-.dark-mode .live-pill { border-color: #333; color: #aaa; background: #1a1a1a; }
-.dark-mode .live-pill:hover { background: #2a2a2a; border-color: #555; }
-.dark-mode .live-pill--active { background: #9147ff; color: white; border-color: #9147ff; }
+.dark-mode .live-pill { border-color: var(--text-primary); color: var(--text-muted); background: var(--text-primary); }
+.dark-mode .live-pill:hover { background: #2a2a2a; border-color: var(--text-secondary); }
+.dark-mode .live-pill--active { background: var(--accent); color: white; border-color: var(--accent); }
 
-.dark-mode .game-pill { border-color: #333; color: #aaa; background: #1a1a1a; }
-.dark-mode .game-pill:hover { background: #2a2a2a; border-color: #555; }
-.dark-mode .game-pill--active { background: #e4e4e7; color: #111; border-color: #e4e4e7; }
+.dark-mode .game-pill { border-color: var(--text-primary); color: var(--text-muted); background: var(--text-primary); }
+.dark-mode .game-pill:hover { background: #2a2a2a; border-color: var(--text-secondary); }
+.dark-mode .game-pill--active { background: var(--text-primary); color: var(--text-primary); border-color: var(--text-primary); }
 
-.dark-mode .live-card { background: #141418; border-color: #2a2a2e; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-.dark-mode .live-card:hover { background: #1f1f23; border-color: #3f3f46; box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
-.dark-mode .live-card__title { color: #aaa; }
-.dark-mode .live-card__name { color: #e4e4e7; }
-.dark-mode .live-card__game { color: #888; }
-.dark-mode .live-card__thumb { background: #1a0a2e; }
+.dark-mode .live-card { background: #141418; border-color: var(--bg-card); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+.dark-mode .live-card:hover { background: #1f1f23; border-color: var(--bg-hover); box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
+.dark-mode .live-card__title { color: var(--text-muted); }
+.dark-mode .live-card__name { color: var(--text-primary); }
+.dark-mode .live-card__game { color: var(--text-muted); }
+.dark-mode .live-card__thumb { background: var(--bg-secondary); }
 
 /* ============================================================
    4. MEDIA QUERIES (Responsive)

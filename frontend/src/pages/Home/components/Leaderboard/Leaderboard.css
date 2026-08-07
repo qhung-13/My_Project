@@ -33,18 +33,18 @@
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  color: #888;
+  color: var(--text-muted);
   padding: 8px 0;
   transition: all 0.2s ease;
 }
 
 .leaderboard__tabs button:hover {
-  color: #9147ff;
+  color: var(--accent);
 }
 
 .leaderboard__tabs .active {
-  color: #9147ff;
-  border-bottom-color: #9147ff;
+  color: var(--accent);
+  border-bottom-color: var(--accent);
   font-weight: 600;
 }
 
@@ -97,7 +97,7 @@
   width: 60px;
   height: 60px;
   font-size: 18px;
-  border: 2px solid #ffd700;
+  border: 2px solid var(--gold);
 }
 
 .medal {
@@ -117,7 +117,7 @@
 
 .value {
   font-size: 12px;
-  color: #9147ff;
+  color: var(--accent);
   font-weight: 600;
 }
 
@@ -148,7 +148,7 @@
   width: 20px;
   font-size: 13px;
   font-weight: 700;
-  color: #555;
+  color: var(--text-secondary);
   text-align: center;
   flex-shrink: 0;
 }
@@ -176,15 +176,15 @@
    ============================================================ */
 /* --- Light Mode --- */
 .light-mode .leaderboard__title {
-  color: #111;
+  color: var(--text-primary);
 }
 
 .light-mode .leaderboard__tabs {
-  border-bottom-color: #eee;
+  border-bottom-color: var(--border-color);
 }
 
 .light-mode .name {
-  color: #111;
+  color: var(--text-primary);
 }
 
 .light-mode .list-item {
@@ -195,36 +195,36 @@
 
 .light-mode .list-item:hover {
   background: #fdfdfd;
-  border-color: #ddd;
+  border-color: var(--border-color);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
 }
 
 .light-mode .rank {
-  color: #888;
+  color: var(--text-muted);
 }
 
 /* --- Dark Mode --- */
 .dark-mode .leaderboard__title {
-  color: #e4e4e7;
+  color: var(--text-primary);
 }
 
 .dark-mode .leaderboard__tabs {
-  border-bottom-color: #2a2a2e;
+  border-bottom-color: var(--bg-card);
 }
 
 .dark-mode .name {
-  color: #e4e4e7;
+  color: var(--text-primary);
 }
 
 .dark-mode .list-item {
   background: #141418;
-  border-color: #2a2a2e;
+  border-color: var(--bg-card);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .dark-mode .list-item:hover {
   background: #1f1f23;
-  border-color: #3f3f46;
+  border-color: var(--bg-hover);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
 }
 

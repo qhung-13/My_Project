@@ -2,7 +2,7 @@ import NodeMediaServer from "node-media-server";
 import { mkdirSync, writeFileSync } from "fs";
 import { spawn } from "child_process";
 import path from "path";
-import User from "../models/User.model.js";
+import User from "../model/User.model.js";
 import { startHlsUploader } from "../services/hlsUploader.service.js";
 
 const ffmpegProcesses = new Map();

@@ -1,29 +1,142 @@
 @import "tailwindcss";
 
+/* ============================================================
+   OMEXLIVE DESIGN SYSTEM — "Broadcast Console"
+   ------------------------------------------------------------
+   Direction: a live-streaming platform should feel like an on-air
+   broadcast console, not a generic SaaS dashboard. Dark, cool-toned
+   "studio" surfaces; a single signature signal color for anything
+   truly live; a warm gold reserved only for the coin/donation economy
+   so money always reads distinctly from "live"; a cyan telemetry
+   accent for counts/status. Typography pairs a geometric display face
+   (headings, big numbers) with a clean body face, plus a monospace
+   for anything that behaves like live data (viewer counts, timers,
+   coin balances, stream keys) — reinforcing the "broadcast telemetry"
+   feel instead of treating numbers like ordinary text.
+
+   Signature element: the "on-air tally light" — a small dot with a
+   genuine broadcast pulse (glow ring expands + fades), used
+   consistently everywhere something is live. This is the one place
+   the design spends its boldness; everything else stays disciplined.
+   ============================================================ */
+
+:root {
+  /* ── Type ── */
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+
+  /* ── Radius scale ── */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+
+  /* ── Motion ── */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --duration-fast: 0.15s;
+  --duration: 0.25s;
+
+  --header-height: 60px;
+}
+
+/* ── Light mode ── */
+:root {
+  --bg-primary: #f3f5fa;
+  --bg-secondary: #e9edf5;
+  --bg-card: #ffffff;
+  --bg-hover: #eef1f8;
+
+  --text-primary: #10131c;
+  --text-secondary: #4a5169;
+  --text-muted: #8790a6;
+
+  --border-color: #e1e5f0;
+  --border-hover: #cbd2e5;
+
+  /* signature signal (on-air) */
+  --accent: #ff3b5c;
+  --accent-hover: #e42750;
+  --accent-light: #ffe7ec;
+  --accent-border: #ffc2cf;
+
+  /* currency / donations — deliberately a different hue from --accent
+     so "live" and "money" never get visually confused */
+  --gold: #c8790a;
+  --gold-light: #fff2dc;
+
+  /* telemetry / status */
+  --cyan: #0d9488;
+  --cyan-light: #dcfdf5;
+
+  --danger: #dc2626;
+  --danger-light: #fee2e2;
+  --success: #16a34a;
+  --success-light: #dcfce7;
+
+  --shadow: 0 2px 10px rgba(16, 19, 28, 0.06);
+  --shadow-lg: 0 16px 40px rgba(16, 19, 28, 0.14);
+  --shadow-signal: 0 6px 20px rgba(255, 59, 92, 0.25);
+}
+
+/* ── Dark mode (default expression of the brand) ── */
+.dark-mode {
+  --bg-primary: #0a0e17;
+  --bg-secondary: #10151f;
+  --bg-card: #12182a;
+  --bg-hover: #1b2338;
+
+  --text-primary: #eef1fa;
+  --text-secondary: #9aa3bd;
+  --text-muted: #626c88;
+
+  --border-color: #232b42;
+  --border-hover: #313c5c;
+
+  --accent: #ff3b5c;
+  --accent-hover: #ff5c78;
+  --accent-light: #331420;
+  --accent-border: #59202f;
+
+  --gold: #ffb93f;
+  --gold-light: #3a2a0d;
+
+  --cyan: #34e7c4;
+  --cyan-light: #0e2f2a;
+
+  --danger: #ff5c72;
+  --danger-light: #3a1420;
+  --success: #34d17e;
+  --success-light: #0e2f1c;
+
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.55);
+  --shadow-signal: 0 6px 24px rgba(255, 59, 92, 0.35);
+}
+
 .light-mode {
-  background-color: #ffffff;
-  color: #222;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   min-height: 100vh;
-  transition: all 0.3s ease;
 }
 
 .dark-mode {
-  background-color: #121212;
-  color: #e4e6eb;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   min-height: 100vh;
-  transition: all 0.3s ease;
 }
 
 * {
   transition:
-    background 0.25s ease,
-    color 0.25s ease,
-    border 0.25s ease;
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 }
 
 html,
 body {
   overscroll-behavior-x: none;
+  font-family: var(--font-body);
 }
 
 html::-webkit-scrollbar,
@@ -39,71 +152,105 @@ body,
   -ms-overflow-style: none;
 }
 
-/* ── Light mode (default) ── */
-:root {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8f8f8;
-  --bg-card: #ffffff;
-  --bg-hover: #f5f5f5;
-
-  --text-primary: #1a1a1a;
-  --text-secondary: #555555;
-  --text-muted: #999999;
-
-  --border-color: #eeeeee;
-  --border-hover: #dddddd;
-
-  --accent: #6366f1;
-  --accent-hover: #4f46e5;
-  --accent-light: #f0f0ff;
-  --accent-border: #c7d2fe;
-
-  --danger: #ef4444;
-  --danger-light: #fee2e2;
-  --success: #22c55e;
-  --success-light: #dcfce7;
-
-  --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.12);
-
-  --header-height: 60px;
-}
-
-/* ── Dark mode ── */
-.dark-mode {
-  --bg-primary: #18181b;
-  --bg-secondary: #27272a;
-  --bg-card: #27272a;
-  --bg-hover: #3f3f46;
-
-  --text-primary: #e4e4e7;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
-
-  --border-color: #3f3f46;
-  --border-hover: #52525b;
-
-  --accent: #818cf8;
-  --accent-hover: #6366f1;
-  --accent-light: #1e1b4b;
-  --accent-border: #3730a3;
-
-  --danger: #f87171;
-  --danger-light: #450a0a;
-  --success: #4ade80;
-  --success-light: #052e16;
-
-  --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
-}
-
-/* ── Base styles dùng variables ── */
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  transition:
-    background-color 0.2s,
-    color 0.2s;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/* Anything that behaves like live data reads in the monospace face —
+   viewer counts, coin balances, timers, stream keys. */
+.font-mono,
+.stat-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-body);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ============================================================
+   SIGNATURE ELEMENT — the on-air tally light
+   A small dot that pulses like a real broadcast tally light: a glow
+   ring expands outward and fades while the core dot stays lit. Used
+   everywhere something is genuinely live (LIVE badges, nav "Live"
+   link, header Go Live button, video player badge).
+   ============================================================ */
+.tally-light {
+  position: relative;
+  display: inline-flex;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.tally-light::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  animation: tally-pulse 1.8s var(--ease) infinite;
+}
+
+@keyframes tally-pulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.9;
+  }
+  70% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tally-light::before {
+    animation: none;
+  }
+  * {
+    transition: none !important;
+  }
+}
+
+/* Reusable "LIVE" badge — signal-colored pill with a tally light */
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 4px 8px 4px 7px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-signal);
 }
 
 /* ── Global Dark Mode Overrides ── */

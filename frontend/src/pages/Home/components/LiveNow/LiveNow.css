@@ -17,42 +17,55 @@
 .live-now__title {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 600; 
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .live-now__dot {
+  position: relative;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #e24b4a;
+  background: var(--accent);
   display: inline-block;
-  animation: pulseLive 2s infinite; 
+  flex-shrink: 0;
+}
+
+.live-now__dot::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  animation: tally-pulse 1.8s var(--ease) infinite;
 }
 
 .live-now__more {
+  font-family: var(--font-display);
   font-size: 12px;
-  color: #9147ff;
+  color: var(--accent);
   background: transparent;
   border: none;
   cursor: pointer;
   padding: 0;
-  font-weight: 500;
-  transition: color 0.2s ease;
+  font-weight: 600;
+  transition: color var(--duration-fast) var(--ease);
 }
 
 .live-now__more:hover {
-  color: #772ce8;
+  color: var(--accent-hover);
 }
 
 /* Scroll container */
 .live-now__scroll {
   display: flex;
-  gap: 12px; 
+  gap: 14px;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 0 16px 16px; 
+  padding: 0 16px 16px;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }
@@ -67,24 +80,40 @@
 .stream-card {
   flex: 0 0 150px;
   width: 150px;
-  background: transparent; 
-  border-radius: 8px;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
   overflow: hidden;
-  border: 1px solid transparent;
+  border: 1px solid var(--border-color);
   cursor: pointer;
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: var(--shadow);
+  transition:
+    transform var(--duration) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration) var(--ease);
+}
+
+.stream-card:hover {
+  border-color: var(--accent-border);
+  box-shadow: var(--shadow-lg);
 }
 
 .stream-card__thumb {
   width: 100%;
   aspect-ratio: 16 / 9;
-  background: #1a0a2e;
+  background: var(--bg-secondary);
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px; 
   overflow: hidden;
+}
+
+.stream-card__thumb img {
+  transition: transform 0.5s var(--ease);
+}
+
+.stream-card:hover .stream-card__thumb img {
+  transform: scale(1.06);
 }
 
 .stream-card__play {
@@ -96,12 +125,13 @@
   height: 32px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.15);
-  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
 }
 
 .stream-card:hover .stream-card__play {
@@ -113,28 +143,49 @@
   position: absolute;
   top: 6px;
   left: 6px;
-  background: #e24b4a;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--accent);
   color: white;
+  font-family: var(--font-display);
   font-size: 9px;
   font-weight: 700;
-  padding: 2px 5px;
-  border-radius: 4px;
+  letter-spacing: 0.03em;
+  padding: 3px 6px 3px 5px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-signal);
+}
+
+.stream-card__badge::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
+  flex-shrink: 0;
 }
 
 .stream-card__viewers {
   position: absolute;
   bottom: 6px;
   left: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 600;
   color: white;
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(10, 14, 23, 0.72);
+  backdrop-filter: blur(3px);
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .stream-card__info {
-  padding: 8px 4px 0; 
+  padding: 10px 10px 12px;
 }
 
 .stream-card__streamer {
@@ -145,7 +196,7 @@
 }
 
 .stream-card__avatar {
-  width: 24px; 
+  width: 24px;
   height: 24px;
   border-radius: 50%;
   display: flex;
@@ -160,6 +211,7 @@
 .stream-card__name {
   font-size: 12px;
   font-weight: 600;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -167,6 +219,7 @@
 
 .stream-card__title {
   font-size: 12px;
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -175,82 +228,16 @@
 
 .stream-card__game {
   font-size: 11px;
+  color: var(--text-muted);
 }
 
 /* ============================================================
-   3. THEMING (DARK / LIGHT)
-   ============================================================ */
-/* --- Light Mode --- */
-.light-mode .live-now__title {
-  color: #111;
-}
-
-.light-mode .stream-card {
-  background: #ffffff;
-  border-color: #eaeaea;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.light-mode .stream-card:hover {
-  background: #fdfdfd;
-  border-color: #ddd;
-}
-
-.light-mode .stream-card__thumb {
-  background: #e0e0e0;
-}
-
-.light-mode .stream-card__name {
-  color: #111;
-}
-
-.light-mode .stream-card__title {
-  color: #555;
-}
-
-.light-mode .stream-card__game {
-  color: #777;
-}
-
-/* --- Dark Mode --- */
-.dark-mode .live-now__title {
-  color: #e4e4e7;
-}
-
-.dark-mode .stream-card {
-  background: #141418;
-  border-color: #2a2a2e;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.dark-mode .stream-card:hover {
-  background: #1f1f23;
-  border-color: #3f3f46;
-}
-
-.dark-mode .stream-card__thumb {
-  background: #1a0a2e;
-}
-
-.dark-mode .stream-card__name {
-  color: #e4e4e7;
-}
-
-.dark-mode .stream-card__title {
-  color: #aaa;
-}
-
-.dark-mode .stream-card__game {
-  color: #888;
-}
-
-/* ============================================================
-   4. MEDIA QUERIES (Responsive)
+   3. MEDIA QUERIES (Responsive)
    ============================================================ */
 /* --- TABLET --- */
 @media (min-width: 768px) {
   .live-now {
-    padding: 32px 16px 0; 
+    padding: 32px 16px 0;
   }
 
   .live-now__header {
@@ -259,19 +246,17 @@
   }
 
   .live-now__scroll {
-    display: gird;
+    display: grid;
     grid-template-columns: repeat(3, 1fr);
     overflow-x: unset;
     gap: 16px;
   }
 
   .live-now__title {
-    font-size: 16px;
+    font-size: 17px;
   }
 
   .stream-card {
-    /* flex: 0 0 220px; 
-    width: 220px; */
     flex: unset;
     width: 100%;
   }
@@ -279,7 +264,7 @@
   .stream-card__name { font-size: 13px; }
   .stream-card__title { font-size: 13px; margin-bottom: 4px; }
   .stream-card__game { font-size: 12px; }
-  
+
   .stream-card__avatar {
     width: 30px;
     height: 30px;
@@ -290,13 +275,13 @@
 /* --- DESKTOP --- */
 @media (min-width: 1024px) {
   .live-now {
-    max-width: 1248px; 
+    max-width: 1248px;
     margin: 0 auto;
     padding: 40px 0 0;
   }
 
   .live-now__title {
-    font-size: 20px; 
+    font-size: 21px;
   }
 
   .live-now__more {
@@ -304,8 +289,6 @@
   }
 
   .live-now__scroll {
-    /* gap: 20px; 
-    padding-bottom: 24px; */
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     overflow-x: unset;
@@ -313,8 +296,6 @@
   }
 
   .stream-card {
-    /* flex: 0 0 280px; 
-    width: 280px; */
     flex: unset;
     width: 100%;
   }
@@ -323,17 +304,8 @@
   .stream-card__title { font-size: 14px; }
   .stream-card__game { font-size: 13px; }
 
-
   .stream-card:hover {
     transform: translateY(-6px);
-  }
-  
-  .light-mode .stream-card:hover {
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
-  }
-  
-  .dark-mode .stream-card:hover {
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
   }
 }
 
@@ -346,13 +318,4 @@
     flex: 0 0 300px;
     width: 300px;
   }
-}
-
-/* ============================================================
-   5. ANIMATIONS
-   ============================================================ */
-@keyframes pulseLive {
-  0% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.2); }
-  100% { opacity: 1; transform: scale(1); }
 }
