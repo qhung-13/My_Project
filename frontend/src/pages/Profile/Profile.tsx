@@ -165,7 +165,13 @@ const Profile = () => {
           {isMyProfile ? (
             <button
               className="profile__go-live-btn"
-              onClick={() => setShowGoLive(true)}
+              onClick={() => {
+                if (authUser) {
+                  setShowGoLive(true);
+                } else {
+                  navigate("/home");
+                }
+              }}
             >
               Go Live
             </button>
