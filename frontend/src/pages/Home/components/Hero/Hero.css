@@ -55,7 +55,7 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #9147ff;
+  background: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -66,29 +66,46 @@
 }
 
 .hero__name {
+  font-family: var(--font-display);
   font-size: 14px;
   font-weight: 600;
   color: white;
 }
 
 .hero__badge-live {
-  background: #e24b4a;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--accent);
   color: white;
+  font-family: var(--font-display);
   font-size: 10px;
   font-weight: 700;
-  padding: 3px 6px;
-  border-radius: 4px;
-  letter-spacing: 0.5px;
+  padding: 3px 7px 3px 6px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.04em;
+  box-shadow: var(--shadow-signal);
+}
+
+.hero__badge-live::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
 }
 
 .hero__viewers {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .hero__title {
-  font-size: 15px;
-  font-weight: 500;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
   color: white;
   margin-bottom: 4px;
   white-space: nowrap;
@@ -125,7 +142,7 @@
 
 /* --- Dark Mode --- */
 .dark-mode .hero__video {
-  background: #1a0a2e;
+  background: var(--bg-secondary);
 }
 
 .dark-mode .hero__play-btn {
@@ -154,7 +171,7 @@
 
   .hero__video {
     width: 100%;
-    border-radius: 12px; 
+    border-radius: var(--radius-md); 
   }
 
   .hero__overlay {
@@ -178,8 +195,8 @@
 
   .hero__video {
     max-width: 1248px; 
-    border-radius: 16px; 
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15); 
+    border-radius: var(--radius-lg); 
+    box-shadow: var(--shadow-lg);
   }
 
   .hero__overlay {
