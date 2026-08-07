@@ -1,6 +1,10 @@
-/* ===============================
-   LOGIN MODAL CONTAINER
-   =============================== */
+/* ============================================================
+   LOGIN MODAL
+   Rebuilt on the shared design system (index.css) instead of
+   hardcoded colors, so it automatically matches light/dark mode
+   and the brand's signal color — no more separate ".dark-mode"
+   override block duplicating every rule.
+   ============================================================ */
 
 .login {
   position: fixed;
@@ -11,82 +15,65 @@
   z-index: 1000;
 }
 
-/* Overlay phía sau popup */
 .login__overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(6px); /* làm mờ background */
+  background: rgba(4, 6, 12, 0.6);
+  backdrop-filter: blur(8px);
 }
 
-
-/* ===============================
-   LOGIN CARD
-   =============================== */
-
+/* ── Card ── */
 .login__card {
   position: relative;
   width: 92%;
   max-width: 380px;
-  padding: 1.75rem 1.5rem;
-  background: #ffffff;
-  border-radius: 14px;
-  /* shadow giúp popup nổi lên */
-  box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+  padding: 2rem 1.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   align-items: center;
-
-  animation: fadeIn 0.25s ease;
+  animation: login-in var(--duration) var(--ease);
   z-index: 1001;
 }
 
-
-/* ===============================
-   CLOSE BUTTON
-   =============================== */
-
 .login__close {
   position: absolute;
-  top: 12px;
+  top: 14px;
   right: 14px;
   border: none;
   background: transparent;
-  font-size: 1.6rem;
+  font-size: 1.4rem;
+  line-height: 1;
   cursor: pointer;
-  color: #777;
-  transition: 0.2s;
+  color: var(--text-muted);
+  transition: color var(--duration-fast) var(--ease);
 }
 
 .login__close:hover {
-  color: #111;
+  color: var(--text-primary);
 }
 
-
-/* ===============================
-   TITLE + SUBTITLE
-   =============================== */
-
+/* ── Title ── */
 .login__title {
-  font-size: 1.55rem;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
   font-weight: 600;
   margin-bottom: 0.35rem;
-  color: #222;
+  color: var(--text-primary);
   text-align: center;
 }
 
 .login__subtitle {
   font-size: 0.9rem;
-  color: #666;
-  margin-bottom: 1.4rem;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
   text-align: center;
 }
 
-
-/* ===============================
-   FORM
-   =============================== */
-
+/* ── Form ── */
 .login__form {
   width: 100%;
   display: flex;
@@ -94,103 +81,90 @@
   gap: 12px;
 }
 
-/* ===============================
-   INPUT
-   =============================== */
-
-.login__input {
+.login__input,
+.otp-input {
   width: 100%;
-  padding: 0.65rem 0.85rem;
+  padding: 0.7rem 0.9rem;
   font-size: 0.95rem;
-  border: 1px solid #dcdcdc;
-  border-radius: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
   outline: none;
-  transition: 0.2s;
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
 }
 
-.login__input:focus {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79,70,229,0.18);
+.login__input::placeholder,
+.otp-input::placeholder {
+  color: var(--text-muted);
 }
 
+.login__input:focus,
+.otp-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
 
-/* ===============================
-   LOGIN BUTTON
-   =============================== */
-
+/* ── Primary button ── */
 .login__button {
-  padding: 0.75rem;
+  padding: 0.8rem;
   border: none;
-  border-radius: 8px;
-  background: #4f46e5;
-  color: white;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: #fff;
   font-size: 0.95rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: 0.2s;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
 }
 
 .login__button:hover {
-  background: #4338ca;
+  background: var(--accent-hover);
+  transform: translateY(-1px);
 }
 
+.login__button:active {
+  transform: translateY(0);
+}
 
-/* ===============================
-   SOCIAL LOGIN
-   =============================== */
-
+/* ── Social login ── */
 .login__social {
   width: 100%;
   display: flex;
   gap: 12px;
-  margin: 14px 0;
+  margin: 16px 0;
 }
 
 .login__social-btn {
   flex: 1;
-  padding: 0.6rem;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  background: #fff;
+  padding: 0.65rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: 0.2s;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease);
 }
 
 .login__social-btn:hover {
-  background: #f7f7f7;
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
 }
 
-
-/* ===============================
-   OTP SECTION
-   =============================== */
-
-.otp-input {
-  width: 100%;
-  padding: 0.65rem 0.85rem;
-  border-radius: 8px;
-  border: 1px solid #dcdcdc;
-  font-size: 0.95rem;
-  outline: none;
-  transition: 0.2s;
-}
-
-.otp-input:focus {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79,70,229,0.18);
-}
-
+/* ── OTP ── */
 .otp-info {
   font-size: 0.8rem;
-  color: #666;
+  color: var(--text-secondary);
   text-align: center;
 }
-
-
-/* OTP ACTION BUTTONS */
 
 .otp-actions {
   display: flex;
@@ -201,144 +175,77 @@
 .otp-actions button {
   flex: 1;
   padding: 10px 0;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   border: none;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: 0.2s;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
 }
 
 .otp-confirm {
-  background: #4f46e5;
-  color: white;
+  background: var(--accent);
+  color: #fff;
 }
 
 .otp-confirm:hover {
-  background: #4338ca;
+  background: var(--accent-hover);
+  transform: translateY(-1px);
 }
 
 .otp-back {
-  background: #f3f4f6;
-  color: #333;
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .otp-back:hover {
-  background: #e5e7eb;
+  background: var(--border-color);
 }
 
-
-/* ===============================
-   FOOTER
-   =============================== */
-
+/* ── Footer ── */
 .login__footer {
-  margin-top: 12px;
+  margin-top: 14px;
   font-size: 0.9rem;
-  color: #555;
+  color: var(--text-secondary);
 }
 
 .login__link {
   border: none;
   background: none;
-  color: #4f46e5;
+  color: var(--accent);
   cursor: pointer;
-  font-weight: 500;
-  text-decoration: underline;
+  font-weight: 600;
 }
 
 .login__link:hover {
-  color: #4338ca;
+  color: var(--accent-hover);
+  text-decoration: underline;
 }
 
-
-/* ===============================
-   DARK MODE
-   =============================== */
-
-.dark-mode .login__overlay {
-  background: rgba(0,0,0,0.75);
-}
-
-.dark-mode .login__card {
-  background: #27272a;
-  color: #e4e4e7;
-  border: 1px solid #3f3f46;
-  box-shadow: 0 25px 60px rgba(0,0,0,0.6);
-}
-
-.dark-mode .login__title {
-  color: white;
-}
-
-.dark-mode .login__input,
-.dark-mode .otp-input {
-  background: #18181b;
-  border: 1px solid #3f3f46;
-  color: #f4f4f5;
-}
-
-.dark-mode .login__input::placeholder {
-  color: #9ca3af;
-}
-
-.dark-mode .login__button {
-  background: #6366f1;
-}
-
-.dark-mode .login__button:hover {
-  background: #4f46e5;
-}
-
-.dark-mode .login__social-btn {
-  background: #18181b;
-  border: 1px solid #3f3f46;
-}
-
-.dark-mode .login__social-btn:hover {
-  background: #3f3f46;
-}
-
-.dark-mode .login__close {
-  color: #a1a1aa;
-}
-
-.dark-mode .login__close:hover {
-  color: white;
-}
-
-
-/* ===============================
-   ANIMATION
-   =============================== */
-
-@keyframes fadeIn {
+/* ── Animation ── */
+@keyframes login-in {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-8px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
-
-/* ===============================
-   MOBILE
-   =============================== */
-
+/* ── Mobile ── */
 @media (max-width: 480px) {
-
   .login__card {
-    padding: 1.5rem 1.25rem;
+    padding: 1.75rem 1.25rem;
   }
 
   .login__title {
-    font-size: 1.35rem;
+    font-size: 1.3rem;
   }
 
   .login__social {
     gap: 10px;
   }
-
 }
