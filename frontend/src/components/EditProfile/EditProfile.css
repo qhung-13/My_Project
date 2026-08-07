@@ -33,18 +33,18 @@
   border: none;
   font-size: 20px;
   cursor: pointer;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .edit-profile__title {
   font-size: 20px;
   font-weight: 600;
   margin-bottom: 20px;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .edit-profile__error {
-  color: #ef4444;
+  color: var(--danger);
   font-size: 13px;
   margin-bottom: 12px;
 }
@@ -64,13 +64,13 @@
 .edit-profile__label {
   font-size: 13px;
   font-weight: 500;
-  color: #555;
+  color: var(--text-secondary);
   display: flex;
   justify-content: space-between;
 }
 
 .edit-profile__count {
-  color: #999;
+  color: var(--text-muted);
   font-weight: 400;
 }
 
@@ -85,14 +85,14 @@
   height: 80px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid #e5e5e5;
+  border: 2px solid var(--border-color);
 }
 
 .edit-profile__avatar-placeholder {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: #6366f1;
+  background: var(--accent);
   color: white;
   display: flex;
   align-items: center;
@@ -103,7 +103,7 @@
 
 .edit-profile__input {
   height: 40px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 0 12px;
   font-size: 14px;
@@ -112,11 +112,11 @@
 }
 
 .edit-profile__input:focus {
-  border-color: #6366f1;
+  border-color: var(--accent);
 }
 
 .edit-profile__textarea {
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 10px 12px;
   font-size: 14px;
@@ -127,7 +127,7 @@
 }
 
 .edit-profile__textarea:focus {
-  border-color: #6366f1;
+  border-color: var(--accent);
 }
 
 .edit-profile__actions {
@@ -149,22 +149,22 @@
 }
 
 .edit-profile__btn--cancel {
-  background: #f5f5f5;
-  color: #333;
-  border: 1px solid #ddd;
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
 .edit-profile__btn--cancel:hover {
-  background: #eee;
+  background: var(--border-color);
 }
 
 .edit-profile__btn--save {
-  background: #6366f1;
+  background: var(--accent);
   color: white;
 }
 
 .edit-profile__btn--save:hover {
-  background: #4f46e5;
+  background: var(--accent-hover);
 }
 
 .edit-profile__btn:disabled {
@@ -174,32 +174,32 @@
 
 /* Dark mode */
 .dark-mode .edit-profile__card {
-  background: #27272a;
-  color: #e4e4e7;
+  background: var(--bg-card);
+  color: var(--text-primary);
 }
 
 .dark-mode .edit-profile__title {
-  color: #e4e4e7;
+  color: var(--text-primary);
 }
 
 .dark-mode .edit-profile__label {
-  color: #a1a1aa;
+  color: var(--text-secondary);
 }
 
 .dark-mode .edit-profile__input,
 .dark-mode .edit-profile__textarea {
-  background: #3f3f46;
-  border-color: #52525b;
-  color: #e4e4e7;
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
 }
 
 .dark-mode .edit-profile__input:focus,
 .dark-mode .edit-profile__textarea:focus {
-  border-color: #818cf8;
+  border-color: var(--accent);
 }
 
 .dark-mode .edit-profile__btn--cancel {
-  background: #3f3f46;
-  border-color: #52525b;
-  color: #e4e4e7;
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
 }
