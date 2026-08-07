@@ -6,7 +6,7 @@
 .channel__loading {
   text-align: center;
   padding: 60px;
-  color: #999;
+  color: var(--text-muted);
 }
 
 /* ── Banner ── */
@@ -43,7 +43,7 @@
   align-items: flex-end;
   gap: 16px;
   padding: 0 16px 20px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
   flex-wrap: wrap;
 }
 
@@ -56,7 +56,7 @@
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: #6366f1;
+  background: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -82,15 +82,15 @@
 .channel__name {
   font-size: 22px;
   font-weight: 700;
-  color: #333;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .channel__live-dot {
   font-size: 12px;
   font-weight: 600;
-  color: #ef4444;
-  background: #fee2e2;
+  color: var(--danger);
+  background: var(--danger-light);
   padding: 2px 8px;
   border-radius: 20px;
 }
@@ -99,13 +99,13 @@
   display: flex;
   gap: 8px;
   font-size: 13px;
-  color: #888;
+  color: var(--text-muted);
   margin: 4px 0 8px;
 }
 
 .channel__bio {
   font-size: 14px;
-  color: #555;
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -118,7 +118,7 @@
 .channel__watch-btn {
   height: 38px;
   padding: 0 16px;
-  background: #ef4444;
+  background: var(--danger);
   color: white;
   border: none;
   border-radius: 8px;
@@ -128,12 +128,12 @@
   transition: background 0.2s;
 }
 
-.channel__watch-btn:hover { background: #dc2626; }
+.channel__watch-btn:hover { background: var(--danger); }
 
 .channel__follow-btn {
   height: 38px;
   padding: 0 16px;
-  background: #6366f1;
+  background: var(--accent);
   color: white;
   border: none;
   border-radius: 8px;
@@ -144,16 +144,16 @@
 }
 
 .channel__follow-btn--following {
-  background: #e0e0ff;
-  color: #6366f1;
+  background: var(--accent-light);
+  color: var(--accent);
 }
 
 .channel__edit-btn {
   height: 38px;
   padding: 0 16px;
-  background: #f5f5f5;
-  color: #333;
-  border: 1px solid #ddd;
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
@@ -165,7 +165,7 @@
   display: flex;
   gap: 4px;
   padding: 16px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .channel__tab {
@@ -175,13 +175,13 @@
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: #666;
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.channel__tab:hover { background: #f5f5f5; color: #333; }
-.channel__tab--active { background: #6366f1; color: white; }
+.channel__tab:hover { background: var(--bg-hover); color: var(--text-primary); }
+.channel__tab--active { background: var(--accent); color: white; }
 
 /* ── Content ── */
 .channel__content { padding: 20px 16px; }
@@ -195,7 +195,7 @@
 .channel__video-card {
   border-radius: 10px;
   overflow: hidden;
-  border: 1px solid #eee;
+  border: 1px solid var(--border-color);
   cursor: pointer;
   transition: transform 0.2s;
 }
@@ -236,14 +236,14 @@
 .channel__video-title {
   font-size: 13px;
   font-weight: 500;
-  color: #333;
+  color: var(--text-primary);
   margin: 0 0 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.channel__video-meta { font-size: 12px; color: #888; margin: 0; }
+.channel__video-meta { font-size: 12px; color: var(--text-muted); margin: 0; }
 
 /* ── Schedule ── */
 .channel__schedule {
@@ -254,14 +254,14 @@
 
 .channel__schedule-item {
   background: white;
-  border: 1px solid #eee;
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 14px 16px;
 }
 
 .channel__schedule-time {
   font-size: 13px;
-  color: #6366f1;
+  color: var(--accent);
   font-weight: 500;
   margin-bottom: 4px;
 }
@@ -269,11 +269,11 @@
 .channel__schedule-title {
   font-size: 15px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 4px;
 }
 
-.channel__schedule-category { font-size: 12px; color: #888; }
+.channel__schedule-category { font-size: 12px; color: var(--text-muted); }
 
 /* ── About ── */
 .channel__about { max-width: 600px; }
@@ -285,13 +285,13 @@
 .channel__about-section h3 {
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 10px;
 }
 
 .channel__about-section p {
   font-size: 14px;
-  color: #555;
+  color: var(--text-secondary);
   line-height: 1.6;
 }
 
@@ -300,35 +300,35 @@
   flex-direction: column;
   gap: 8px;
   font-size: 14px;
-  color: #555;
+  color: var(--text-secondary);
 }
 
-.channel__about-stats strong { color: #333; }
+.channel__about-stats strong { color: var(--text-primary); }
 
 /* ── Empty ── */
 .channel__empty {
   text-align: center;
   padding: 60px;
-  color: #999;
+  color: var(--text-muted);
 }
 
 .channel__empty span { font-size: 48px; display: block; margin-bottom: 12px; }
 .channel__empty p { font-size: 14px; margin: 0; }
 
 /* Dark mode */
-.dark-mode .channel__name { color: #e4e4e7; }
-.dark-mode .channel__bio { color: #a1a1aa; }
-.dark-mode .channel__info { border-color: #3f3f46; }
-.dark-mode .channel__tabs { border-color: #3f3f46; }
-.dark-mode .channel__tab:hover { background: #3f3f46; color: #e4e4e7; }
-.dark-mode .channel__video-card { border-color: #3f3f46; }
-.dark-mode .channel__video-title { color: #e4e4e7; }
-.dark-mode .channel__schedule-item { background: #27272a; border-color: #3f3f46; }
-.dark-mode .channel__schedule-title { color: #e4e4e7; }
-.dark-mode .channel__about-section h3 { color: #e4e4e7; }
-.dark-mode .channel__about-section p { color: #a1a1aa; }
-.dark-mode .channel__about-stats { color: #a1a1aa; }
-.dark-mode .channel__about-stats strong { color: #e4e4e7; }
+.dark-mode .channel__name { color: var(--text-primary); }
+.dark-mode .channel__bio { color: var(--text-secondary); }
+.dark-mode .channel__info { border-color: var(--bg-hover); }
+.dark-mode .channel__tabs { border-color: var(--bg-hover); }
+.dark-mode .channel__tab:hover { background: var(--bg-hover); color: var(--text-primary); }
+.dark-mode .channel__video-card { border-color: var(--bg-hover); }
+.dark-mode .channel__video-title { color: var(--text-primary); }
+.dark-mode .channel__schedule-item { background: var(--bg-card); border-color: var(--bg-hover); }
+.dark-mode .channel__schedule-title { color: var(--text-primary); }
+.dark-mode .channel__about-section h3 { color: var(--text-primary); }
+.dark-mode .channel__about-section p { color: var(--text-secondary); }
+.dark-mode .channel__about-stats { color: var(--text-secondary); }
+.dark-mode .channel__about-stats strong { color: var(--text-primary); }
 
 /* Responsive */
 @media (max-width: 768px) {
