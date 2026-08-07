@@ -233,10 +233,11 @@ const resetPassword = asyncHandler(async (req, res) => {
 // @access  Private
 // ─────────────────────────────────────────────
 const logout = asyncHandler(async (req, res) => {
-  // Clear JWT cookie by setting it to empty with past expiry
+  const isProduction = process.env.NODE_ENV !== "development";
   res.cookie("jwt", "", {
     httpOnly: true,
-    sameSite: "none",
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
     expires: new Date(0),
   });
 
