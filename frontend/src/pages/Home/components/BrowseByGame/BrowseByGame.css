@@ -21,7 +21,7 @@
 
 .browse__more {
   font-size: 12px;
-  color: #9147ff;
+  color: var(--accent);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -31,7 +31,7 @@
 }
 
 .browse__more:hover {
-  color: #772ce8;
+  color: var(--accent-hover);
 }
 
 .browse__scroll {
@@ -112,7 +112,7 @@
    ============================================================ */
 /* --- Light Mode --- */
 .light-mode .browse__title {
-  color: #111;
+  color: var(--text-primary);
 }
 
 .light-mode .game-card__poster {
@@ -126,7 +126,7 @@
 
 /* --- Dark Mode --- */
 .dark-mode .browse__title {
-  color: #e4e4e7;
+  color: var(--text-primary);
 }
 
 .dark-mode .game-card__poster {
@@ -135,7 +135,7 @@
 }
 
 .dark-mode .game-card:hover .game-card__poster {
-  border-color: #555;
+  border-color: var(--text-secondary);
 }
 
 /* ============================================================
