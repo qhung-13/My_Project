@@ -21,7 +21,7 @@
 
 .recommended__more {
   font-size: 12px;
-  color: #9147ff;
+  color: var(--accent);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -31,7 +31,7 @@
 }
 
 .recommended__more:hover {
-  color: #772ce8;
+  color: var(--accent-hover);
 }
 
 .recommended__list {
@@ -125,20 +125,20 @@
    ============================================================ */
 /* --- Light Mode --- */
 .light-mode .recommended__title {
-  color: #111;
+  color: var(--text-primary);
 }
 
 .light-mode .rec-card__title {
-  color: #111;
+  color: var(--text-primary);
 }
 
 .light-mode .rec-card__thumb {
   border-color: #e5e5e5;
-  background: #f0f0f0;
+  background: var(--bg-hover);
 }
 
 .light-mode .rec-card__streamer span {
-  color: #555;
+  color: var(--text-secondary);
 }
 
 .light-mode .rec-card__meta {
@@ -146,33 +146,33 @@
 }
 
 .light-mode .rec-card:hover {
-  background: #f5f5f5; 
+  background: var(--bg-hover); 
 }
 
 /* --- Dark Mode --- */
 .dark-mode .recommended__title {
-  color: #e4e4e7;
+  color: var(--text-primary);
 }
 
 .dark-mode .rec-card__title {
-  color: #e4e4e7;
+  color: var(--text-primary);
 }
 
 .dark-mode .rec-card__thumb {
-  border-color: #333;
-  background: #1a0a2e;
+  border-color: var(--text-primary);
+  background: var(--bg-secondary);
 }
 
 .dark-mode .rec-card__streamer span {
-  color: #aaa;
+  color: var(--text-muted);
 }
 
 .dark-mode .rec-card__meta {
-  color: #888;
+  color: var(--text-muted);
 }
 
 .dark-mode .rec-card:hover {
-  background: #1a1a1a; 
+  background: var(--text-primary); 
 }
 
 /* ============================================================
