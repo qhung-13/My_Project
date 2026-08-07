@@ -7,6 +7,8 @@ import jwt from "jsonwebtoken";
  * @param {string|ObjectId} userId - The unique identifier of the authenticated user
  * @returns {string} The generated JWT string
  */
+const isProduction = process.env.NODE_ENV !== "development";
+
 const createToken = (res, userId) => {
   const token = jwt.sign({ userId }, process.env.JWT_SECRET, {
     expiresIn: "30d",
@@ -14,8 +16,8 @@ const createToken = (res, userId) => {
 
   res.cookie("jwt", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV !== "development",
-    sameSite: "none",
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days in milliseconds
   });
 
