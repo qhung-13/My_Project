@@ -126,3 +126,31 @@
   border-color: var(--border-hover);
   color: var(--text-primary);
 }
+.schedule-modal__overlay {
+  border: 0;
+  padding: 0;
+}
+
+.schedule-modal__card {
+  background: var(--bg-card);
+  outline: none;
+}
+
+.schedule-modal__close:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 520px) {
+  .schedule-modal {
+    align-items: flex-end;
+  }
+
+  .schedule-modal__card {
+    width: 100%;
+    max-width: none;
+    max-height: 92vh;
+    padding: 24px 16px max(20px, env(safe-area-inset-bottom));
+    border-radius: 16px 16px 0 0;
+  }
+}
