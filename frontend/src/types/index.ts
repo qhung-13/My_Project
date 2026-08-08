@@ -117,7 +117,7 @@ export interface LeaderboardItem {
   id: string;
   userId: string;
   name: string;
-  avatar?: string | null;
+  avatar: string | undefined;
   value: string;
   live: boolean;
 }
