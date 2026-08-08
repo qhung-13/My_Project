@@ -1,12 +1,11 @@
-import { test, describe, before } from "node:test";
+import { test, describe, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import jwt from "jsonwebtoken";
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || "test-secret";
 
-const { default: createToken, generateToken } = await import(
-  "../createToken.js"
-);
+const { default: createToken, generateToken } =
+  await import("../createToken.js");
 
 // Minimal fake Express response, just enough to observe res.cookie(...) calls
 const createFakeRes = () => {
@@ -18,6 +17,11 @@ const createFakeRes = () => {
 };
 
 describe("createToken", () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+  });
   test("signs a JWT containing the userId", () => {
     const token = generateToken("user-123");
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -38,9 +42,19 @@ describe("createToken", () => {
     // safer than the old localStorage-based OAuth token (see axios.ts).
   });
 
-  test("cookie is scoped to sameSite=none so it works across the FE/BE domains", () => {
+  test("uses cross-site secure cookie options in production", () => {
+    process.env.NODE_ENV = "production";
     const res = createFakeRes();
     createToken(res, "user-789");
     assert.equal(res._calls[0].options.sameSite, "none");
+    assert.equal(res._calls[0].options.secure, true);
+  });
+
+  test("uses localhost-friendly cookie options in development", () => {
+    process.env.NODE_ENV = "development";
+    const res = createFakeRes();
+    createToken(res, "user-local");
+    assert.equal(res._calls[0].options.sameSite, "lax");
+    assert.equal(res._calls[0].options.secure, false);
   });
 });
