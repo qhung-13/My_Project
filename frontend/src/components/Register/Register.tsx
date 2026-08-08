@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./Register.css";
 import { FcGoogle } from "react-icons/fc";
 import { FaFacebook } from "react-icons/fa";
@@ -7,14 +7,19 @@ import type { AppDispatch } from "../../store/store";
 import { setUser } from "../../store/slices/authSlice";
 import {
   useRegisterMutation,
-  useSendOtpMutation,
   useVerifyOtpMutation,
 } from "../../store/api/userApi";
+import { buildApiUrl } from "../../config/api";
 
 interface RegisterProps {
   onClose: () => void;
   onSwitch: () => void;
 }
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  const apiError = error as { data?: { message?: string } };
+  return apiError.data?.message || fallback;
+};
 
 const Register = ({ onClose, onSwitch }: RegisterProps) => {
   const [username, setUsername] = useState("");
@@ -27,13 +32,24 @@ const Register = ({ onClose, onSwitch }: RegisterProps) => {
 
   const dispatch = useDispatch<AppDispatch>();
   const [register, { isLoading: isRegisterLoading }] = useRegisterMutation();
-  const [sendOtp, { isLoading: isSendOtpLoading }] = useSendOtpMutation();
   const [verifyOtp, { isLoading: isVerifyLoading }] = useVerifyOtpMutation();
 
-  const isLoading = isRegisterLoading || isSendOtpLoading;
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.body.classList.add("modal-open");
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.classList.remove("modal-open");
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onClose]);
 
-  const handleRegisterClick = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRegisterClick = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
     setError("");
 
     if (password !== confirmPassword) {
@@ -42,148 +58,203 @@ const Register = ({ onClose, onSwitch }: RegisterProps) => {
     }
 
     try {
-      // Step 1: Register account
-      await register({ username, email, password }).unwrap();
-
-      // Step 2: Send OTP to email
-      await sendOtp({ email }).unwrap();
-
+      await register({
+        username: username.trim(),
+        email: email.trim().toLowerCase(),
+        password,
+      }).unwrap();
+      setOtp("");
       setStep("otp");
-    } catch (err) {
-      const error = err as { data?: { message?: string } };
-      setError(error.data?.message || "Registration failed");
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, "Registration failed"));
     }
   };
 
-  const handleOtpSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleOtpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setError("");
 
     try {
-      // Step 3: Verify OTP → isVerified = true
-      const res = await verifyOtp({ email, otp }).unwrap();
-
+      const response = await verifyOtp({
+        email: email.trim().toLowerCase(),
+        otp,
+      }).unwrap();
       dispatch(
         setUser({
-          _id: res._id,
-          username: res.username,
-          email: res.email,
-          avatar: res.avatar || null,
-          coins: res.coins || 0,
-          role: res.role || "user",
+          _id: response._id,
+          username: response.username,
+          email: response.email,
+          avatar: response.avatar ?? null,
+          coins: response.coins ?? 0,
+          role: response.role ?? "user",
         }),
       );
       onClose();
-    } catch (err) {
-      const error = err as { data?: { message?: string } };
-      setError(error.data?.message || "Invalid OTP");
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, "Invalid OTP"));
     }
   };
 
   return (
-    <div className="register">
-      <div className="register__overlay" onClick={onClose}></div>
-
-      <div className="register__card">
-        <button className="register__close" onClick={onClose}>
+    <div className="register" role="presentation">
+      <button
+        className="register__overlay"
+        onClick={onClose}
+        aria-label="Đóng hộp thoại đăng ký"
+      />
+      <section
+        className="register__card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="register-title"
+        aria-describedby="register-subtitle"
+      >
+        <button className="register__close" onClick={onClose} aria-label="Đóng">
           &times;
         </button>
+        <h2 className="register__title" id="register-title">
+          Create Account
+        </h2>
+        <p className="register__subtitle" id="register-subtitle">
+          Register to get started
+        </p>
 
-        <h2 className="register__title">Create Account</h2>
-        <p className="register__subtitle">Register to get started</p>
-
-        {error && <p className="register__error">{error}</p>}
+        {error && (
+          <p className="register__error" role="alert">
+            {error}
+          </p>
+        )}
 
         {step === "credentials" ? (
           <form className="register__form" onSubmit={handleRegisterClick}>
+            <label className="sr-only" htmlFor="register-username">
+              Username
+            </label>
             <input
+              id="register-username"
+              className="register__input"
               type="text"
               placeholder="Username"
-              className="register__input"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(event) => setUsername(event.target.value)}
+              autoComplete="username"
+              minLength={3}
+              maxLength={30}
+              autoFocus
               required
             />
+            <label className="sr-only" htmlFor="register-email">
+              Email
+            </label>
             <input
+              id="register-email"
+              className="register__input"
               type="email"
               placeholder="Email"
-              className="register__input"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(event) => setEmail(event.target.value)}
+              autoComplete="email"
               required
             />
+            <label className="sr-only" htmlFor="register-password">
+              Password
+            </label>
             <input
-              type="password"
-              placeholder="Password"
+              id="register-password"
               className="register__input"
+              type="password"
+              placeholder="Password (minimum 8 characters)"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="new-password"
+              minLength={8}
               required
             />
+            <label className="sr-only" htmlFor="register-password-confirm">
+              Confirm password
+            </label>
             <input
+              id="register-password-confirm"
+              className="register__input"
               type="password"
               placeholder="Confirm Password"
-              className="register__input"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              autoComplete="new-password"
+              minLength={8}
               required
             />
             <button
-              type="submit"
               className="register__button"
-              disabled={isLoading}
+              type="submit"
+              disabled={isRegisterLoading}
             >
-              {isLoading ? "Loading..." : "Register"}
+              {isRegisterLoading ? "Creating..." : "Register"}
             </button>
           </form>
         ) : (
           <form className="register__form" onSubmit={handleOtpSubmit}>
             <p className="otp-info">
-              OTP sent to: <strong>{email}</strong>
+              OTP đã được gửi tới email: <strong>{email}</strong>
             </p>
+            <label className="sr-only" htmlFor="register-otp">
+              Mã OTP
+            </label>
             <input
-              type="text"
-              placeholder="Enter OTP"
+              id="register-otp"
               className="otp-input"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]{6}"
+              maxLength={6}
+              placeholder="Enter OTP"
               value={otp}
-              onChange={(e) => setOtp(e.target.value)}
+              onChange={(event) =>
+                setOtp(event.target.value.replace(/\D/g, ""))
+              }
+              autoComplete="one-time-code"
+              autoFocus
               required
             />
             <div className="otp-actions">
               <button
-                type="button"
-                className="otp-back"
-                onClick={() => {
-                  setOtp("");
-                  setStep("credentials");
-                }}
-              >
-                Back
-              </button>
-              <button
-                type="submit"
                 className="otp-confirm"
-                disabled={isVerifyLoading}
+                type="submit"
+                disabled={isVerifyLoading || otp.length !== 6}
               >
                 {isVerifyLoading ? "Verifying..." : "Confirm"}
+              </button>
+              <button
+                className="otp-back"
+                type="button"
+                onClick={() => setStep("credentials")}
+              >
+                Back
               </button>
             </div>
           </form>
         )}
 
         {step === "credentials" && (
-          <div className="register__social">
+          <div
+            className="register__social"
+            aria-label="Đăng ký bằng mạng xã hội"
+          >
             <button
+              type="button"
               className="register__social-btn register__social--google"
               onClick={() =>
-                (window.location.href = `${import.meta.env.VITE_API_URL?.replace("/api", "")}/api/users/auth/google`)
+                window.location.assign(buildApiUrl("/users/auth/google"))
               }
+              aria-label="Đăng ký bằng Google"
             >
               <FcGoogle size={24} />
             </button>
             <button
+              type="button"
               className="register__social-btn register__social--facebook"
               disabled
+              aria-label="Facebook chưa khả dụng"
             >
               <FaFacebook size={24} color="#1877F2" />
             </button>
@@ -192,11 +263,11 @@ const Register = ({ onClose, onSwitch }: RegisterProps) => {
 
         <p className="register__footer">
           Already have an account?{" "}
-          <button className="register__link" onClick={onSwitch}>
+          <button type="button" className="register__link" onClick={onSwitch}>
             Login
           </button>
         </p>
-      </div>
+      </section>
     </div>
   );
 };
