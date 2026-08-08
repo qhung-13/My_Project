@@ -1,265 +1,363 @@
+import mongoose from "mongoose";
+import { v4 as uuidv4 } from "uuid";
 import Stream from "../models/Stream.model.js";
 import User from "../models/User.model.js";
+import Donation from "../models/Donation.model.js";
 import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
 import { createNotification } from "./NotificationController.controller.js";
-import { v4 as uuidv4 } from "uuid";
+import { getViewersForStream } from "../sockets/presence.store.js";
+import buildHlsUrl from "../utils/hlsUrl.js";
 
-// ─────────────────────────────────────────────
-// @desc    Start a stream
-// @route   POST /api/streams/start
-// @access  Private
-// ─────────────────────────────────────────────
+const clampPagination = (query) => {
+  const page = Math.max(1, Number.parseInt(query.page, 10) || 1);
+  const limit = Math.min(
+    50,
+    Math.max(1, Number.parseInt(query.limit, 10) || 12),
+  );
+  return { page, limit, skip: (page - 1) * limit };
+};
+
+const cleanTags = (tags) => {
+  if (!Array.isArray(tags)) return [];
+  return [...new Set(tags.map((tag) => String(tag).trim()).filter(Boolean))]
+    .slice(0, 10)
+    .map((tag) => tag.slice(0, 30));
+};
+
+const serializeStream = (stream) => {
+  const object = stream.toObject ? stream.toObject() : stream;
+  return {
+    ...object,
+    hlsUrl: object.isLive ? buildHlsUrl(object.streamKey) : null,
+  };
+};
+
 const startStream = asyncHandler(async (req, res) => {
-  const { title, description, category, tags } = req.body;
+  const title = String(req.body.title || "").trim();
+  const description = String(req.body.description || "").trim();
+  const category = String(req.body.category || "").trim();
   const userId = req.user._id;
 
-  if (!title || !description || !category) {
+  if (!title || !category) {
     res.status(400);
-    throw new Error("Please fill all fields");
+    throw new Error("Title and category are required");
   }
 
-  // Check nếu user đang live rồi
-  const existingStream = await Stream.findOne({ userId, isLive: true });
-  if (existingStream) {
-    res.status(400);
+  const existingLiveStream = await Stream.findOne({ userId, isLive: true });
+  if (existingLiveStream) {
+    res.status(409);
     throw new Error("You are already streaming");
   }
 
-  // Sinh streamKey unique
-  const streamKey = uuidv4();
+  const user = await User.findById(userId);
+  if (!user || !user.isActive) {
+    res.status(404);
+    throw new Error("User not found");
+  }
 
-  // Tạo stream mới
-  const stream = new Stream({
+  if (!user.streamKey) user.streamKey = uuidv4();
+  user.role = user.role === "admin" ? "admin" : "streamer";
+  await user.save();
+
+  // Preparing a stream must not make the channel appear live. The media
+  // service promotes this draft only after OBS has successfully published.
+  let stream = await Stream.findOne({
     userId,
-    title,
-    description,
-    category,
-    tags: tags || [],
-    streamKey,
-    isLive: true,
-    startedAt: new Date(),
-  });
+    streamKey: user.streamKey,
+    isLive: false,
+    isScheduled: false,
+    startedAt: null,
+    endedAt: null,
+  }).sort({ createdAt: -1 });
 
-  await stream.save();
+  const values = {
+    title: title.slice(0, 120),
+    description: description.slice(0, 1000),
+    category: category.slice(0, 60),
+    tags: cleanTags(req.body.tags),
+    streamKey: user.streamKey,
+    isLive: false,
+    isScheduled: false,
+    startedAt: null,
+    endedAt: null,
+  };
 
-  // Update role thành streamer
-  await User.findByIdAndUpdate(userId, { role: "streamer" });
+  if (stream) {
+    Object.assign(stream, values);
+    await stream.save();
+  } else {
+    stream = await Stream.create({ userId, ...values });
+  }
 
   res.status(201).json({
-    _id: stream._id,
-    userId: stream.userId,
-    title: stream.title,
-    description: stream.description,
-    category: stream.category,
-    tags: stream.tags,
-    streamKey: stream.streamKey,
-    isLive: stream.isLive,
-    startedAt: stream.startedAt,
+    message: "Stream setup saved. Start streaming from OBS when ready.",
+    stream: serializeStream(stream),
   });
 });
 
-// ─────────────────────────────────────────────
-// @desc    End a stream
-// @route   POST /api/streams/end
-// @access  Private
-// ─────────────────────────────────────────────
-const endStream = asyncHandler(async (req, res) => {
-  const userId = req.user._id;
+const notifyFollowersStreamStarted = async (user, stream) => {
+  if (!user.followers?.length) return;
+  await Promise.allSettled(
+    user.followers.map((followerId) =>
+      createNotification({
+        userId: followerId,
+        fromUserId: user._id,
+        type: "stream_live",
+        message: `${user.displayName || user.username} is live: ${stream.title}`,
+        link: `/watch/${stream._id}`,
+      }),
+    ),
+  );
+};
 
-  // Tìm stream đang live của user
-  const stream = await Stream.findOne({ userId, isLive: true });
+const streamPublished = asyncHandler(async (req, res) => {
+  const streamKey = String(req.body.streamKey || "").trim();
+  if (!/^[a-zA-Z0-9-]{16,128}$/.test(streamKey)) {
+    res.status(400);
+    throw new Error("Invalid stream key");
+  }
+
+  const user = await User.findOne({ streamKey, isActive: true });
+  if (!user) {
+    res.status(404);
+    throw new Error("Streamer not found");
+  }
+
+  const alreadyLive = await Stream.findOne({ userId: user._id, isLive: true });
+  if (alreadyLive) {
+    return res
+      .status(200)
+      .json({ stream: serializeStream(alreadyLive), idempotent: true });
+  }
+
+  const now = new Date();
+  let stream = await Stream.findOne({
+    userId: user._id,
+    streamKey,
+    isLive: false,
+    isScheduled: false,
+    startedAt: null,
+    endedAt: null,
+  }).sort({ createdAt: -1 });
+
+  if (!stream) {
+    stream = await Stream.create({
+      userId: user._id,
+      title: `${user.displayName || user.username}'s live stream`,
+      description: "",
+      category: "Other",
+      streamKey,
+      isLive: true,
+      startedAt: now,
+    });
+  } else {
+    stream.isLive = true;
+    stream.startedAt = now;
+    stream.endedAt = null;
+    stream.viewers = 0;
+    await stream.save();
+  }
+
+  user.isLive = true;
+  user.role = user.role === "admin" ? "admin" : "streamer";
+  await user.save();
+
+  await notifyFollowersStreamStarted(user, stream);
+  req.app.get("io")?.emit("stream-started", serializeStream(stream));
+  return res.status(200).json({ stream: serializeStream(stream) });
+});
+
+const finishStream = async ({ stream, userId, io }) => {
+  stream.isLive = false;
+  stream.viewers = 0;
+  stream.endedAt = new Date();
+  await stream.save();
+  await User.findByIdAndUpdate(userId, { isLive: false });
+  io?.to(`stream:${stream._id}`).emit("stream-ended", {
+    streamId: stream._id,
+    endedAt: stream.endedAt,
+  });
+  io?.emit("stream-stopped", { streamId: stream._id, userId });
+  return stream;
+};
+
+const streamUnpublished = asyncHandler(async (req, res) => {
+  const streamKey = String(req.body.streamKey || "").trim();
+  if (!streamKey) {
+    res.status(400);
+    throw new Error("Stream key is required");
+  }
+
+  const user = await User.findOne({ streamKey });
+  if (!user) return res.status(200).json({ idempotent: true });
+
+  const stream = await Stream.findOne({ userId: user._id, isLive: true }).sort({
+    startedAt: -1,
+  });
+  if (!stream) {
+    await User.findByIdAndUpdate(user._id, { isLive: false });
+    return res.status(200).json({ idempotent: true });
+  }
+
+  await finishStream({ stream, userId: user._id, io: req.app.get("io") });
+  return res.status(200).json({ message: "Stream ended successfully" });
+});
+
+const endStream = asyncHandler(async (req, res) => {
+  const stream = await Stream.findOne({ userId: req.user._id, isLive: true });
   if (!stream) {
     res.status(404);
     throw new Error("No active stream found");
   }
 
-  // Kết thúc stream
-  stream.isLive = false;
-  stream.endedAt = new Date();
-  await stream.save();
-
+  await finishStream({ stream, userId: req.user._id, io: req.app.get("io") });
   res.status(200).json({ message: "Stream ended successfully" });
 });
 
-// ─────────────────────────────────────────────
-// @desc    Get all live streams
-// @route   GET /api/streams
-// @access  Public
-// ─────────────────────────────────────────────
 const getLiveStreams = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 12;
-  const skip = (page - 1) * limit;
-
+  const { page, limit, skip } = clampPagination(req.query);
   const [streams, total] = await Promise.all([
     Stream.find({ isLive: true })
       .populate("userId", "username displayName avatar")
-      .sort({ viewers: -1 })
+      .sort({ viewers: -1, startedAt: -1 })
       .skip(skip)
       .limit(limit),
     Stream.countDocuments({ isLive: true }),
   ]);
 
+  const totalPages = Math.ceil(total / limit);
   res.status(200).json({
-    streams,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-      hasMore: page < Math.ceil(total / limit),
-    },
+    streams: streams.map(serializeStream),
+    pagination: { page, limit, total, totalPages, hasMore: page < totalPages },
   });
 });
 
-// ─────────────────────────────────────────────
-// @desc    Get a single stream by ID
-// @route   GET /api/streams/:id
-// @access  Public
-// ─────────────────────────────────────────────
 const getStreamById = asyncHandler(async (req, res) => {
   const stream = await Stream.findById(req.params.id).populate(
     "userId",
     "username displayName avatar",
   );
-
   if (!stream) {
     res.status(404);
     throw new Error("Stream not found");
   }
-
-  res.status(200).json(stream);
+  res.status(200).json(serializeStream(stream));
 });
 
-// ─────────────────────────────────────────────
-// @desc    Get streams by user ID
-// @route   GET /api/streams/user/:userId
-// @access  Public
-// ─────────────────────────────────────────────
 const getStreamsByUser = asyncHandler(async (req, res) => {
-  const streams = await Stream.find({ userId: req.params.userId }).sort({
-    createdAt: -1,
+  const { page, limit, skip } = clampPagination(req.query);
+  const filter = { userId: req.params.userId };
+  const [streams, total] = await Promise.all([
+    Stream.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Stream.countDocuments(filter),
+  ]);
+  const totalPages = Math.ceil(total / limit);
+  res.status(200).json({
+    streams: streams.map(serializeStream),
+    pagination: { page, limit, total, totalPages, hasMore: page < totalPages },
   });
-
-  res.status(200).json(streams);
 });
 
-// ─────────────────────────────────────────────
-// @desc    Update viewer count
-// @route   PUT /api/streams/:id/viewers
-// @access  Private
-// ─────────────────────────────────────────────
 const updateViewers = asyncHandler(async (req, res) => {
-  const { viewers } = req.body;
+  const viewers = Number(req.body.viewers);
+  if (!Number.isInteger(viewers) || viewers < 0 || viewers > 1_000_000) {
+    res.status(400);
+    throw new Error("Viewer count must be a non-negative integer");
+  }
 
   const stream = await Stream.findById(req.params.id);
   if (!stream) {
     res.status(404);
     throw new Error("Stream not found");
   }
+  if (
+    stream.userId.toString() !== req.user._id.toString() &&
+    req.user.role !== "admin"
+  ) {
+    res.status(403);
+    throw new Error("Not authorized to update this stream");
+  }
 
   stream.viewers = viewers;
-  if (viewers > stream.peakViewers) {
-    stream.peakViewers = viewers;
-  }
+  stream.peakViewers = Math.max(stream.peakViewers || 0, viewers);
   await stream.save();
-
   res
     .status(200)
     .json({ viewers: stream.viewers, peakViewers: stream.peakViewers });
 });
 
-// ─────────────────────────────────────────────
-// @desc    Get top streamers by hours
-// @route   GET /api/streams/top-hours
-// @access  Public
-// ─────────────────────────────────────────────
 const getTopStreamersByHours = asyncHandler(async (req, res) => {
-  const streams = await Stream.find({ endedAt: { $ne: null } }).populate(
-    "userId",
-    "username displayName avatar",
-  );
-
-  // Tính tổng giờ stream theo userId
+  const streams = await Stream.find({
+    startedAt: { $ne: null },
+    endedAt: { $ne: null },
+  }).populate("userId", "username displayName avatar");
   const hoursMap = new Map();
-  streams.forEach((stream) => {
-    if (!stream.startedAt || !stream.endedAt) return;
-    const hours =
-      (new Date(stream.endedAt) - new Date(stream.startedAt)) /
-      (1000 * 60 * 60);
-    const uid = stream.userId?._id?.toString();
-    if (!uid) return;
-    hoursMap.set(uid, {
-      user: stream.userId,
-      hours: (hoursMap.get(uid)?.hours || 0) + hours,
-    });
-  });
 
-  const result = Array.from(hoursMap.values())
+  for (const stream of streams) {
+    const userId = stream.userId?._id?.toString();
+    if (!userId) continue;
+    const hours = Math.max(0, (stream.endedAt - stream.startedAt) / 3_600_000);
+    const current = hoursMap.get(userId) || { user: stream.userId, hours: 0 };
+    current.hours += hours;
+    hoursMap.set(userId, current);
+  }
+
+  const result = [...hoursMap.values()]
     .sort((a, b) => b.hours - a.hours)
     .slice(0, 5)
-    .map((item) => ({
-      ...item.user._doc,
-      totalHours: Math.round(item.hours),
+    .map(({ user, hours }) => ({
+      ...user.toObject(),
+      totalHours: Math.round(hours * 10) / 10,
     }));
-
   res.status(200).json(result);
 });
 
-// ─────────────────────────────────────────────
-// @desc    Schedule a stream
-// @route   POST /api/streams/schedule
-// @access  Private
-// ─────────────────────────────────────────────
 const scheduleStream = asyncHandler(async (req, res) => {
-  const { title, description, category, tags, scheduledAt } = req.body;
+  const title = String(req.body.title || "").trim();
+  const scheduledDate = new Date(req.body.scheduledAt);
+  if (!title || Number.isNaN(scheduledDate.getTime())) {
+    res.status(400);
+    throw new Error("A title and valid scheduled time are required");
+  }
+  if (scheduledDate.getTime() <= Date.now() + 60_000) {
+    res.status(400);
+    throw new Error("Scheduled time must be at least one minute in the future");
+  }
+
   const userId = req.user._id;
-
-  if (!title || !scheduledAt) {
-    res.status(400);
-    throw new Error("Title and scheduled time are required");
-  }
-
-  const scheduledDate = new Date(scheduledAt);
-  if (scheduledDate < new Date()) {
-    res.status(400);
-    throw new Error("Scheduled time must be in the future");
-  }
-
-  const stream = new Stream({
+  const stream = await Stream.create({
     userId,
-    title,
-    description: description || "",
-    category: category || "Other",
-    tags: tags || [],
+    title: title.slice(0, 120),
+    description: String(req.body.description || "")
+      .trim()
+      .slice(0, 1000),
+    category: String(req.body.category || "Other")
+      .trim()
+      .slice(0, 60),
+    tags: cleanTags(req.body.tags),
     isLive: false,
     isScheduled: true,
     scheduledAt: scheduledDate,
   });
 
-  await stream.save();
+  const user = await User.findById(userId);
+  if (user) {
+    await Promise.allSettled(
+      (user.followers || []).map((followerId) =>
+        createNotification({
+          userId: followerId,
+          fromUserId: userId,
+          type: "stream_live",
+          message: `${user.username} sẽ livestream "${stream.title}" vào ${scheduledDate.toLocaleString("vi-VN")}`,
+          link: `/channel/${userId}`,
+        }),
+      ),
+    );
+  }
 
-  // Notify tất cả followers
-  const user = await User.findById(userId).populate("followers");
-  const notificationPromises = (user.followers || []).map((followerId) =>
-    createNotification({
-      userId: followerId,
-      fromUserId: userId,
-      type: "stream_live",
-      message: `${user.username} sẽ livestream "${title}" vào ${scheduledDate.toLocaleString("vi-VN")}`,
-      link: `/profile/${userId}`,
-    }),
-  );
-  await Promise.all(notificationPromises);
-
-  res.status(201).json(stream);
+  res.status(201).json(serializeStream(stream));
 });
 
-// ─────────────────────────────────────────────
-// @desc    Get scheduled streams
-// @route   GET /api/streams/scheduled
-// @access  Public
-// ─────────────────────────────────────────────
 const getScheduledStreams = asyncHandler(async (req, res) => {
   const streams = await Stream.find({
     isScheduled: true,
@@ -269,15 +367,9 @@ const getScheduledStreams = asyncHandler(async (req, res) => {
     .populate("userId", "username displayName avatar")
     .sort({ scheduledAt: 1 })
     .limit(20);
-
-  res.status(200).json(streams);
+  res.status(200).json(streams.map(serializeStream));
 });
 
-// ─────────────────────────────────────────────
-// @desc    Get scheduled streams by user
-// @route   GET /api/streams/scheduled/:userId
-// @access  Public
-// ─────────────────────────────────────────────
 const getScheduledStreamsByUser = asyncHandler(async (req, res) => {
   const streams = await Stream.find({
     userId: req.params.userId,
@@ -285,122 +377,125 @@ const getScheduledStreamsByUser = asyncHandler(async (req, res) => {
     isLive: false,
     scheduledAt: { $gte: new Date() },
   }).sort({ scheduledAt: 1 });
-
-  res.status(200).json(streams);
+  res.status(200).json(streams.map(serializeStream));
 });
 
-// ─────────────────────────────────────────────
-// @desc    Update stream info khi đang live
-// @route   PUT /api/streams/live/update
-// @access  Private
-// ─────────────────────────────────────────────
 const updateLiveStream = asyncHandler(async (req, res) => {
-  const { title, description, category, tags } = req.body;
-  const userId = req.user._id;
-
-  const stream = await Stream.findOne({ userId, isLive: true });
+  const stream = await Stream.findOne({ userId: req.user._id, isLive: true });
   if (!stream) {
     res.status(404);
     throw new Error("No active stream found");
   }
 
-  stream.title = title || stream.title;
-  stream.description = description || stream.description;
-  stream.category = category || stream.category;
-  stream.tags = tags || stream.tags;
-
+  if (Object.hasOwn(req.body, "title")) {
+    const title = String(req.body.title || "").trim();
+    if (!title) {
+      res.status(400);
+      throw new Error("Title cannot be empty");
+    }
+    stream.title = title.slice(0, 120);
+  }
+  if (Object.hasOwn(req.body, "description")) {
+    stream.description = String(req.body.description || "")
+      .trim()
+      .slice(0, 1000);
+  }
+  if (Object.hasOwn(req.body, "category")) {
+    const category = String(req.body.category || "").trim();
+    if (!category) {
+      res.status(400);
+      throw new Error("Category cannot be empty");
+    }
+    stream.category = category.slice(0, 60);
+  }
+  if (Object.hasOwn(req.body, "tags")) stream.tags = cleanTags(req.body.tags);
   await stream.save();
 
-  // Notify viewers realtime qua Socket.io
-  const { io } = await import("../../index.js");
-  io.to(`stream:${stream._id}`).emit("stream-info-updated", {
+  req.app.get("io")?.to(`stream:${stream._id}`).emit("stream-info-updated", {
     title: stream.title,
     description: stream.description,
     category: stream.category,
+    tags: stream.tags,
   });
-
-  res.status(200).json(stream);
+  res.status(200).json(serializeStream(stream));
 });
 
-// ─────────────────────────────────────────────
-// @desc    Get viewer list trong stream
-// @route   GET /api/streams/:id/viewers
-// @access  Public
-// ─────────────────────────────────────────────
 const getViewerList = asyncHandler(async (req, res) => {
-  const streamId = req.params.id;
-
-  // Lấy danh sách socket IDs trong room
-  const { io } = await import("../../index.js");
-  const room = io.sockets.adapter.rooms.get(`stream:${streamId}`);
-  const viewerCount = room?.size || 0;
-
-  res.status(200).json({ viewerCount });
+  const viewers = await getViewersForStream(req.params.id);
+  res.status(200).json({ viewerCount: viewers.length, viewers });
 });
 
-// ─────────────────────────────────────────────
-// @desc    Get stream analytics for streamer
-// @route   GET /api/streams/analytics/:userId
-// @access  Private
-// ─────────────────────────────────────────────
 const getStreamAnalytics = asyncHandler(async (req, res) => {
   const userId = req.params.userId;
+  if (!mongoose.isValidObjectId(userId)) {
+    res.status(400);
+    throw new Error("Invalid user id");
+  }
+  if (userId !== req.user._id.toString() && req.user.role !== "admin") {
+    res.status(403);
+    throw new Error("Not authorized to view these analytics");
+  }
 
   const streams = await Stream.find({ userId })
     .sort({ createdAt: -1 })
-    .limit(30);
-
-  const totalStreams = streams.length;
-  const totalHours = streams.reduce((acc, s) => {
-    if (!s.startedAt || !s.endedAt) return acc;
-    return (
-      acc + (new Date(s.endedAt) - new Date(s.startedAt)) / (1000 * 60 * 60)
-    );
-  }, 0);
-
-  const avgViewers = streams.length
-    ? Math.round(
-        streams.reduce((acc, s) => acc + (s.viewers || 0), 0) / streams.length,
-      )
-    : 0;
-
-  const peakViewers = streams.reduce(
-    (max, s) => Math.max(max, s.peakViewers || 0),
+    .limit(100);
+  const completedStreams = streams.filter(
+    (stream) => stream.startedAt && stream.endedAt,
+  );
+  const totalHours = completedStreams.reduce(
+    (sum, stream) =>
+      sum + Math.max(0, (stream.endedAt - stream.startedAt) / 3_600_000),
     0,
   );
-
-  // Data cho chart — viewers theo từng stream
+  const avgViewers = streams.length
+    ? Math.round(
+        streams.reduce((sum, stream) => sum + (stream.peakViewers || 0), 0) /
+          streams.length,
+      )
+    : 0;
+  const peakViewers = streams.reduce(
+    (max, stream) => Math.max(max, stream.peakViewers || 0),
+    0,
+  );
   const viewerHistory = streams
     .slice(0, 10)
     .reverse()
-    .map((s) => ({
-      date: new Date(s.startedAt || s.createdAt).toLocaleDateString("vi-VN"),
-      viewers: s.peakViewers || 0,
+    .map((stream) => ({
+      date: new Date(stream.startedAt || stream.createdAt).toLocaleDateString(
+        "vi-VN",
+      ),
+      viewers: stream.peakViewers || 0,
       duration:
-        s.startedAt && s.endedAt
+        stream.startedAt && stream.endedAt
           ? Math.round(
-              (new Date(s.endedAt) - new Date(s.startedAt)) / (1000 * 60),
+              Math.max(0, (stream.endedAt - stream.startedAt) / 60_000),
             )
           : 0,
     }));
-
-  // Donations nhận được
-  const Donation = (await import("../models/Donate.model.js")).default;
-  const donations = await Donation.find({ toUserId: userId });
-  const totalCoinsReceived = donations.reduce((acc, d) => acc + d.coins, 0);
+  const donationTotals = await Donation.aggregate([
+    {
+      $match: {
+        toUserId: new mongoose.Types.ObjectId(userId),
+        status: "completed",
+      },
+    },
+    { $group: { _id: null, total: { $sum: "$coins" } } },
+  ]);
 
   res.status(200).json({
-    totalStreams,
+    totalStreams: streams.length,
     totalHours: Math.round(totalHours * 10) / 10,
     avgViewers,
     peakViewers,
-    totalCoinsReceived,
+    totalCoinsReceived: donationTotals[0]?.total || 0,
     viewerHistory,
   });
 });
 
 export {
   startStream,
+  streamPublished,
+  streamUnpublished,
   endStream,
   getLiveStreams,
   getStreamById,
