@@ -254,3 +254,43 @@
     grid-template-columns: repeat(4, 1fr); /* 4 cột */
   }
 }
+
+.rec-card {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.rec-card__thumb,
+.rec-card__info,
+.rec-card__title,
+.rec-card__streamer,
+.rec-card__meta {
+  display: flex;
+}
+
+.rec-card__thumb img,
+.rec-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rec-card__title,
+.rec-card__meta {
+  display: block;
+}
+
+.rec-card__avatar {
+  overflow: hidden;
+}
+
+.rec-card:focus-visible,
+.recommended__more:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 42%, transparent);
+  outline-offset: 3px;
+}

@@ -2,50 +2,75 @@ import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import User from "../models/User.model.js";
 
-/**
- * Configure Passport.js with Google OAuth2 strategy
- * Must be called after dotenv.config() to access environment variables
- */
+export const isGoogleOAuthConfigured = () =>
+  Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+
 const configurePassport = () => {
+  if (!isGoogleOAuthConfigured()) {
+    console.warn(
+      "Google OAuth disabled: GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET are missing",
+    );
+    return;
+  }
+
+  const backendOrigin = (
+    process.env.BACKEND_PUBLIC_URL || "http://localhost:5000"
+  ).replace(/\/$/, "");
   passport.use(
     new GoogleStrategy(
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL:
-          process.env.NODE_ENV === "production"
-            ? "https://my-project-5bd7.onrender.com/api/users/auth/google/callback"
-            : "http://localhost:5000/api/users/auth/google/callback",
+        callbackURL: `${backendOrigin}/api/v1/users/auth/google/callback`,
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
-          // Check if user already exists with this Google account
-          let user = await User.findOne({ googleId: profile.id });
+          const email = profile.emails?.[0]?.value?.trim().toLowerCase();
+          const isEmailVerified = profile._json?.email_verified !== false;
+          if (!email || !isEmailVerified) {
+            return done(
+              new Error("Google account did not provide a verified email"),
+              null,
+            );
+          }
 
-          // If not, create a new user with Google profile data
+          let user = await User.findOne({
+            $or: [{ googleId: profile.id }, { email }],
+          });
+          if (user && !user.isActive) {
+            return done(new Error("This account has been disabled"), null);
+          }
           if (!user) {
-            // 1. Calculate base username
-            const baseUsername = profile.displayName
-              .replace(/[^a-zA-Z0-9_]/g, "_")
-              .toLowerCase();
-
+            const rawBase = profile.displayName || email.split("@")[0];
+            const baseUsername =
+              rawBase
+                .replace(/[^a-zA-Z0-9_]/g, "_")
+                .toLowerCase()
+                .slice(0, 24) || "user";
             let username = baseUsername;
             let count = 0;
-
-            // 2. Ensure it is unique
-            while (await User.findOne({ username })) {
-              count++;
-              username = `${baseUsername}_${count}`;
+            while (await User.exists({ username })) {
+              count += 1;
+              username = `${baseUsername}_${count}`.slice(0, 30);
             }
-
-            // 3. Create the user using the unique 'username' variable
             user = await User.create({
               googleId: profile.id,
-              username: username, //
-              email: profile.emails[0].value,
-              avatar: profile.photos[0].value,
+              username,
+              email,
+              avatar: profile.photos?.[0]?.value || null,
               isVerified: true,
             });
+          } else {
+            let changed = false;
+            if (!user.googleId) {
+              user.googleId = profile.id;
+              changed = true;
+            }
+            if (!user.isVerified) {
+              user.isVerified = true;
+              changed = true;
+            }
+            if (changed) await user.save();
           }
 
           return done(null, user);

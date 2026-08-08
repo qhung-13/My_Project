@@ -4,7 +4,7 @@ import { useGetUserByIdQuery } from "../../store/api/userApi";
 import { useGetVideosByUserQuery } from "../../store/api/videoApi";
 import {
   useGetScheduledStreamsByUserQuery,
-  useGetLiveStreamsQuery,
+  useGetStreamsByUserQuery,
 } from "../../store/api/streamApi";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
@@ -28,17 +28,19 @@ type TabType = "VODs" | "Clips" | "Schedule" | "About";
 const Channel = () => {
   const { userId } = useParams<{ userId: string }>();
   const [activeTab, setActiveTab] = useState<TabType>("VODs");
+  const [followError, setFollowError] = useState("");
 
   const { user: authUser } = useSelector((state: RootState) => state.auth);
-  const [followUser] = useFollowUserMutation();
-  const [unfollowUser] = useUnfollowUserMutation();
+  const [followUser, { isLoading: isFollowingUser }] = useFollowUserMutation();
+  const [unfollowUser, { isLoading: isUnfollowingUser }] =
+    useUnfollowUserMutation();
 
   const { data: channelUser, isLoading } = useGetUserByIdQuery(userId!, {
     skip: !userId,
   });
 
   const { data: videosResult } = useGetVideosByUserQuery(
-    { userId: userId!, page: 1, limit: 12 },
+    { userId: userId!, page: 1, limit: 50 },
     { skip: !userId },
   );
 
@@ -47,10 +49,13 @@ const Channel = () => {
     { skip: !userId },
   );
 
-  const { data: liveResult } = useGetLiveStreamsQuery({});
+  const { data: channelStreams } = useGetStreamsByUserQuery(
+    { userId: userId!, page: 1, limit: 12 },
+    { skip: !userId },
+  );
 
-  const liveStream = liveResult?.streams?.find(
-    (s: Stream) => typeof s.userId === "object" && s.userId._id === userId,
+  const liveStream = channelStreams?.streams?.find(
+    (stream: Stream) => stream.isLive,
   );
 
   const isFollowing =
@@ -59,12 +64,20 @@ const Channel = () => {
     ) ?? false;
 
   const handleFollow = async () => {
+    setFollowError("");
     if (!userId) return;
+    if (!authUser) {
+      setFollowError("Bạn cần đăng nhập để follow kênh này.");
+      return;
+    }
     try {
       if (isFollowing) await unfollowUser(userId).unwrap();
       else await followUser(userId).unwrap();
-    } catch (err) {
-      console.error(err);
+    } catch (requestError) {
+      const apiError = requestError as { data?: { message?: string } };
+      setFollowError(
+        apiError.data?.message || "Không thể cập nhật trạng thái follow.",
+      );
     }
   };
 
@@ -86,15 +99,29 @@ const Channel = () => {
         isOwnChannel={userId === authUser?._id}
         isFollowing={isFollowing}
         onFollow={handleFollow}
+        followLoading={isFollowingUser || isUnfollowingUser}
         vodCount={vodVideos.length}
         clipCount={clipVideos.length}
       />
 
-      <div className="channel__tabs">
+      {followError && (
+        <p className="channel__error" role="alert">
+          {followError}
+        </p>
+      )}
+
+      <div
+        className="channel__tabs"
+        role="tablist"
+        aria-label="Channel sections"
+      >
         {(["VODs", "Clips", "Schedule", "About"] as TabType[]).map((tab) => (
           <button
             key={tab}
             className={`channel__tab ${activeTab === tab ? "channel__tab--active" : ""}`}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab}
             onClick={() => setActiveTab(tab)}
           >
             {tab}

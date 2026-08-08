@@ -1,252 +1,332 @@
+import Stripe from "stripe";
+import mongoose from "mongoose";
 import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
 import User from "../models/User.model.js";
 import TopUp from "../models/TopUp.model.js";
 import Donation from "../models/Donation.model.js";
-import Stripe from "stripe";
-import { io } from "../../index.js";
+import Stream from "../models/Stream.model.js";
+import { createNotification } from "./NotificationController.controller.js";
 
-const COIN_RATE = 100;
+const COIN_PACKAGES = Object.freeze([
+  { id: 1, coins: 100, price: 1, bonus: 0, label: "Starter" },
+  { id: 2, coins: 500, price: 5, bonus: 50, label: "Basic" },
+  { id: 3, coins: 1000, price: 10, bonus: 150, label: "Popular" },
+  { id: 4, coins: 2000, price: 20, bonus: 400, label: "Pro" },
+  { id: 5, coins: 5000, price: 50, bonus: 1500, label: "Elite" },
+]);
 
-// ─────────────────────────────────────────────
-// @desc    Get coin packages
-// @route   GET /api/coins/packages
-// @access  Public
-// ─────────────────────────────────────────────
+const getStripe = () => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    const error = new Error("Stripe is not configured");
+    error.statusCode = 503;
+    throw error;
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY);
+};
+
+const paymentMatchesTopUp = (paymentIntent, topUp) =>
+  paymentIntent.status === "succeeded" &&
+  paymentIntent.currency === "usd" &&
+  paymentIntent.amount === Math.round(topUp.amount * 100) &&
+  paymentIntent.metadata.userId === topUp.userId.toString() &&
+  paymentIntent.metadata.coins === topUp.coins.toString();
+
+const completeTopUp = async (topUp) => {
+  const session = await mongoose.startSession();
+  let user;
+
+  try {
+    await session.withTransaction(async () => {
+      const claimed = await TopUp.findOneAndUpdate(
+        { _id: topUp._id, status: "pending" },
+        { $set: { status: "completed" } },
+        { new: true, session },
+      );
+
+      if (!claimed) {
+        user = await User.findById(topUp.userId)
+          .select("coins")
+          .session(session);
+        return;
+      }
+
+      user = await User.findByIdAndUpdate(
+        topUp.userId,
+        { $inc: { coins: topUp.coins } },
+        { new: true, runValidators: true, session },
+      ).select("coins");
+
+      if (!user) {
+        const error = new Error("User not found");
+        error.statusCode = 404;
+        throw error;
+      }
+    });
+
+    return user;
+  } finally {
+    await session.endSession();
+  }
+};
+
 const getCoinPackages = asyncHandler(async (req, res) => {
-  const packages = [
-    { id: 1, coins: 100, price: 1, bonus: 0, label: "Starter" },
-    { id: 2, coins: 500, price: 5, bonus: 50, label: "Basic" },
-    { id: 3, coins: 1000, price: 10, bonus: 150, label: "Popular" },
-    { id: 4, coins: 2000, price: 20, bonus: 400, label: "Pro" },
-    { id: 5, coins: 5000, price: 50, bonus: 1500, label: "Elite" },
-  ];
-  res.status(200).json(packages);
+  res.status(200).json(COIN_PACKAGES);
 });
 
-// ─────────────────────────────────────────────
-// @desc    Create payment intent for top up
-// @route   POST /api/coins/topup
-// @access  Private
-// ─────────────────────────────────────────────
 const createTopUp = asyncHandler(async (req, res) => {
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-  const { packageId } = req.body;
-  const userId = req.user._id;
-
-  const packages = [
-    { id: 1, coins: 100, price: 1, bonus: 0 },
-    { id: 2, coins: 500, price: 5, bonus: 50 },
-    { id: 3, coins: 1000, price: 10, bonus: 150 },
-    { id: 4, coins: 2000, price: 20, bonus: 400 },
-    { id: 5, coins: 5000, price: 50, bonus: 1500 },
-  ];
-
-  const selectedPackage = packages.find((p) => p.id === packageId);
+  const packageId = Number(req.body.packageId);
+  const selectedPackage = COIN_PACKAGES.find((item) => item.id === packageId);
   if (!selectedPackage) {
     res.status(400);
-    throw new Error("Invalid package");
+    throw new Error("Invalid coin package");
   }
 
   const totalCoins = selectedPackage.coins + selectedPackage.bonus;
-
+  const stripe = getStripe();
   const paymentIntent = await stripe.paymentIntents.create({
-    amount: selectedPackage.price * 100, // cents
+    amount: Math.round(selectedPackage.price * 100),
     currency: "usd",
-    metadata: { userId: userId.toString(), coins: totalCoins.toString() },
+    automatic_payment_methods: { enabled: true, allow_redirects: "never" },
+    metadata: {
+      userId: req.user._id.toString(),
+      coins: totalCoins.toString(),
+      packageId: packageId.toString(),
+    },
   });
 
-  const topUp = new TopUp({
-    userId,
-    amount: selectedPackage.price,
-    coins: totalCoins,
-    stripePaymentIntentId: paymentIntent.id,
-    status: "pending",
-  });
-
-  await topUp.save();
+  try {
+    await TopUp.create({
+      userId: req.user._id,
+      amount: selectedPackage.price,
+      coins: totalCoins,
+      stripePaymentIntentId: paymentIntent.id,
+      status: "pending",
+    });
+  } catch (error) {
+    await stripe.paymentIntents
+      .cancel(paymentIntent.id)
+      .catch((cancelError) => {
+        console.error(
+          "Failed to cancel orphaned payment intent:",
+          cancelError.message,
+        );
+      });
+    throw error;
+  }
 
   res.status(200).json({
     clientSecret: paymentIntent.client_secret,
+    paymentIntentId: paymentIntent.id,
     coins: totalCoins,
     price: selectedPackage.price,
   });
 });
 
-// ─────────────────────────────────────────────
-// @desc    Confirm top up after payment success
-// @route   POST /api/coins/topup/confirm
-// @access  Private
-// ─────────────────────────────────────────────
 const confirmTopUp = asyncHandler(async (req, res) => {
-  const { paymentIntentId } = req.body;
-  const userId = req.user._id;
+  const paymentIntentId = String(req.body.paymentIntentId || "").trim();
+  if (!paymentIntentId) {
+    res.status(400);
+    throw new Error("Payment intent id is required");
+  }
 
   const topUp = await TopUp.findOne({
     stripePaymentIntentId: paymentIntentId,
-    userId,
+    userId: req.user._id,
   });
-
   if (!topUp) {
     res.status(404);
-    throw new Error("TopUp not found");
+    throw new Error("Top up not found");
   }
 
-  if (topUp.status === "completed") {
-    res.status(400);
-    throw new Error("TopUp already confirmed");
+  const paymentIntent =
+    await getStripe().paymentIntents.retrieve(paymentIntentId);
+  if (paymentIntent.metadata.userId !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error("Payment does not belong to this account");
+  }
+  if (!paymentMatchesTopUp(paymentIntent, topUp)) {
+    res.status(409);
+    throw new Error("Payment details do not match this top up");
   }
 
-  // Update topup status
-  topUp.status = "completed";
-  await topUp.save();
-
-  // Add coins to user
-  const user = await User.findByIdAndUpdate(
-    userId,
-    { $inc: { coins: topUp.coins } },
-    { new: true },
-  );
-
-  res.status(200).json({
-    message: "Top up successful",
-    coins: user.coins,
-  });
+  const user = await completeTopUp(topUp);
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+  res.status(200).json({ message: "Top up successful", coins: user.coins });
 });
 
-// ─────────────────────────────────────────────
-// @desc    Get user coin balance
-// @route   GET /api/coins/balance
-// @access  Private
-// ─────────────────────────────────────────────
 const getCoinBalance = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id);
-  res.status(200).json({ coins: user.coins });
+  const user = await User.findById(req.user._id).select("coins");
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+  res.status(200).json({ coins: user.coins ?? 0 });
 });
 
-// ─────────────────────────────────────────────
-// @desc    Donate coins to streamer
-// @route   POST /api/coins/donate
-// @access  Private
-// ─────────────────────────────────────────────
 const donateCoins = asyncHandler(async (req, res) => {
-  const { toUserId, coins, message } = req.body;
+  const toUserId = String(req.body.toUserId || "").trim();
+  const coins = Number(req.body.coins);
+  const message = String(req.body.message || "")
+    .trim()
+    .slice(0, 200);
   const fromUserId = req.user._id;
 
-  if (!toUserId || !coins || coins < 1) {
+  if (!mongoose.isValidObjectId(toUserId)) {
     res.status(400);
-    throw new Error("Invalid donation data");
+    throw new Error("Invalid streamer id");
   }
-
+  if (!Number.isSafeInteger(coins) || coins < 1 || coins > 1_000_000) {
+    res.status(400);
+    throw new Error("Invalid donation amount");
+  }
   if (fromUserId.toString() === toUserId) {
     res.status(400);
     throw new Error("Cannot donate to yourself");
   }
 
-  // Check sender balance
-  const sender = await User.findById(fromUserId);
-  if (sender.coins < coins) {
-    res.status(400);
-    throw new Error("Insufficient coins");
+  const session = await mongoose.startSession();
+  let donation;
+  let sender;
+  let receiver;
+
+  try {
+    await session.withTransaction(async () => {
+      receiver = await User.findOne({ _id: toUserId, isActive: true })
+        .select("username displayName")
+        .session(session);
+      if (!receiver) {
+        const error = new Error("Streamer not found");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      sender = await User.findOneAndUpdate(
+        { _id: fromUserId, coins: { $gte: coins }, isActive: true },
+        { $inc: { coins: -coins } },
+        { new: true, runValidators: true, session },
+      ).select("username displayName avatar coins");
+      if (!sender) {
+        const error = new Error("Insufficient coins");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      await User.findByIdAndUpdate(
+        toUserId,
+        { $inc: { coins } },
+        { runValidators: true, session },
+      );
+
+      [donation] = await Donation.create(
+        [{ fromUserId, toUserId, coins, message, status: "completed" }],
+        { session },
+      );
+    });
+  } finally {
+    await session.endSession();
   }
 
-  // Check receiver exists
-  const receiver = await User.findById(toUserId);
-  if (!receiver) {
-    res.status(404);
-    throw new Error("Streamer not found");
+  // Realtime/UI side effects happen only after the database transaction has
+  // committed. Their failure must not roll back or misreport a completed
+  // transfer to the client.
+  try {
+    await createNotification({
+      userId: toUserId,
+      fromUserId,
+      type: "donate",
+      message: `${sender.displayName || sender.username} đã donate ${coins} xu cho bạn`,
+      link: `/profile/${fromUserId}`,
+    });
+  } catch (error) {
+    console.error("Failed to create donation notification:", error.message);
   }
 
-  // Deduct coins from sender
-  await User.findByIdAndUpdate(fromUserId, { $inc: { coins: -coins } });
-
-  // Add coins to receiver
-  await User.findByIdAndUpdate(toUserId, { $inc: { coins: coins } });
-
-  // Save donation record
-  const donation = new Donation({
-    fromUserId,
-    toUserId,
-    coins,
-    message: message || "",
-    status: "completed",
-  });
-  await donation.save();
-
-  // TODO: Socket.io notify streamer
-  io.to(`stream:${toUserId}`).email("donation-received", {
-    fromUsername: sender.userName,
-    fromAvatar: sender.avatar,
-    coins,
-    message: message || "",
-    timestamp: new Date(),
-  });
+  try {
+    const liveStream = await Stream.findOne({
+      userId: toUserId,
+      isLive: true,
+    }).select("_id");
+    if (liveStream) {
+      req.app
+        .get("io")
+        ?.to(`stream:${liveStream._id}`)
+        .emit("donation-received", {
+          id: donation._id.toString(),
+          fromUsername: sender.displayName || sender.username,
+          fromAvatar: sender.avatar,
+          coins,
+          message,
+          timestamp:
+            donation.createdAt?.toISOString?.() || new Date().toISOString(),
+        });
+    }
+  } catch (error) {
+    console.error("Failed to broadcast donation:", error.message);
+  }
 
   res.status(200).json({
     message: "Donation successful",
-    coins: sender.coins - coins,
+    coins: sender.coins,
+    receiver: receiver.displayName || receiver.username,
   });
 });
 
-// ─────────────────────────────────────────────
-// @desc    Get donation history
-// @route   GET /api/coins/donations
-// @access  Private
-// ─────────────────────────────────────────────
 const getDonationHistory = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-
-  const sent = await Donation.find({ fromUserId: userId })
-    .populate("toUserId", "username displayName avatar")
-    .sort({ createdAt: -1 })
-    .limit(20);
-
-  const received = await Donation.find({ toUserId: userId })
-    .populate("fromUserId", "username displayName avatar")
-    .sort({ createdAt: -1 })
-    .limit(20);
-
+  const [sent, received] = await Promise.all([
+    Donation.find({ fromUserId: userId })
+      .populate("toUserId", "username displayName avatar")
+      .sort({ createdAt: -1 })
+      .limit(20),
+    Donation.find({ toUserId: userId })
+      .populate("fromUserId", "username displayName avatar")
+      .sort({ createdAt: -1 })
+      .limit(20),
+  ]);
   res.status(200).json({ sent, received });
 });
 
-// ─────────────────────────────────────────────
-// @desc    Handle Stripe webhook
-// @route   POST /api/coins/webhook
-// @access  Public (Stripe calls this)
-// ─────────────────────────────────────────────
 const handleWebhook = asyncHandler(async (req, res) => {
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-  const sig = req.headers["stripe-signature"];
+  const signature = req.headers["stripe-signature"];
+  if (!signature || !process.env.STRIPE_WEBHOOK_SECRET) {
+    return res.status(400).send("Missing webhook signature or secret");
+  }
 
   let event;
   try {
-    event = stripe.webhooks.constructEvent(
+    event = getStripe().webhooks.constructEvent(
       req.body,
-      sig,
+      signature,
       process.env.STRIPE_WEBHOOK_SECRET,
     );
-  } catch (err) {
-    console.log("Webhook signature failed:", err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+  } catch (error) {
+    return res.status(400).send(`Webhook Error: ${error.message}`);
   }
 
   if (event.type === "payment_intent.succeeded") {
     const paymentIntent = event.data.object;
-    const { userId, coins } = paymentIntent.metadata;
-
     const topUp = await TopUp.findOne({
       stripePaymentIntentId: paymentIntent.id,
     });
-
-    if (topUp && topUp.status !== "completed") {
-      topUp.status = "completed";
-      await topUp.save();
-
-      await User.findByIdAndUpdate(userId, {
-        $inc: { coins: parseInt(coins) },
-      });
-
-      console.log(`Webhook: Added ${coins} coins to user ${userId}`);
+    if (topUp && paymentMatchesTopUp(paymentIntent, topUp)) {
+      await completeTopUp(topUp);
+    } else if (topUp) {
+      console.error(
+        `Rejected mismatched Stripe payment intent ${paymentIntent.id}`,
+      );
+      await TopUp.updateOne(
+        { _id: topUp._id, status: "pending" },
+        { $set: { status: "failed" } },
+      );
     }
+  } else if (event.type === "payment_intent.payment_failed") {
+    await TopUp.findOneAndUpdate(
+      { stripePaymentIntentId: event.data.object.id, status: "pending" },
+      { status: "failed" },
+    );
   }
 
   res.status(200).json({ received: true });

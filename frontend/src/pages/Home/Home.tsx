@@ -3,7 +3,7 @@ import Hero from "./components/Hero/Hero";
 import Leaderboard from "./components/Leaderboard/Leaderboard";
 import LiveNow from "./components/LiveNow/LiveNow";
 import Recommended from "./components/Recommended/Recommended";
-import "./Home.css"
+import "./Home.css";
 
 const Home = () => {
   return (

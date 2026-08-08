@@ -1,6 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import jwt from "jsonwebtoken";
+import User from "../../models/User.model.js";
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || "test-secret";
 
@@ -12,7 +13,16 @@ const makeSocket = (cookieHeader) => ({
 });
 
 describe("socketAuth", () => {
-  test("resolves userId from a valid jwt cookie", (t, done) => {
+  test("resolves an active user from a valid jwt cookie", (t, done) => {
+    t.mock.method(User, "findById", () => ({
+      select: async () => ({
+        _id: { toString: () => "user-1" },
+        username: "viewer",
+        displayName: "Viewer",
+        avatar: null,
+        isActive: true,
+      }),
+    }));
     const token = jwt.sign({ userId: "user-1" }, process.env.JWT_SECRET);
     const socket = makeSocket(`jwt=${token}; other=1`);
 

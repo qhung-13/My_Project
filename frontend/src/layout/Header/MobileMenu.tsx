@@ -12,22 +12,39 @@ interface Props {
   setDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
   onLogin: () => void;
   onRegister: () => void;
+  onClose: () => void;
 }
 
-const MobileMenu = ({ darkMode, setDarkMode, onLogin, onRegister }: Props) => {
+const MobileMenu = ({
+  darkMode,
+  setDarkMode,
+  onLogin,
+  onRegister,
+  onClose,
+}: Props) => {
   const [showGoLive, setShowGoLive] = useState(false);
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const [logout] = useLogoutMutation();
+  const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
+
+  const navigateAndClose = (path: string) => {
+    navigate(path);
+    onClose();
+  };
 
   const handleLogout = async () => {
     try {
       await logout(undefined).unwrap();
     } catch (error) {
-      console.error("Logout request failed:", error);
+      console.error(
+        "Logout request failed; clearing local session anyway.",
+        error,
+      );
+    } finally {
+      dispatch(clearUser());
+      navigateAndClose("/home");
     }
-    dispatch(clearUser());
   };
 
   return (
@@ -35,11 +52,12 @@ const MobileMenu = ({ darkMode, setDarkMode, onLogin, onRegister }: Props) => {
       <ul className="mobile-menu__list">
         <li className="mobile-menu__item">
           <button
+            type="button"
             className="mobile-menu__link"
             onClick={() => {
-              if (isAuthenticated) {
-                setShowGoLive(true);
-              } else {
+              if (isAuthenticated) setShowGoLive(true);
+              else {
+                onClose();
                 onLogin();
               }
             }}
@@ -47,14 +65,14 @@ const MobileMenu = ({ darkMode, setDarkMode, onLogin, onRegister }: Props) => {
             Go Live
           </button>
         </li>
-        <li className="mobile-menu__item">
+        <li className="mobile-menu__item mobile-menu__item--actions">
           <button
+            type="button"
             className="mobile-menu__link"
-            onClick={() => setDarkMode((prev) => !prev)}
+            onClick={() => setDarkMode((current) => !current)}
           >
             {darkMode ? "Light Mode" : "Dark Mode"}
           </button>
-
           {isAuthenticated && <NotificationBell />}
         </li>
 
@@ -62,31 +80,47 @@ const MobileMenu = ({ darkMode, setDarkMode, onLogin, onRegister }: Props) => {
           <>
             <li className="mobile-menu__item">
               <button
+                type="button"
                 className="mobile-menu__link"
-                onClick={() => navigate("/profile/me")}
+                onClick={() => navigateAndClose("/profile/me")}
               >
                 👤 Profile
               </button>
             </li>
             <li className="mobile-menu__item">
               <button
-                className="mobile-menu__link"
-                style={{ color: "#ef4444" }}
+                type="button"
+                className="mobile-menu__link mobile-menu__link--danger"
                 onClick={handleLogout}
+                disabled={isLoggingOut}
               >
-                🚪 Logout
+                🚪 {isLoggingOut ? "Logging out..." : "Logout"}
               </button>
             </li>
           </>
         ) : (
           <>
             <li className="mobile-menu__item">
-              <button className="mobile-menu__link" onClick={onLogin}>
+              <button
+                type="button"
+                className="mobile-menu__link"
+                onClick={() => {
+                  onClose();
+                  onLogin();
+                }}
+              >
                 Login
               </button>
             </li>
             <li className="mobile-menu__item">
-              <button className="mobile-menu__link" onClick={onRegister}>
+              <button
+                type="button"
+                className="mobile-menu__link"
+                onClick={() => {
+                  onClose();
+                  onRegister();
+                }}
+              >
                 Sign Up
               </button>
             </li>

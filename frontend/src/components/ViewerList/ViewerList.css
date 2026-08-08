@@ -83,3 +83,22 @@
   font-size: 13px;
   color: var(--text-primary);
 }
+.viewer-list__overlay {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  background: rgba(15, 23, 42, 0.36);
+}
+
+.viewer-list__panel {
+  max-width: 88vw;
+  outline: none;
+}
+
+.viewer-item__avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}

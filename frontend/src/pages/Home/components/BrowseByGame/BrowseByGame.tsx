@@ -1,8 +1,8 @@
-import "./BrowseByGame.css";
-import { formatViewers } from "../../../../utils/format";
-import { useGetLiveStreamsQuery } from "../../../../store/api/streamApi";
 import { useNavigate } from "react-router-dom";
+import { useGetLiveStreamsQuery } from "../../../../store/api/streamApi";
 import type { Stream } from "../../../../types/index";
+import { formatViewers } from "../../../../utils/format";
+import "./BrowseByGame.css";
 
 const GAME_COLORS: Record<string, string> = {
   Valorant: "#1a0a2e",
@@ -17,67 +17,57 @@ const GAME_COLORS: Record<string, string> = {
 
 const BrowseByGame = () => {
   const navigate = useNavigate();
-  const { data: result } = useGetLiveStreamsQuery({});
-
-  // Tính tổng viewers theo game từ live streams
+  const { data } = useGetLiveStreamsQuery({ page: 1, limit: 50 });
   const gameMap = new Map<string, number>();
-  (result?.streams || []).forEach((stream: Stream) => {
-    const game = stream.category;
-    if (!game) return;
-    gameMap.set(game, (gameMap.get(game) || 0) + stream.viewers);
+  (data?.streams ?? []).forEach((stream: Stream) => {
+    const game = stream.category?.trim();
+    if (game)
+      gameMap.set(game, (gameMap.get(game) ?? 0) + Math.max(0, stream.viewers));
   });
-
-  // Convert sang array và sort theo viewers
-  const games = Array.from(gameMap.entries())
+  const games = [...gameMap.entries()]
     .map(([name, viewers]) => ({ name, viewers }))
-    .sort((a, b) => b.viewers - a.viewers)
+    .sort((first, second) => second.viewers - first.viewers)
     .slice(0, 6);
 
-  // Nếu không có stream thật thì dùng data mặc định
-  const displayGames =
-    games.length > 0
-      ? games
-      : [
-          { name: "Valorant", viewers: 0 },
-          { name: "LOL", viewers: 0 },
-          { name: "PUBG", viewers: 0 },
-          { name: "CS2", viewers: 0 },
-          { name: "Dota 2", viewers: 0 },
-          { name: "FIFA", viewers: 0 },
-        ];
+  if (games.length === 0) return null;
 
   return (
-    <div className="browse">
+    <section className="browse" aria-labelledby="browse-heading">
       <div className="browse__header">
-        <span className="browse__title">Browse by Game</span>
-        <button className="browse__more" onClick={() => navigate("/game")}>
+        <h2 id="browse-heading" className="browse__title">
+          Khám phá theo game
+        </h2>
+        <button
+          type="button"
+          className="browse__more"
+          onClick={() => navigate("/game")}
+        >
           Xem tất cả
         </button>
       </div>
 
       <div className="browse__scroll">
-        {displayGames.map((game) => (
-          <div
+        {games.map((game) => (
+          <button
+            type="button"
             className="game-card"
             key={game.name}
-            onClick={() => navigate(`/search?q=${game.name}`)}
-            style={{ cursor: "pointer" }}
+            onClick={() => navigate(`/game/${encodeURIComponent(game.name)}`)}
+            aria-label={`Xem stream ${game.name}`}
           >
-            <div
+            <span
               className="game-card__poster"
               style={{ background: GAME_COLORS[game.name] || "#1a1a2e" }}
             >
               <span className="game-card__name">{game.name}</span>
               <span className="game-card__viewers">
-                {game.viewers > 0
-                  ? `${formatViewers(game.viewers)} viewers`
-                  : "No streams"}
+                {formatViewers(game.viewers)} người xem
               </span>
-            </div>
-          </div>
+            </span>
+          </button>
         ))}
       </div>
-    </div>
+    </section>
   );
 };
 

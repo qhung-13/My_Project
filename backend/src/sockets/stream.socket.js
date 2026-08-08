@@ -4,46 +4,64 @@ import {
   getViewersForStream,
 } from "./presence.store.js";
 
-const broadcastPresence = (io, streamId) => {
-  const viewerCount =
-    io.sockets.adapter.rooms.get(`stream:${streamId}`)?.size || 0;
-  io.to(`stream:${streamId}`).emit("viewer-count", viewerCount);
-  io.to(`stream:${streamId}`).emit(
-    "viewer-list",
-    getViewersForStream(streamId),
-  );
+const normalizeStreamId = (value) =>
+  String(value || "")
+    .trim()
+    .slice(0, 100);
+
+const broadcastPresence = async (io, streamId) => {
+  const viewers = await getViewersForStream(streamId);
+  io.to(`stream:${streamId}`).emit("viewer-count", viewers.length);
+  io.to(`stream:${streamId}`).emit("viewer-list", viewers);
 };
 
-/**
- * Registers "join-stream" / "leave-stream" / "disconnect" presence handlers
- * for a single connected socket.
- */
 const registerStreamPresenceHandlers = (io, socket) => {
-  socket.on("join-stream", (streamId, userData) => {
-    socket.join(`stream:${streamId}`);
+  socket.on("join-stream", async (rawStreamId) => {
+    try {
+      const streamId = normalizeStreamId(rawStreamId);
+      if (!streamId) return;
 
-    // Trust the server-verified identity from the auth middleware when
-    // available; fall back to the client-provided display info only for
-    // anonymous viewers.
-    addViewer(socket.id, {
-      ...userData,
-      userId: socket.data.userId || userData?.userId || "anonymous",
-      streamId,
-    });
+      // A socket can only represent one active stream presence at a time.
+      const previous = await removeViewer(socket.id);
+      if (previous?.streamId && previous.streamId !== streamId) {
+        socket.leave(`stream:${previous.streamId}`);
+        await broadcastPresence(io, previous.streamId);
+      }
 
-    broadcastPresence(io, streamId);
+      socket.join(`stream:${streamId}`);
+      await addViewer(socket.id, {
+        userId: socket.data.userId || `anonymous:${socket.id}`,
+        username: socket.data.username || `Guest-${socket.id.slice(0, 4)}`,
+        avatar: socket.data.userId ? socket.data.avatar || null : null,
+        streamId,
+      });
+      await broadcastPresence(io, streamId);
+    } catch (error) {
+      console.error("join-stream failed:", error);
+      socket.emit("presence-error", {
+        message: "Unable to join stream presence",
+      });
+    }
   });
 
-  socket.on("leave-stream", (streamId) => {
-    socket.leave(`stream:${streamId}`);
-    removeViewer(socket.id);
-    broadcastPresence(io, streamId);
+  socket.on("leave-stream", async (rawStreamId) => {
+    try {
+      const removed = await removeViewer(socket.id);
+      const streamId = removed?.streamId || normalizeStreamId(rawStreamId);
+      if (!streamId) return;
+      socket.leave(`stream:${streamId}`);
+      await broadcastPresence(io, streamId);
+    } catch (error) {
+      console.error("leave-stream failed:", error);
+    }
   });
 
-  socket.on("disconnect", () => {
-    const data = removeViewer(socket.id);
-    if (data?.streamId) {
-      broadcastPresence(io, data.streamId);
+  socket.on("disconnect", async () => {
+    try {
+      const removed = await removeViewer(socket.id);
+      if (removed?.streamId) await broadcastPresence(io, removed.streamId);
+    } catch (error) {
+      console.error("disconnect presence cleanup failed:", error);
     }
   });
 };

@@ -18,12 +18,15 @@ const renderWithAuth = (
   authState: {
     user: (typeof baseUser & { role: string }) | null;
     isAuthenticated: boolean;
+    isInitialized?: boolean;
   },
   { adminOnly = false } = {},
 ) => {
   const store = configureStore({
     reducer: { auth: authReducer },
-    preloadedState: { auth: authState },
+    preloadedState: {
+      auth: { ...authState, isInitialized: authState.isInitialized ?? true },
+    },
   });
 
   return render(

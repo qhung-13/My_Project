@@ -13,11 +13,7 @@ import { donateLimiter } from "../middlewares/RateLimiting.middleware.js";
 
 const router = express.Router();
 
-router.post(
-  "/webhook",
-  express.raw({ type: "application/json" }),
-  handleWebhook,
-);
+router.post("/webhook", handleWebhook);
 
 router.get("/packages", getCoinPackages);
 router.get("/balance", protect, getCoinBalance);

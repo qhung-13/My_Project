@@ -1,295 +1,315 @@
+import mongoose from "mongoose";
 import Video from "../models/Video.model.js";
+import Comment from "../models/Comment.model.js";
 import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
+import destroyCloudinaryAsset from "../utils/cloudinaryAssets.js";
 
-// ─────────────────────────────────────────────
-// @desc    Create a new video
-// @route   POST /api/videos
-// @access  Private
-// ─────────────────────────────────────────────
-const createVideo = asyncHandler(async (req, res) => {
-  const { title, description, duration, category, tags, type } = req.body;
-  const userId = req.user._id;
-
-  if (!title || !description || !duration || !category) {
-    res.status(400);
-    throw new Error("Please fill all fields");
+const VIEW_TTL_MS = 24 * 60 * 60 * 1000;
+const MAX_VIEW_SESSIONS = 100_000;
+const viewedSessions = new Map();
+const cleanupViewSessions = () => {
+  const now = Date.now();
+  for (const [key, expiresAt] of viewedSessions) {
+    if (expiresAt <= now) viewedSessions.delete(key);
   }
+};
+setInterval(cleanupViewSessions, 60 * 60 * 1000).unref();
 
-  // Lấy URL từ Cloudinary sau khi upload
-  const videoUrl = req.file?.path || null;
+const paginationFrom = (query) => {
+  const page = Math.max(1, Number.parseInt(query.page, 10) || 1);
+  const limit = Math.min(
+    50,
+    Math.max(1, Number.parseInt(query.limit, 10) || 12),
+  );
+  return { page, limit, skip: (page - 1) * limit };
+};
+
+const parseTags = (value) => {
+  const raw = Array.isArray(value) ? value : String(value || "").split(",");
+  return [...new Set(raw.map((tag) => String(tag).trim()).filter(Boolean))]
+    .slice(0, 10)
+    .map((tag) => tag.slice(0, 30));
+};
+
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const createVideo = asyncHandler(async (req, res) => {
+  const title = String(req.body.title || "").trim();
+  const description = String(req.body.description || "").trim();
+  const category = String(req.body.category || "").trim();
+  const duration = Number(req.body.duration);
+  const type = req.body.type === "vod" ? "vod" : "clip";
+  const videoUrl = req.file?.path;
+  const videoPublicId = req.file?.filename;
+
+  if (
+    !title ||
+    !description ||
+    !category ||
+    !Number.isFinite(duration) ||
+    duration <= 0
+  ) {
+    await destroyCloudinaryAsset(videoPublicId, "video");
+    res.status(400);
+    throw new Error(
+      "Title, description, category, and a valid duration are required",
+    );
+  }
   if (!videoUrl) {
     res.status(400);
     throw new Error("Please upload a video");
   }
 
-  const newVideo = new Video({
-    userId,
-    title,
-    description,
-    videoUrl,
-    duration,
-    category,
-    tags: tags ? tags.split(",") : [],
-    type: type || "clip",
-    status: "processing",
-  });
-
-  await newVideo.save();
-
-  res.status(201).json({
-    _id: newVideo._id,
-    userId: newVideo.userId,
-    title: newVideo.title,
-    description: newVideo.description,
-    videoUrl: newVideo.videoUrl,
-    duration: newVideo.duration,
-    category: newVideo.category,
-    tags: newVideo.tags,
-    status: newVideo.status,
-  });
+  try {
+    const video = await Video.create({
+      userId: req.user._id,
+      title: title.slice(0, 150),
+      description: description.slice(0, 2000),
+      videoUrl,
+      videoPublicId,
+      duration,
+      category: category.slice(0, 60),
+      tags: parseTags(req.body.tags),
+      type,
+      status: "public",
+    });
+    res.status(201).json(video);
+  } catch (error) {
+    await destroyCloudinaryAsset(videoPublicId, "video");
+    throw error;
+  }
 });
 
-// ─────────────────────────────────────────────
-// @desc    Get all public videos
-// @route   GET /api/videos
-// @access  Public
-// ─────────────────────────────────────────────
-const getVideos = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 12;
-  const skip = (page - 1) * limit;
-
+const listVideos = async (filter, req, res) => {
+  const { page, limit, skip } = paginationFrom(req.query);
   const [videos, total] = await Promise.all([
-    Video.find({ status: "public" })
+    Video.find(filter)
       .populate("userId", "username displayName avatar")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
-    Video.countDocuments({ status: "public" }),
+    Video.countDocuments(filter),
   ]);
-
+  const totalPages = Math.ceil(total / limit);
   res.status(200).json({
     videos,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-      hasMore: page < Math.ceil(total / limit),
-    },
+    pagination: { page, limit, total, totalPages, hasMore: page < totalPages },
   });
-});
-// ─────────────────────────────────────────────
-// @desc    Get a single video by ID
-// @route   GET /api/videos/:id
-// @access  Public
-// ─────────────────────────────────────────────
-const getVideoById = asyncHandler(async (req, res) => {
-  const video = await Video.findById(req.params.id).populate(
-    "userId",
-    "username displayName avatar",
-  );
+};
 
+const getVideos = asyncHandler(async (req, res) =>
+  listVideos({ status: "public" }, req, res),
+);
+
+const getVideoById = asyncHandler(async (req, res) => {
+  const video = await Video.findOne({
+    _id: req.params.id,
+    status: { $ne: "processing" },
+  }).populate("userId", "username displayName avatar");
   if (!video) {
     res.status(404);
     throw new Error("Video not found");
   }
-
   res.status(200).json(video);
 });
 
-const viewedSessions = new Set();
 const increaseView = asyncHandler(async (req, res) => {
   const videoId = req.params.id;
-
-  const identifier = req.user?._id
-    ? `${req.user._id}:${videoId}`
-    : `${req.ip}:${videoId}`;
-  if (viewedSessions.has(identifier)) {
+  const identifier = `${req.ip || "unknown"}:${videoId}`;
+  const currentExpiry = viewedSessions.get(identifier);
+  if (currentExpiry && currentExpiry > Date.now()) {
     return res.status(200).json({ success: true, skipped: true });
   }
 
-  const video = await Video.findById(videoId);
+  const video = await Video.findOneAndUpdate(
+    { _id: videoId, status: "public" },
+    { $inc: { views: 1 } },
+    { new: true },
+  ).select("views");
   if (!video) {
     res.status(404);
     throw new Error("Video not found");
   }
-
-  video.views += 1;
-  await video.save();
-
-  viewedSessions.add(identifier);
-  setTimeout(() => viewedSessions.delete(identifier), 24 * 60 * 60 * 1000);
-
-  res.status(200).json({ success: true });
+  viewedSessions.set(identifier, Date.now() + VIEW_TTL_MS);
+  cleanupViewSessions();
+  while (viewedSessions.size > MAX_VIEW_SESSIONS) {
+    const oldestKey = viewedSessions.keys().next().value;
+    if (!oldestKey) break;
+    viewedSessions.delete(oldestKey);
+  }
+  res.status(200).json({ success: true, views: video.views });
 });
 
-// ─────────────────────────────────────────────
-// @desc    Get videos by user ID
-// @route   GET /api/videos/user/:userId
-// @access  Public
-// ─────────────────────────────────────────────
-const getVideosByUser = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 12;
-  const skip = (page - 1) * limit;
+const getVideosByUser = asyncHandler(async (req, res) =>
+  listVideos({ userId: req.params.userId, status: "public" }, req, res),
+);
 
-  const [videos, total] = await Promise.all([
-    Video.find({ userId: req.params.userId, status: "public" })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit),
-    Video.countDocuments({ userId: req.params.userId, status: "public" }),
-  ]);
-
-  res.status(200).json({
-    videos,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-      hasMore: page < Math.ceil(total / limit),
-    },
-  });
-});
-
-// ─────────────────────────────────────────────
-// @desc    Update a video
-// @route   PUT /api/videos/:id
-// @access  Private
-// ─────────────────────────────────────────────
 const updateVideo = asyncHandler(async (req, res) => {
   const video = await Video.findById(req.params.id);
-
   if (!video) {
     res.status(404);
     throw new Error("Video not found");
   }
-
-  if (video.userId.toString() !== req.user._id.toString()) {
+  if (
+    video.userId.toString() !== req.user._id.toString() &&
+    req.user.role !== "admin"
+  ) {
     res.status(403);
     throw new Error("Not authorized to update this video");
   }
 
-  video.title = req.body.title || video.title;
-  video.description = req.body.description || video.description;
-  video.thumbnailUrl = req.file?.path || video.thumbnailUrl; // Từ Cloudinary
-  video.category = req.body.category || video.category;
-  video.tags = req.body.tags ? req.body.tags.split(",") : video.tags;
-  video.status = req.body.status || video.status;
+  if (Object.hasOwn(req.body, "title")) {
+    const title = String(req.body.title || "").trim();
+    if (!title) {
+      res.status(400);
+      throw new Error("Title cannot be empty");
+    }
+    video.title = title.slice(0, 150);
+  }
+  if (Object.hasOwn(req.body, "description")) {
+    video.description = String(req.body.description || "")
+      .trim()
+      .slice(0, 2000);
+  }
+  if (Object.hasOwn(req.body, "category")) {
+    const category = String(req.body.category || "").trim();
+    if (!category) {
+      res.status(400);
+      throw new Error("Category cannot be empty");
+    }
+    video.category = category.slice(0, 60);
+  }
+  if (Object.hasOwn(req.body, "tags")) video.tags = parseTags(req.body.tags);
+  const previousThumbnailPublicId = video.thumbnailPublicId;
+  const newThumbnailPublicId = req.file?.filename;
+  if (req.file?.path) {
+    video.thumbnailUrl = req.file.path;
+    video.thumbnailPublicId = newThumbnailPublicId;
+  }
+  if (Object.hasOwn(req.body, "status")) {
+    if (!["public", "private"].includes(req.body.status)) {
+      res.status(400);
+      throw new Error("Invalid video status");
+    }
+    video.status = req.body.status;
+  }
 
-  const updatedVideo = await video.save();
-  res.status(200).json(updatedVideo);
+  try {
+    await video.save();
+  } catch (error) {
+    await destroyCloudinaryAsset(newThumbnailPublicId, "image");
+    throw error;
+  }
+  if (
+    newThumbnailPublicId &&
+    previousThumbnailPublicId !== newThumbnailPublicId
+  ) {
+    await destroyCloudinaryAsset(previousThumbnailPublicId, "image");
+  }
+  res.status(200).json(video);
 });
 
-// ─────────────────────────────────────────────
-// @desc    Delete a video
-// @route   DELETE /api/videos/:id
-// @access  Private
-// ─────────────────────────────────────────────
 const deleteVideo = asyncHandler(async (req, res) => {
   const video = await Video.findById(req.params.id);
-
   if (!video) {
     res.status(404);
     throw new Error("Video not found");
   }
-
-  // Chỉ chủ video mới được xóa
-  if (video.userId.toString() !== req.user._id.toString()) {
+  if (
+    video.userId.toString() !== req.user._id.toString() &&
+    req.user.role !== "admin"
+  ) {
     res.status(403);
     throw new Error("Not authorized to delete this video");
   }
 
-  await video.deleteOne();
+  await Promise.all([
+    video.deleteOne(),
+    Comment.deleteMany({ videoId: video._id }),
+  ]);
+  await Promise.all([
+    destroyCloudinaryAsset(video.videoPublicId, "video"),
+    destroyCloudinaryAsset(video.thumbnailPublicId, "image"),
+  ]);
   res.status(200).json({ message: "Video deleted successfully" });
 });
 
-// ─────────────────────────────────────────────
-// @desc    Like a video
-// @route   POST /api/videos/:id/like
-// @access  Private
-// ─────────────────────────────────────────────
-const likeVideo = asyncHandler(async (req, res) => {
-  const video = await Video.findById(req.params.id);
+const updateReaction = async (videoId, userId, action) => {
+  const objectId = new mongoose.Types.ObjectId(userId);
+  let likesExpression = "$likes";
+  let dislikesExpression = "$dislikes";
 
-  if (!video) {
-    res.status(404);
-    throw new Error("Video not found");
+  if (action === "like") {
+    likesExpression = { $setUnion: ["$likes", [objectId]] };
+    dislikesExpression = { $setDifference: ["$dislikes", [objectId]] };
+  } else if (action === "unlike") {
+    likesExpression = { $setDifference: ["$likes", [objectId]] };
+  } else if (action === "dislike") {
+    dislikesExpression = { $setUnion: ["$dislikes", [objectId]] };
+    likesExpression = { $setDifference: ["$likes", [objectId]] };
+  } else if (action === "undislike") {
+    dislikesExpression = { $setDifference: ["$dislikes", [objectId]] };
   }
 
-  const alreadyLiked = video.likes.some(
-    (id) => id.toString() === req.user._id.toString(),
-  );
+  return Video.findByIdAndUpdate(
+    videoId,
+    [
+      { $set: { likes: likesExpression, dislikes: dislikesExpression } },
+      {
+        $set: {
+          likesCount: { $size: "$likes" },
+          dislikesCount: { $size: "$dislikes" },
+        },
+      },
+    ],
+    { new: true },
+  ).select("likes dislikes likesCount dislikesCount");
+};
 
-  if (alreadyLiked) {
-    res.status(400);
-    throw new Error("You have already liked this video");
-  }
-
-  await Video.findByIdAndUpdate(req.params.id, {
-    $push: { likes: req.user._id },
-    $inc: { likesCount: 1 },
+const reactionHandler = (action, successMessage) =>
+  asyncHandler(async (req, res) => {
+    const video = await updateReaction(req.params.id, req.user._id, action);
+    if (!video) {
+      res.status(404);
+      throw new Error("Video not found");
+    }
+    res.status(200).json({ message: successMessage, ...video.toObject() });
   });
 
-  res.status(200).json({ message: "Video liked successfully" });
-});
+const likeVideo = reactionHandler("like", "Video liked successfully");
+const unlikeVideo = reactionHandler("unlike", "Video unliked successfully");
+const dislikeVideo = reactionHandler("dislike", "Video disliked successfully");
+const undislikeVideo = reactionHandler(
+  "undislike",
+  "Video undisliked successfully",
+);
 
-// ─────────────────────────────────────────────
-// @desc    Unlike a video
-// @route   POST /api/videos/:id/unlike
-// @access  Private
-// ─────────────────────────────────────────────
-const unlikeVideo = asyncHandler(async (req, res) => {
-  const video = await Video.findById(req.params.id);
-
-  if (!video) {
-    res.status(404);
-    throw new Error("Video not found");
-  }
-
-  const alreadyLiked = video.likes.some(
-    (id) => id.toString() === req.user._id.toString(),
-  );
-
-  if (!alreadyLiked) {
-    res.status(400);
-    throw new Error("You have not liked this video");
-  }
-
-  await Video.findByIdAndUpdate(req.params.id, {
-    $pull: { likes: req.user._id },
-    $inc: { likesCount: -1 },
-  });
-
-  res.status(200).json({ message: "Video unliked successfully" });
-});
-
-// ─────────────────────────────────────────────
-// @desc    Search and filter videos
-// @route   GET /api/videos/search
-// @access  Public
-// ─────────────────────────────────────────────
 const searchVideos = asyncHandler(async (req, res) => {
-  const { q, category, sort } = req.query;
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 12;
-  const skip = (page - 1) * limit;
-
+  const { page, limit, skip } = paginationFrom(req.query);
   const query = { status: "public" };
-  if (q) {
+  const searchText = String(req.query.q || "")
+    .trim()
+    .slice(0, 100);
+  const category = String(req.query.category || "")
+    .trim()
+    .slice(0, 60);
+
+  if (searchText) {
+    const safePattern = escapeRegex(searchText);
     query.$or = [
-      { title: { $regex: q, $options: "i" } },
-      { description: { $regex: q, $options: "i" } },
+      { title: { $regex: safePattern, $options: "i" } },
+      { description: { $regex: safePattern, $options: "i" } },
     ];
   }
   if (category) query.category = category;
 
-  let sortOption = { createdAt: -1 };
-  if (sort === "views") sortOption = { views: -1 };
-  if (sort === "likes") sortOption = { likesCount: -1 };
-  if (sort === "oldest") sortOption = { createdAt: 1 };
+  const allowedSorts = {
+    views: { views: -1 },
+    likes: { likesCount: -1 },
+    oldest: { createdAt: 1 },
+    newest: { createdAt: -1 },
+  };
+  const sortOption = allowedSorts[req.query.sort] || allowedSorts.newest;
 
   const [videos, total] = await Promise.all([
     Video.find(query)
@@ -299,79 +319,11 @@ const searchVideos = asyncHandler(async (req, res) => {
       .limit(limit),
     Video.countDocuments(query),
   ]);
-
+  const totalPages = Math.ceil(total / limit);
   res.status(200).json({
     videos,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-      hasMore: page < Math.ceil(total / limit),
-    },
+    pagination: { page, limit, total, totalPages, hasMore: page < totalPages },
   });
-});
-
-// ─────────────────────────────────────────────
-// @desc    Dislike a video
-// @route   POST /api/videos/:id/dislike
-// @access  Private
-// ─────────────────────────────────────────────
-const dislikeVideo = asyncHandler(async (req, res) => {
-  const video = await Video.findById(req.params.id);
-
-  if (!video) {
-    res.status(404);
-    throw new Error("Video not found");
-  }
-
-  const alreadyDisliked = video.dislikes.some(
-    (id) => id.toString() === req.user._id.toString(),
-  );
-
-  if (alreadyDisliked) {
-    res.status(400);
-    throw new Error("You have already disliked this video");
-  }
-
-  // Nếu đang like thì bỏ like trước
-  await Video.findByIdAndUpdate(req.params.id, {
-    $pull: { likes: req.user._id },
-    $push: { dislikes: req.user._id },
-    $inc: { dislikesCount: 1 },
-  });
-
-  res.status(200).json({ message: "Video disliked successfully" });
-});
-
-// ─────────────────────────────────────────────
-// @desc    Undislike a video
-// @route   POST /api/videos/:id/undislike
-// @access  Private
-// ─────────────────────────────────────────────
-const undislikeVideo = asyncHandler(async (req, res) => {
-  const video = await Video.findById(req.params.id);
-
-  if (!video) {
-    res.status(404);
-    throw new Error("Video not found");
-  }
-
-  const alreadyDisliked = video.dislikes.some(
-    (id) => id.toString() === req.user._id.toString(),
-  );
-
-  if (!alreadyDisliked) {
-    res.status(400);
-    throw new Error("You have not disliked this video");
-  }
-
-  await Video.findByIdAndUpdate(req.params.id, {
-    $pull: { dislikes: req.user._id },
-    $inc: { dislikesCount: -1 },
-  });
-
-  res.status(200).json({ message: "Video undisliked successfully" });
 });
 
 export {

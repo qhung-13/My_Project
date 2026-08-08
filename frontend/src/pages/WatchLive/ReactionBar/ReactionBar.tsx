@@ -8,22 +8,24 @@ interface ReactionBarProps {
 const ReactionBar = ({ onReact, floatingReactions }: ReactionBarProps) => {
   return (
     <>
-      <div className="reaction-bar">
+      <div className="reaction-bar" aria-label="Gửi cảm xúc">
         {REACTION_EMOJIS.map((emoji) => (
           <button
             key={emoji}
+            type="button"
             className="reaction-btn"
             onClick={() => onReact(emoji)}
+            aria-label={`Gửi cảm xúc ${emoji}`}
           >
-            {emoji}
+            <span aria-hidden="true">{emoji}</span>
           </button>
         ))}
       </div>
 
-      <div className="floating-reactions">
-        {floatingReactions.map((r) => (
-          <div key={r.id} className="floating-reaction">
-            {r.emoji}
+      <div className="floating-reactions" aria-hidden="true">
+        {floatingReactions.map((reaction) => (
+          <div key={reaction.id} className="floating-reaction">
+            {reaction.emoji}
           </div>
         ))}
       </div>

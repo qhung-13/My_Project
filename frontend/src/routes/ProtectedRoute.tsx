@@ -5,24 +5,27 @@ import type { RootState } from "../store/store";
 
 interface ProtectedRouteProps {
   children: ReactElement;
-  /** When true, only users with role "admin" may pass. */
   adminOnly?: boolean;
 }
 
-/**
- * Guards a route on the client so unauthenticated users are redirected to
- * /home instead of briefly seeing a page that only renders correctly once
- * a bunch of API calls fail with 401.
- *
- * NOTE: this is a UX guard only. The backend routes (see Auth.middleware.js
- * / Admin.middleware.js) remain the actual source of truth for access
- * control and must always be trusted over this check.
- */
-const ProtectedRoute = ({ children, adminOnly = false }: ProtectedRouteProps) => {
+const ProtectedRoute = ({
+  children,
+  adminOnly = false,
+}: ProtectedRouteProps) => {
   const location = useLocation();
-  const { user, isAuthenticated } = useSelector(
+  const { user, isAuthenticated, isInitialized } = useSelector(
     (state: RootState) => state.auth,
   );
+
+  // Undefined is treated as initialized for backward-compatible preloaded test
+  // states; the real store always starts with false.
+  if (isInitialized === false) {
+    return (
+      <div className="page-loading" role="status">
+        Đang kiểm tra phiên đăng nhập...
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/home" replace state={{ from: location }} />;

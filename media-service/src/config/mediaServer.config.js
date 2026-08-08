@@ -4,11 +4,38 @@ import { spawn } from "child_process";
 import path from "path";
 import User from "../model/User.model.js";
 import { startHlsUploader } from "../services/hlsUploader.service.js";
+import { extractStreamKey } from "../utils/streamPath.js";
 
 const ffmpegProcesses = new Map();
 const MEDIA_ROOT = path.resolve("./media");
 const HTTP_PORT = Number(process.env.MEDIA_HTTP_PORT || 8000);
 const RTMP_PORT = Number(process.env.MEDIA_RTMP_PORT || 1935);
+const BACKEND_INTERNAL_URL = (
+  process.env.BACKEND_INTERNAL_URL || "http://localhost:5000/api/v1"
+).replace(/\/+$/, "");
+
+const notifyBackend = async (event, streamKey) => {
+  const response = await fetch(
+    `${BACKEND_INTERNAL_URL}/streams/internal/${event}`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-media-service-secret": process.env.MEDIA_SERVICE_SECRET,
+      },
+      body: JSON.stringify({ streamKey }),
+      signal: AbortSignal.timeout(5_000),
+    },
+  );
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(
+      payload.message || `Backend returned HTTP ${response.status}`,
+    );
+  }
+  return response.json();
+};
 
 const config = {
   logType: 3,
@@ -30,26 +57,51 @@ const configureMediaServer = () => {
   const nms = new NodeMediaServer(config);
   nms.run();
 
+  const rejectSession = (sessionId) => {
+    if (
+      sessionId &&
+      typeof sessionId === "object" &&
+      typeof sessionId.reject === "function"
+    ) {
+      sessionId.reject();
+      return;
+    }
+    nms.getSession?.(sessionId)?.reject?.();
+  };
+
   // Sync HLS output to object storage/CDN as segments are written (no-op
   // if S3_BUCKET isn't configured — see hlsUploader.service.js).
   startHlsUploader(path.join(MEDIA_ROOT, "live"));
 
   nms.on("prePublish", async (id, StreamPath, args) => {
     const streamPath = typeof id === "object" ? id.streamPath : StreamPath;
-    const streamKey = streamPath?.split("/").pop();
+    const streamKey = extractStreamKey(streamPath);
     console.log("Stream started:", streamPath);
 
-    if (!streamPath) return;
+    if (!streamPath || !streamKey) {
+      console.warn("Rejected malformed stream path:", streamPath);
+      rejectSession(id);
+      return;
+    }
     const user = await User.findOne({ streamKey });
     if (!user) {
       console.log("Invalid stream key:", streamKey);
-      const session = nms.getSession(id);
-      if (session) session.reject();
+      rejectSession(id);
       return;
     }
     console.log(`Valid stream key for user: ${user.username || user._id}`);
 
-    const folderPath = path.join(MEDIA_ROOT, streamPath);
+    try {
+      await notifyBackend("publish", streamKey);
+    } catch (error) {
+      console.error(
+        `[media-service] Could not register live stream: ${error.message}`,
+      );
+      rejectSession(id);
+      return;
+    }
+
+    const folderPath = path.join(MEDIA_ROOT, "live", streamKey);
     mkdirSync(folderPath, { recursive: true });
     mkdirSync(`${folderPath}/1080p`, { recursive: true });
     mkdirSync(`${folderPath}/720p`, { recursive: true });
@@ -66,7 +118,13 @@ const configureMediaServer = () => {
     writeFileSync(`${folderPath}/index.m3u8`, masterPlaylist);
     console.log("Master playlist created at:", `${folderPath}/index.m3u8`);
 
+    const existingProcess = ffmpegProcesses.get(streamPath);
+    if (existingProcess) existingProcess.kill("SIGTERM");
+
     const ffmpeg = spawn("ffmpeg", [
+      "-hide_banner",
+      "-loglevel",
+      "warning",
       "-i",
       `rtmp://localhost:${RTMP_PORT}${streamPath}`,
 
@@ -74,9 +132,11 @@ const configureMediaServer = () => {
       "-map",
       "0:v",
       "-map",
-      "0:a",
+      "0:a?",
       "-c:v",
       "libx264",
+      "-preset",
+      "veryfast",
       "-b:v",
       "5000k",
       "-s",
@@ -99,9 +159,11 @@ const configureMediaServer = () => {
       "-map",
       "0:v",
       "-map",
-      "0:a",
+      "0:a?",
       "-c:v",
       "libx264",
+      "-preset",
+      "veryfast",
       "-b:v",
       "2500k",
       "-s",
@@ -124,9 +186,11 @@ const configureMediaServer = () => {
       "-map",
       "0:v",
       "-map",
-      "0:a",
+      "0:a?",
       "-c:v",
       "libx264",
+      "-preset",
+      "veryfast",
       "-b:v",
       "1000k",
       "-s",
@@ -147,18 +211,35 @@ const configureMediaServer = () => {
     ]);
 
     ffmpeg.stderr.on("data", (data) => {
-      console.log("ffmpeg:", data.toString());
+      console.warn(`[ffmpeg ${streamKey}]`, data.toString().trim());
     });
 
-    ffmpeg.on("close", (code) => {
-      console.log("ffmpeg closed:", code);
+    ffmpeg.on("error", (error) => {
+      console.error(`[ffmpeg ${streamKey}] failed to start:`, error.message);
       ffmpegProcesses.delete(streamPath);
+      void notifyBackend("unpublish", streamKey).catch((notifyError) =>
+        console.error(
+          "[media-service] Failed to roll back stream state:",
+          notifyError.message,
+        ),
+      );
+    });
+
+    ffmpeg.on("close", (code, signal) => {
+      console.log("ffmpeg closed:", { code, signal });
+      ffmpegProcesses.delete(streamPath);
+      if (typeof code === "number" && code !== 0) {
+        void notifyBackend("unpublish", streamKey).catch((notifyError) =>
+          console.error(
+            "[media-service] Failed to mark failed transcode offline:",
+            notifyError.message,
+          ),
+        );
+      }
     });
 
     ffmpegProcesses.set(streamPath, ffmpeg);
     console.log("ffmpeg started for:", streamPath);
-
-    await User.findByIdAndUpdate(user._id, { isLive: true });
   });
 
   nms.on("donePublish", async (id, StreamPath, args) => {
@@ -172,15 +253,11 @@ const configureMediaServer = () => {
     }
 
     try {
-      const streamKey = streamPath?.split("/").pop();
+      const streamKey = extractStreamKey(streamPath);
       if (!streamKey) return;
-
-      const user = await User.findOne({ streamKey });
-      if (user) {
-        await User.findByIdAndUpdate(user._id, { isLive: false });
-      }
+      await notifyBackend("unpublish", streamKey);
     } catch (error) {
-      console.error("Error while finalizing donePublish:", error);
+      console.error("Error while finalizing donePublish:", error.message);
     }
   });
 
@@ -192,6 +269,14 @@ const configureMediaServer = () => {
   console.log(
     `[media-service] RTMP ingest on :${RTMP_PORT}, HLS HTTP on :${HTTP_PORT}`,
   );
+
+  return {
+    stop: () => {
+      for (const process of ffmpegProcesses.values()) process.kill("SIGTERM");
+      ffmpegProcesses.clear();
+      nms.stop?.();
+    },
+  };
 };
 
 export default configureMediaServer;

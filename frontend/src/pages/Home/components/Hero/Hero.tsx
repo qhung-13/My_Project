@@ -1,53 +1,61 @@
 import { Play } from "lucide-react";
-import { formatViewers } from "../../../../utils/format";
-import "./Hero.css";
 import { useNavigate } from "react-router-dom";
 import { useGetLiveStreamsQuery } from "../../../../store/api/streamApi";
+import { formatViewers } from "../../../../utils/format";
+import "./Hero.css";
 
 const Hero = () => {
   const navigate = useNavigate();
-  const { data: result } = useGetLiveStreamsQuery(undefined);
+  const { data } = useGetLiveStreamsQuery({ page: 1, limit: 1 });
+  const featuredStream = data?.streams?.[0];
 
-  const featuredStream = result?.streams?.[0];
+  if (!featuredStream) return null;
 
-  if (!featuredStream) {
-    return null;
-  }
+  const streamerName =
+    featuredStream.userId?.displayName ||
+    featuredStream.userId?.username ||
+    "Streamer";
 
   return (
-    <div className="hero">
-      <div
+    <section className="hero" aria-label="Livestream nổi bật">
+      <button
+        type="button"
         className="hero__video"
-        style={{ background: "#0a1a2e" }}
         onClick={() => navigate(`/stream/${featuredStream._id}`)}
+        aria-label={`Xem livestream ${featuredStream.title} của ${streamerName}`}
       >
-        <button className="hero__play-btn">
-          <Play size={20} fill="white" />
-        </button>
+        {featuredStream.thumbnailUrl && (
+          <img
+            className="hero__thumbnail"
+            src={featuredStream.thumbnailUrl}
+            alt=""
+            fetchPriority="high"
+          />
+        )}
+        <span className="hero__play-btn" aria-hidden="true">
+          <Play size={20} fill="currentColor" />
+        </span>
 
-        <div className="hero__overlay">
-          <div className="hero__streamer">
-            <div className="hero__avatar">
+        <span className="hero__overlay">
+          <span className="hero__streamer">
+            <span className="hero__avatar">
               {featuredStream.userId?.avatar ? (
                 <img src={featuredStream.userId.avatar} alt="" />
               ) : (
-                featuredStream.userId?.username?.slice(0, 2).toUpperCase()
+                streamerName.slice(0, 2).toUpperCase()
               )}
-            </div>
-            <span className="hero__name">
-              {featuredStream.userId?.displayName ||
-                featuredStream.userId?.username}
             </span>
+            <span className="hero__name">{streamerName}</span>
             <span className="hero__badge-live">LIVE</span>
-            <div className="hero__viewers">
-              {formatViewers(featuredStream.viewers)} viewers
-            </div>
-          </div>
-          <div className="hero__title">{featuredStream.title}</div>
-          <div className="hero__game">{featuredStream.category}</div>
-        </div>
-      </div>
-    </div>
+            <span className="hero__viewers">
+              {formatViewers(featuredStream.viewers)} người xem
+            </span>
+          </span>
+          <span className="hero__title">{featuredStream.title}</span>
+          <span className="hero__game">{featuredStream.category}</span>
+        </span>
+      </button>
+    </section>
   );
 };
 

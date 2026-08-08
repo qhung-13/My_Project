@@ -4,6 +4,7 @@ import rateLimit from "express-rate-limit";
 export const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
+  skip: (req) => /\/coins\/webhook(?:\?|$)/.test(req.originalUrl),
   message: { message: "Quá nhiều request, vui lòng thử lại sau." },
   standardHeaders: true,
   legacyHeaders: false,

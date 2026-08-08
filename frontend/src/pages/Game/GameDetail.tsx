@@ -1,117 +1,116 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Play } from "lucide-react";
-import { formatViewers, generateColor } from "../../utils/format";
+import { ArrowLeft, Play, RefreshCw } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 import { useGetLiveStreamsQuery } from "../../store/api/streamApi";
+import { formatViewers, generateColor } from "../../utils/format";
 import type { Stream } from "../../types/index";
 import "./GameDetail.css";
-
-const GAME_NAMES: Record<string, string> = {
-  valorant: "Valorant",
-  lol: "LOL",
-  pubg: "PUBG",
-  cs2: "CS2",
-  dota2: "Dota 2",
-  fifa: "FIFA",
-  mlbb: "MLBB",
-  cod: "COD",
-};
 
 const GameDetail = () => {
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
+  const gameName = gameId ? decodeURIComponent(gameId) : "Danh mục";
+  const { data, isLoading, isError, isFetching, refetch } =
+    useGetLiveStreamsQuery({ page: 1, limit: 50 });
 
-  const gameName = GAME_NAMES[gameId ?? ""] ?? gameId;
-
-  const { data: result, isLoading } = useGetLiveStreamsQuery({});
-  const streams = (result?.streams || []).filter(
+  const streams = (data?.streams ?? []).filter(
     (stream: Stream) =>
-      stream.category?.toLowerCase() === gameName?.toLowerCase(),
+      stream.category?.trim().toLocaleLowerCase() ===
+      gameName.trim().toLocaleLowerCase(),
   );
-
-  if (isLoading) return <div className="game-detail__loading">Loading...</div>;
 
   return (
     <div className="game-detail">
-      <div className="game-detail__header">
-        <button className="game-detail__back" onClick={() => navigate(-1)}>
-          <ArrowLeft size={20} />
+      <header className="game-detail__header">
+        <button
+          type="button"
+          className="game-detail__back"
+          onClick={() => navigate(-1)}
+          aria-label="Quay lại"
+        >
+          <ArrowLeft size={20} aria-hidden="true" />
         </button>
-        <span className="game-detail__title">{gameName}</span>
+        <h1 className="game-detail__title">{gameName}</h1>
         <span className="game-detail__count">{streams.length} streams</span>
-      </div>
+      </header>
 
-      {streams.length > 0 ? (
+      {isLoading ? (
+        <div className="game-detail__loading" role="status">
+          Đang tải stream...
+        </div>
+      ) : isError ? (
+        <div className="game-detail__empty" role="alert">
+          <p>Không thể tải danh sách stream.</p>
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+          >
+            <RefreshCw size={16} aria-hidden="true" />
+            {isFetching ? "Đang thử lại..." : "Thử lại"}
+          </button>
+        </div>
+      ) : streams.length > 0 ? (
         <div className="game-detail__grid">
           {streams.map((stream: Stream) => {
             const name =
               typeof stream.userId === "object"
                 ? stream.userId?.displayName || stream.userId?.username
                 : "Unknown";
+            const avatar =
+              typeof stream.userId === "object" ? stream.userId.avatar : null;
+
             return (
-              <div
+              <button
+                type="button"
                 className="gd-card"
                 key={stream._id}
                 onClick={() => navigate(`/stream/${stream._id}`)}
+                aria-label={`Xem ${stream.title} của ${name}`}
               >
-                <div
-                  className="gd-card__thumb"
-                  style={{ background: "#0a1a2e" }}
-                >
-                  {stream.thumbnailUrl && (
-                    <img
-                      src={stream.thumbnailUrl}
-                      alt={stream.title}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                      }}
-                    />
+                <span className="gd-card__thumb">
+                  {stream.thumbnailUrl ? (
+                    <img src={stream.thumbnailUrl} alt="" loading="lazy" />
+                  ) : (
+                    <span className="gd-card__placeholder" aria-hidden="true">
+                      {gameName.slice(0, 2).toUpperCase()}
+                    </span>
                   )}
-                  <button className="gd-card__play">
-                    <Play size={14} fill="white" />
-                  </button>
+                  <span className="gd-card__play" aria-hidden="true">
+                    <Play size={14} fill="currentColor" />
+                  </span>
                   <span className="gd-card__badge">LIVE</span>
                   <span className="gd-card__viewers">
-                    {formatViewers(stream.viewers)} viewers
+                    {formatViewers(stream.viewers)} người xem
                   </span>
-                </div>
+                </span>
 
-                <div className="gd-card__info">
-                  <div className="gd-card__streamer">
-                    <div
+                <span className="gd-card__info">
+                  <span className="gd-card__streamer">
+                    <span
                       className="gd-card__avatar"
                       style={{ background: generateColor(name || "") }}
                     >
-                      {typeof stream.userId === "object" &&
-                      stream.userId?.avatar ? (
-                        <img
-                          src={stream.userId.avatar}
-                          alt=""
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            borderRadius: "50%",
-                            objectFit: "cover",
-                          }}
-                        />
+                      {avatar ? (
+                        <img src={avatar} alt="" loading="lazy" />
                       ) : (
                         name?.slice(0, 2).toUpperCase()
                       )}
-                    </div>
+                    </span>
                     <span className="gd-card__name">{name}</span>
-                  </div>
-                  <div className="gd-card__title">{stream.title}</div>
-                </div>
-              </div>
+                  </span>
+                  <span className="gd-card__title">{stream.title}</span>
+                </span>
+              </button>
             );
           })}
         </div>
       ) : (
         <div className="game-detail__empty">
-          <div className="game-detail__empty-icon">📭</div>
+          <div className="game-detail__empty-icon" aria-hidden="true">
+            📭
+          </div>
           <p>Chưa có stream nào cho {gameName}</p>
-          <span>Quay lại sau nhé!</span>
+          <span>Hãy quay lại khi có streamer bắt đầu phát.</span>
         </div>
       )}
     </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./Login.css";
 import { FcGoogle } from "react-icons/fc";
 import { FaFacebook } from "react-icons/fa";
@@ -9,11 +9,17 @@ import {
   useLoginMutation,
   useVerifyLoginOtpMutation,
 } from "../../store/api/userApi";
+import { buildApiUrl } from "../../config/api";
 
 interface LoginProps {
   onClose: () => void;
   onSwitch: () => void;
 }
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  const apiError = error as { data?: { message?: string } };
+  return apiError.data?.message || fallback;
+};
 
 const Login = ({ onClose, onSwitch }: LoginProps) => {
   const [username, setUsername] = useState("");
@@ -28,71 +34,120 @@ const Login = ({ onClose, onSwitch }: LoginProps) => {
   const [verifyLoginOtp, { isLoading: isVerifyLoading }] =
     useVerifyLoginOtpMutation();
 
-  const handleLoginClick = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.body.classList.add("modal-open");
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.classList.remove("modal-open");
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onClose]);
+
+  const handleLoginClick = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setError("");
 
     try {
-      const res = await login({ username, password }).unwrap();
-      setEmail(res.email);
+      const response = await login({
+        username: username.trim(),
+        password,
+      }).unwrap();
+      setEmail(response.email);
+      setOtp("");
       setStep("otp");
-    } catch (err) {
-      const error = err as { data?: { message?: string } };
-      setError(error.data?.message || "Login failed");
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, "Đăng nhập thất bại."));
     }
   };
 
-  const handleOtpSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleOtpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setError("");
 
     try {
-      const res = await verifyLoginOtp({ email, otp }).unwrap();
+      const response = await verifyLoginOtp({
+        email,
+        otp: otp.trim(),
+      }).unwrap();
       dispatch(
         setUser({
-          _id: res._id,
-          username: res.username,
-          email: res.email,
-          avatar: res.avatar || null,
-          coins: res.coins || 0,
-          role: res.role || "users",
+          _id: response._id,
+          username: response.username,
+          email: response.email,
+          avatar: response.avatar ?? null,
+          coins: response.coins ?? 0,
+          role: response.role ?? "user",
         }),
       );
       onClose();
-    } catch (err) {
-      const error = err as { data?: { message?: string } };
-      setError(error.data?.message || "Invalid OTP");
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, "Mã OTP không hợp lệ."));
     }
   };
 
   return (
-    <div className="login">
-      <div className="login__overlay" onClick={onClose}></div>
-      <div className="login__card">
-        <button className="login__close" onClick={onClose}>
+    <div className="login" role="presentation">
+      <button
+        className="login__overlay"
+        onClick={onClose}
+        aria-label="Đóng hộp thoại đăng nhập"
+      />
+      <section
+        className="login__card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="login-title"
+        aria-describedby="login-subtitle"
+      >
+        <button className="login__close" onClick={onClose} aria-label="Đóng">
           &times;
         </button>
-        <h2 className="login__title">Welcome Back</h2>
-        <p className="login__subtitle">Login to continue</p>
+        <h2 className="login__title" id="login-title">
+          Welcome Back
+        </h2>
+        <p className="login__subtitle" id="login-subtitle">
+          Login to continue
+        </p>
 
-        {error && <p className="login__error">{error}</p>}
+        {error && (
+          <p className="login__error" role="alert">
+            {error}
+          </p>
+        )}
 
         {step === "credentials" ? (
           <form className="login__form" onSubmit={handleLoginClick}>
+            <label className="sr-only" htmlFor="login-username">
+              Username
+            </label>
             <input
+              id="login-username"
               type="text"
               placeholder="Username"
               className="login__input"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(event) => setUsername(event.target.value)}
+              autoComplete="username"
+              minLength={3}
+              maxLength={30}
+              autoFocus
               required
             />
+            <label className="sr-only" htmlFor="login-password">
+              Password
+            </label>
             <input
+              id="login-password"
               type="password"
               placeholder="Password"
               className="login__input"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="current-password"
+              minLength={6}
               required
             />
             <button
@@ -100,7 +155,7 @@ const Login = ({ onClose, onSwitch }: LoginProps) => {
               className="login__button"
               disabled={isLoginLoading}
             >
-              {isLoginLoading ? "Loading..." : "Login"}
+              {isLoginLoading ? "Đang gửi OTP..." : "Login"}
             </button>
           </form>
         ) : (
@@ -108,19 +163,30 @@ const Login = ({ onClose, onSwitch }: LoginProps) => {
             <p className="otp-info">
               OTP đã được gửi tới email: <strong>{email}</strong>
             </p>
+            <label className="sr-only" htmlFor="login-otp">
+              Mã OTP
+            </label>
             <input
+              id="login-otp"
               type="text"
+              inputMode="numeric"
+              pattern="[0-9]{6}"
+              maxLength={6}
               placeholder="Enter OTP"
               className="otp-input"
               value={otp}
-              onChange={(e) => setOtp(e.target.value)}
+              onChange={(event) =>
+                setOtp(event.target.value.replace(/\D/g, ""))
+              }
+              autoComplete="one-time-code"
+              autoFocus
               required
             />
             <div className="otp-actions">
               <button
                 type="submit"
                 className="otp-confirm"
-                disabled={isVerifyLoading}
+                disabled={isVerifyLoading || otp.length !== 6}
               >
                 {isVerifyLoading ? "Verifying..." : "Confirm"}
               </button>
@@ -136,18 +202,25 @@ const Login = ({ onClose, onSwitch }: LoginProps) => {
         )}
 
         {step === "credentials" && (
-          <div className="login__social">
+          <div
+            className="login__social"
+            aria-label="Đăng nhập bằng mạng xã hội"
+          >
             <button
+              type="button"
               className="login__social-btn login__social--google"
               onClick={() =>
-                (window.location.href = `${import.meta.env.VITE_API_URL?.replace("/api", "")}/api/users/auth/google`)
+                window.location.assign(buildApiUrl("/users/auth/google"))
               }
+              aria-label="Đăng nhập bằng Google"
             >
               <FcGoogle size={24} />
             </button>
             <button
+              type="button"
               className="login__social-btn login__social--facebook"
               disabled
+              aria-label="Facebook chưa khả dụng"
             >
               <FaFacebook size={24} color="#1877F2" />
             </button>
@@ -156,11 +229,11 @@ const Login = ({ onClose, onSwitch }: LoginProps) => {
 
         <p className="login__footer">
           Don't have an account?{" "}
-          <button className="login__link" onClick={onSwitch}>
+          <button type="button" className="login__link" onClick={onSwitch}>
             Register
           </button>
         </p>
-      </div>
+      </section>
     </div>
   );
 };

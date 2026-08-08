@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 interface Country {
   name: string;
@@ -15,87 +15,109 @@ interface Props {
 const CountrySelector = ({ selectedCountry, countries, onSelect }: Props) => {
   const [countryOpen, setCountryOpen] = useState(false);
   const [searchCountry, setSearchCountry] = useState("");
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const listId = useId();
 
-  // Close dropdown on outside click
   useEffect(() => {
-    const handleClick = () => setCountryOpen(false);
-    window.addEventListener("click", handleClick);
-    return () => window.removeEventListener("click", handleClick);
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setCountryOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setCountryOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
-  // Reset scroll on search
   useEffect(() => {
-    if (dropdownRef.current) dropdownRef.current.scrollTop = 0;
-    if (listRef.current) listRef.current.scrollTop = 0;
-  }, [searchCountry]);
+    if (countryOpen) searchInputRef.current?.focus();
+    else setSearchCountry("");
+  }, [countryOpen]);
 
-  const filtered = countries.filter((c) =>
-    c.name
-      .toLowerCase()
-      .replace(/\s/g, "")
-      .includes(searchCountry.toLowerCase().replace(/\s/g, "")),
+  const normalizedSearch = searchCountry.trim().toLocaleLowerCase();
+  const filtered = countries.filter((country) =>
+    country.name.toLocaleLowerCase().includes(normalizedSearch),
   );
 
   return (
-    <div className="header__country">
+    <div className="header__country" ref={rootRef}>
       <button
+        type="button"
         className="header__country-btn"
-        onClick={(e) => {
-          e.stopPropagation();
-          setCountryOpen(!countryOpen);
-        }}
+        onClick={() => setCountryOpen((current) => !current)}
+        aria-haspopup="listbox"
+        aria-controls={listId}
+        aria-expanded={countryOpen}
+        aria-label={`Quốc gia: ${selectedCountry?.name ?? "đang tải"}`}
       >
         {selectedCountry ? (
           <>
             <img
               src={`https://flagcdn.com/w20/${selectedCountry.code.toLowerCase()}.png`}
-              alt={selectedCountry.name}
+              alt=""
               width={20}
               height={14}
-              style={{ borderRadius: "2px" }}
+              loading="lazy"
             />
             {selectedCountry.code}
           </>
         ) : (
-          "Loading..."
+          "..."
         )}
       </button>
 
       {countryOpen && (
-        <div className="header__country-dropdown" ref={dropdownRef}>
+        <div className="header__country-dropdown">
           <div className="header__country-search">
+            <label className="sr-only" htmlFor={`${listId}-search`}>
+              Tìm quốc gia
+            </label>
             <input
-              type="text"
-              placeholder="Search country..."
+              ref={searchInputRef}
+              id={`${listId}-search`}
+              type="search"
+              placeholder="Tìm quốc gia..."
               className="header__country-search-input"
-              onClick={(e) => e.stopPropagation()}
-              onChange={(e) => setSearchCountry(e.target.value)}
+              onChange={(event) => setSearchCountry(event.target.value)}
               value={searchCountry}
-              autoFocus
+              maxLength={60}
             />
           </div>
-          <div className="header__country-list" ref={listRef}>
-            {filtered.map((country) => (
-              <div
-                key={country.code}
-                className="header__country-item"
-                onClick={() => {
-                  onSelect(country);
-                  setCountryOpen(false);
-                  setSearchCountry("");
-                }}
-              >
-                <img
-                  src={`https://flagcdn.com/w20/${country.code.toLowerCase()}.png`}
-                  alt={country.name}
-                  width={20}
-                  height={15}
-                />
-                {country.name}
-              </div>
-            ))}
+          <div className="header__country-list" id={listId} role="listbox">
+            {filtered.length > 0 ? (
+              filtered.map((country) => (
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={country.code === selectedCountry?.code}
+                  key={country.code}
+                  className="header__country-item"
+                  onClick={() => {
+                    onSelect(country);
+                    setCountryOpen(false);
+                  }}
+                >
+                  <img
+                    src={`https://flagcdn.com/w20/${country.code.toLowerCase()}.png`}
+                    alt=""
+                    width={20}
+                    height={15}
+                    loading="lazy"
+                  />
+                  {country.name}
+                </button>
+              ))
+            ) : (
+              <p className="header__country-empty">Không tìm thấy quốc gia.</p>
+            )}
           </div>
         </div>
       )}

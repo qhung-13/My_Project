@@ -1,24 +1,29 @@
 import { useState } from "react";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements } from "@stripe/react-stripe-js";
 import {
-  useGetCoinPackagesQuery,
-  useCreateTopUpMutation,
-  useConfirmTopUpMutation,
-  useGetCoinBalanceQuery,
-} from "../../store/api/coinApi";
-import "./TopUp.css";
+  Elements,
+  PaymentElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
 import { useNavigate } from "react-router-dom";
 import {
-  useStripe,
-  useElements,
-  PaymentElement,
-} from "@stripe/react-stripe-js";
+  useConfirmTopUpMutation,
+  useCreateTopUpMutation,
+  useGetCoinBalanceQuery,
+  useGetCoinPackagesQuery,
+} from "../../store/api/coinApi";
 import type { CoinPackage } from "../../types/index";
+import "./TopUp.css";
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY?.trim();
+const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
 
-// ─── Checkout Form ───────────────────────────
+const getApiError = (error: unknown, fallback: string) => {
+  const apiError = error as { data?: { message?: string } };
+  return apiError.data?.message || fallback;
+};
+
 const TopUpCheckoutForm = ({
   coins,
   paymentIntentId,
@@ -26,7 +31,7 @@ const TopUpCheckoutForm = ({
 }: {
   coins: number;
   paymentIntentId: string;
-  onSuccess: () => void;
+  onSuccess: () => Promise<void>;
 }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -34,49 +39,56 @@ const TopUpCheckoutForm = ({
   const [error, setError] = useState("");
   const [confirmTopUp] = useConfirmTopUpMutation();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!stripe || !elements) return;
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!stripe || !elements || loading) return;
 
     setLoading(true);
     setError("");
 
-    const { error } = await stripe.confirmPayment({
+    const paymentResult = await stripe.confirmPayment({
       elements,
-      confirmParams: { return_url: window.location.href },
       redirect: "if_required",
     });
 
-    if (error) {
-      setError(error.message || "Payment failed");
+    if (paymentResult.error) {
+      setError(paymentResult.error.message || "Payment failed");
       setLoading(false);
       return;
     }
 
-    // Confirm topup với backend
-    await confirmTopUp(paymentIntentId).unwrap();
-    onSuccess();
+    try {
+      await confirmTopUp(paymentIntentId).unwrap();
+      await onSuccess();
+    } catch (requestError) {
+      setError(getApiError(requestError, "Không thể xác nhận giao dịch"));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="topup__checkout">
       <p className="topup__checkout-info">
-        Bạn sẽ nhận được <strong>{coins} xu</strong>
+        Bạn sẽ nhận được <strong>{coins.toLocaleString()} xu</strong>
       </p>
-      {error && <p className="topup__error">{error}</p>}
+      {error && (
+        <p className="topup__error" role="alert">
+          {error}
+        </p>
+      )}
       <PaymentElement />
       <button
         className="topup__btn"
         type="submit"
-        disabled={!stripe || loading}
+        disabled={!stripe || !elements || loading}
       >
-        {loading ? "Đang xử lý..." : "Thanh toán"}
+        {loading ? "Đang xử lý…" : "Thanh toán an toàn"}
       </button>
     </form>
   );
 };
 
-// ─── Main TopUp Page ─────────────────────────
 const TopUp = () => {
   const navigate = useNavigate();
   const [selectedPackage, setSelectedPackage] = useState<number | null>(null);
@@ -85,22 +97,32 @@ const TopUp = () => {
   const [totalCoins, setTotalCoins] = useState(0);
   const [step, setStep] = useState<"select" | "payment" | "success">("select");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const { data: packages } = useGetCoinPackagesQuery(undefined);
+  const {
+    data: packages,
+    isLoading: packagesLoading,
+    isError: packagesError,
+  } = useGetCoinPackagesQuery(undefined);
   const { data: balance, refetch } = useGetCoinBalanceQuery(undefined);
   const [createTopUp] = useCreateTopUpMutation();
 
   const handleSelectPackage = async (pkg: CoinPackage) => {
+    if (loading) return;
+    setError("");
     setSelectedPackage(pkg.id);
     setLoading(true);
     try {
-      const res = await createTopUp(pkg.id).unwrap();
-      setClientSecret(res.clientSecret);
-      setPaymentIntentId(res.clientSecret.split("_secret")[0]);
-      setTotalCoins(res.coins);
+      const response = await createTopUp(pkg.id).unwrap();
+      setClientSecret(response.clientSecret);
+      setPaymentIntentId(response.paymentIntentId);
+      setTotalCoins(response.coins);
       setStep("payment");
-    } catch (err) {
-      console.log(err);
+    } catch (requestError) {
+      setError(
+        getApiError(requestError, "Không thể tạo giao dịch. Vui lòng thử lại."),
+      );
+      setSelectedPackage(null);
     } finally {
       setLoading(false);
     }
@@ -111,57 +133,109 @@ const TopUp = () => {
     setStep("success");
   };
 
+  const resetSelection = () => {
+    setStep("select");
+    setSelectedPackage(null);
+    setClientSecret("");
+    setPaymentIntentId("");
+    setError("");
+  };
+
   return (
-    <div className="topup">
+    <main className="topup">
       <div className="topup__header">
-        <button className="topup__back" onClick={() => navigate(-1)}>
+        <button
+          className="topup__back"
+          type="button"
+          onClick={() => navigate(-1)}
+        >
           ← Quay lại
         </button>
-        <h1 className="topup__title">💰 Nạp Xu</h1>
+        <div>
+          <p className="topup__eyebrow">Wallet</p>
+          <h1 className="topup__title">Nạp xu</h1>
+        </div>
         <div className="topup__balance">
-          Số dư: <strong>{balance?.coins || 0} xu</strong>
+          Số dư: <strong>{(balance?.coins ?? 0).toLocaleString()} xu</strong>
         </div>
       </div>
 
-      {step === "select" && (
-        <>
-          <p className="topup__desc">Chọn gói xu phù hợp với bạn</p>
-          <div className="topup__packages">
-            {packages?.map((pkg: CoinPackage) => (
-              <div
-                key={pkg.id}
-                className={`topup__package ${selectedPackage === pkg.id ? "topup__package--active" : ""}`}
-                onClick={() => !loading && handleSelectPackage(pkg)}
-              >
-                {pkg.label === "Popular" && (
-                  <span className="topup__badge">🔥 Phổ biến</span>
-                )}
-                <div className="topup__package-coins">
-                  🪙 {pkg.coins.toLocaleString()} xu
-                </div>
-                {pkg.bonus > 0 && (
-                  <div className="topup__package-bonus">
-                    + {pkg.bonus} xu bonus
-                  </div>
-                )}
-                <div className="topup__package-total">
-                  Tổng: {(pkg.coins + pkg.bonus).toLocaleString()} xu
-                </div>
-                <div className="topup__package-price">${pkg.price}</div>
-                <button className="topup__package-btn" disabled={loading}>
-                  {loading && selectedPackage === pkg.id
-                    ? "Loading..."
-                    : "Nạp ngay"}
-                </button>
-              </div>
-            ))}
-          </div>
-        </>
+      {!publishableKey && (
+        <p className="topup__error" role="alert">
+          Thanh toán chưa được cấu hình. Hãy đặt VITE_STRIPE_PUBLISHABLE_KEY khi
+          build frontend.
+        </p>
+      )}
+      {error && (
+        <p className="topup__error" role="alert">
+          {error}
+        </p>
       )}
 
-      {step === "payment" && clientSecret && (
-        <div className="topup__payment">
-          <h2 className="topup__payment-title">💳 Thanh toán</h2>
+      {step === "select" && (
+        <section aria-labelledby="topup-package-heading">
+          <h2 id="topup-package-heading" className="topup__section-title">
+            Chọn gói xu
+          </h2>
+          <p className="topup__desc">
+            Giá và số xu được xác nhận lại ở server trước khi thanh toán.
+          </p>
+
+          {packagesLoading ? (
+            <p className="topup__state" role="status">
+              Đang tải các gói xu…
+            </p>
+          ) : packagesError ? (
+            <p className="topup__state topup__state--error" role="alert">
+              Không thể tải các gói xu. Vui lòng thử lại sau.
+            </p>
+          ) : !packages?.length ? (
+            <p className="topup__state">Hiện chưa có gói xu nào.</p>
+          ) : (
+            <div className="topup__packages">
+              {packages.map((pkg: CoinPackage) => (
+                <button
+                  key={pkg.id}
+                  type="button"
+                  className={`topup__package ${selectedPackage === pkg.id ? "topup__package--active" : ""}`}
+                  disabled={loading || !publishableKey}
+                  onClick={() => void handleSelectPackage(pkg)}
+                >
+                  {pkg.label === "Popular" && (
+                    <span className="topup__badge">Phổ biến</span>
+                  )}
+                  <span className="topup__package-coins">
+                    {pkg.coins.toLocaleString()} xu
+                  </span>
+                  {pkg.bonus > 0 && (
+                    <span className="topup__package-bonus">
+                      + {pkg.bonus.toLocaleString()} xu bonus
+                    </span>
+                  )}
+                  <span className="topup__package-total">
+                    Tổng: {(pkg.coins + pkg.bonus).toLocaleString()} xu
+                  </span>
+                  <span className="topup__package-price">${pkg.price}</span>
+                  <span className="topup__package-cta">
+                    {loading && selectedPackage === pkg.id
+                      ? "Đang tạo giao dịch…"
+                      : "Chọn gói"}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {step === "payment" && clientSecret && stripePromise && (
+        <section
+          className="topup__payment"
+          aria-labelledby="topup-payment-title"
+        >
+          <h2 id="topup-payment-title" className="topup__payment-title">
+            Thanh toán
+          </h2>
           <Elements stripe={stripePromise} options={{ clientSecret }}>
             <TopUpCheckoutForm
               coins={totalCoins}
@@ -169,28 +243,37 @@ const TopUp = () => {
               onSuccess={handleSuccess}
             />
           </Elements>
-          <button className="topup__back-btn" onClick={() => setStep("select")}>
+          <button
+            className="topup__back-btn"
+            type="button"
+            onClick={resetSelection}
+          >
             ← Chọn gói khác
           </button>
-        </div>
+        </section>
       )}
 
       {step === "success" && (
-        <div className="topup__success">
-          <span>🎉</span>
-          <h2>Nạp xu thành công!</h2>
+        <section className="topup__success" role="status">
+          <span aria-hidden="true">✓</span>
+          <h2>Nạp xu thành công</h2>
           <p>
-            Bạn đã nhận được <strong>{totalCoins} xu</strong>
+            Bạn đã nhận được <strong>{totalCoins.toLocaleString()} xu</strong>.
           </p>
           <p>
-            Số dư hiện tại: <strong>{balance?.coins || 0} xu</strong>
+            Số dư hiện tại:{" "}
+            <strong>{(balance?.coins ?? 0).toLocaleString()} xu</strong>.
           </p>
-          <button className="topup__btn" onClick={() => navigate(-1)}>
-            Quay lại
+          <button
+            className="topup__btn"
+            type="button"
+            onClick={() => navigate(-1)}
+          >
+            Hoàn tất
           </button>
-        </div>
+        </section>
       )}
-    </div>
+    </main>
   );
 };
 

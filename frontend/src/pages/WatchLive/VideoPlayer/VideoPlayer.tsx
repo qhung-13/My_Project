@@ -1,38 +1,49 @@
-import { useEffect, useRef, useCallback } from "react";
-import Hls, { Level } from "hls.js";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Hls, { type Level } from "hls.js";
 import Plyr from "plyr";
 import "plyr/dist/plyr.css";
 
 interface VideoPlayerProps {
-  streamKey: string;
+  streamUrl?: string | null;
 }
 
-/**
- * React Video Player component for HLS live streaming
- * Supports native HLS (Safari) and HLS.js + Plyr for other browsers
- * Features: Auto quality switching, manual quality selection, error recovery
- */
-const VideoPlayer = ({ streamKey }: VideoPlayerProps) => {
+const MAX_NETWORK_RETRIES = 3;
+
+const VideoPlayer = ({ streamUrl }: VideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const playerRef = useRef<Plyr | null>(null);
+  const retryTimerRef = useRef<number | null>(null);
+  const networkRetryCountRef = useRef(0);
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
 
-  // Cleanup function to properly destroy resources
   const cleanup = useCallback(() => {
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
+    if (retryTimerRef.current !== null) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
     }
-    if (playerRef.current) {
-      playerRef.current.destroy();
-      playerRef.current = null;
+
+    hlsRef.current?.destroy();
+    hlsRef.current = null;
+    playerRef.current?.destroy();
+    playerRef.current = null;
+
+    const video = videoRef.current;
+    if (video) {
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
     }
   }, []);
 
-  // Initialize Plyr with quality settings
   const initPlyr = useCallback((availableQualities: number[]) => {
     const video = videoRef.current;
     if (!video) return;
+
+    playerRef.current?.destroy();
+    const qualityOptions = [0, ...new Set(availableQualities)].filter(
+      (quality, index, values) => values.indexOf(quality) === index,
+    );
 
     playerRef.current = new Plyr(video, {
       controls: [
@@ -45,156 +56,131 @@ const VideoPlayer = ({ streamKey }: VideoPlayerProps) => {
         "settings",
         "fullscreen",
       ],
-      settings: ["quality", "speed"],
+      settings: ["quality"],
       quality: {
-        default: 0, // 0 = Auto quality
-        options: [0, ...availableQualities], // Include Auto + available qualities
-        forced: true,
+        default: 0,
+        options: qualityOptions,
+        forced: qualityOptions.length > 1,
         onChange: (quality: number) => {
           const hls = hlsRef.current;
           if (!hls) return;
 
           if (quality === 0) {
-            // Switch to Auto quality
             hls.currentLevel = -1;
-            console.log("Switched to Auto quality");
-          } else {
-            // Find and switch to specific quality
-            const targetLevel = hls.levels.findIndex(
-              (level) => level.height === quality,
-            );
-            if (targetLevel !== -1) {
-              hls.currentLevel = targetLevel;
-              console.log(`Switched to ${quality}p quality`);
-            }
+            return;
           }
+
+          const targetLevel = hls.levels.findIndex(
+            (level) => level.height === quality,
+          );
+          if (targetLevel >= 0) hls.currentLevel = targetLevel;
         },
       },
       i18n: {
-        quality: "Quality",
-        speed: "Speed",
-        auto: "Auto",
+        quality: "Chất lượng",
+        auto: "Tự động",
       },
     });
   }, []);
 
   useEffect(() => {
+    cleanup();
+    setPlaybackError(null);
+    networkRetryCountRef.current = 0;
+
     const video = videoRef.current;
-    if (!video || !streamKey) return;
+    if (!video || !streamUrl) {
+      setPlaybackError("Luồng phát chưa sẵn sàng.");
+      return cleanup;
+    }
 
-    const streamUrl = `http://localhost:5000/live/${streamKey}/index.m3u8`;
+    const startPlayback = () => {
+      void video.play().catch(() => {
+        // Autoplay can be blocked by browser policy; Plyr still lets the user start it.
+      });
+    };
 
-    // Handle native HLS support (Safari/iOS)
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = streamUrl;
       initPlyr([]);
-      video.play().catch((error) => {
-        console.error("Native HLS playback failed:", error);
-      });
-    }
-    // Handle HLS.js for other browsers
-    else if (Hls.isSupported()) {
-      const hls = new Hls({
-        lowLatencyMode: true, // Enable low latency for live streams
-        enableWorker: true, // Use web worker for better performance
-        backBufferLength: 90, // Keep 90 seconds of back buffer
-      });
-
-      hlsRef.current = hls;
-      hls.attachMedia(video);
-
-      // Load stream source after media attachment
-      hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-        console.log("🔗 HLS media attached");
-        hls.loadSource(streamUrl);
-      });
-
-      // Initialize player once manifest is parsed
-      hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
-        console.log("Live stream connected successfully!");
-
-        // Extract available quality levels (sorted highest to lowest)
-        const availableQualities = data.levels
-          .map((level: Level) => level.height)
-          .filter(Boolean) // Remove undefined heights
-          .sort((a: number, b: number) => b - a);
-
-        console.log(
-          `📺 Available qualities: ${availableQualities.join(", ")}p`,
-        );
-        initPlyr(availableQualities);
-
-        // Auto-start playback
-        video.play().catch((error) => {
-          console.error("❌ Auto-play failed:", error);
-        });
-      });
-
-      // Comprehensive error handling with recovery
-      hls.on(Hls.Events.ERROR, (_, data) => {
-        if (!data.fatal) return;
-
-        console.error("❌ HLS Error:", data);
-
-        switch (data.type) {
-          case Hls.ErrorTypes.NETWORK_ERROR:
-            console.warn("Network error, retrying...");
-            hls.startLoad();
-            break;
-
-          case Hls.ErrorTypes.MEDIA_ERROR:
-            console.warn("Media error, recovering...");
-            hls.recoverMediaError();
-            break;
-
-          default:
-            console.error("Fatal error, destroying HLS instance");
-            hls.destroy();
-            hlsRef.current = null;
-            break;
-        }
-      });
-
-      // Handle stream level switching
-      hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
-        const level = hls.levels[data.level];
-        console.log(
-          `Switched to ${level?.height}p (${(level?.bitrate / 1000) | 0}kbps)`,
-        );
-      });
-    }
-    // Fallback for unsupported browsers
-    else {
-      console.error("HLS not supported and no native HLS support");
-      video.src = streamUrl;
+      startPlayback();
+      return cleanup;
     }
 
-    // Cleanup on unmount or streamKey change
-    return () => {
-      cleanup();
-    };
-  }, [streamKey, initPlyr, cleanup]);
+    if (!Hls.isSupported()) {
+      setPlaybackError("Trình duyệt này không hỗ trợ phát livestream HLS.");
+      return cleanup;
+    }
+
+    const hls = new Hls({
+      lowLatencyMode: true,
+      enableWorker: true,
+      backBufferLength: 60,
+      liveSyncDurationCount: 3,
+      liveMaxLatencyDurationCount: 8,
+    });
+
+    hlsRef.current = hls;
+    hls.attachMedia(video);
+
+    hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+      hls.loadSource(streamUrl);
+    });
+
+    hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+      networkRetryCountRef.current = 0;
+      const availableQualities = data.levels
+        .map((level: Level) => level.height)
+        .filter((height): height is number => Number.isFinite(height))
+        .sort((a, b) => b - a);
+      initPlyr(availableQualities);
+      startPlayback();
+    });
+
+    hls.on(Hls.Events.ERROR, (_, data) => {
+      if (!data.fatal) return;
+
+      if (
+        data.type === Hls.ErrorTypes.NETWORK_ERROR &&
+        networkRetryCountRef.current < MAX_NETWORK_RETRIES
+      ) {
+        networkRetryCountRef.current += 1;
+        retryTimerRef.current = window.setTimeout(() => {
+          if (hlsRef.current === hls) hls.startLoad();
+        }, networkRetryCountRef.current * 1_000);
+        return;
+      }
+
+      if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+        hls.recoverMediaError();
+        return;
+      }
+
+      setPlaybackError(
+        "Không thể kết nối tới livestream. Stream có thể đang khởi động hoặc đã kết thúc.",
+      );
+      hls.destroy();
+      if (hlsRef.current === hls) hlsRef.current = null;
+    });
+
+    return cleanup;
+  }, [streamUrl, initPlyr, cleanup]);
 
   return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        background: "black",
-        position: "relative",
-      }}
-    >
+    <div className="live-player">
       <video
         ref={videoRef}
+        className="live-player__video"
+        aria-label="Trình phát livestream"
         playsInline
-        muted // Required for autoplay in most browsers
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "contain",
-        }}
-        controls={false} // Plyr handles controls
+        muted
+        controls={false}
       />
+      {playbackError && (
+        <div className="live-player__error" role="status" aria-live="polite">
+          {playbackError}
+        </div>
+      )}
     </div>
   );
 };

@@ -3,6 +3,8 @@ import User from "../models/User.model.js";
 import Video from "../models/Video.model.js";
 import Stream from "../models/Stream.model.js";
 import Donation from "../models/Donation.model.js";
+import Comment from "../models/Comment.model.js";
+import destroyCloudinaryAsset from "../utils/cloudinaryAssets.js";
 
 // ─────────────────────────────────────────────
 // @desc    Get dashboard stats
@@ -51,6 +53,11 @@ const getAllUsers = asyncHandler(async (req, res) => {
 const updateUserRole = asyncHandler(async (req, res) => {
   const { role } = req.body;
 
+  if (req.params.id === req.user._id.toString() && role !== "admin") {
+    res.status(400);
+    throw new Error("You cannot remove your own admin role");
+  }
+
   if (!["user", "streamer", "admin"].includes(role)) {
     res.status(400);
     throw new Error("Invalid role");
@@ -76,6 +83,11 @@ const updateUserRole = asyncHandler(async (req, res) => {
 // @access  Admin
 // ─────────────────────────────────────────────
 const toggleBanUser = asyncHandler(async (req, res) => {
+  if (req.params.id === req.user._id.toString()) {
+    res.status(400);
+    throw new Error("You cannot ban your own account");
+  }
+
   const user = await User.findById(req.params.id);
 
   if (!user) {
@@ -118,8 +130,17 @@ const deleteVideo = asyncHandler(async (req, res) => {
     throw new Error("Video not found");
   }
 
-  await video.deleteOne();
-  res.status(200).json({ message: "Video deleted successfully" });
+  await Promise.all([
+    Comment.deleteMany({ videoId: video._id }),
+    video.deleteOne(),
+  ]);
+  await Promise.all([
+    destroyCloudinaryAsset(video.videoPublicId, "video"),
+    destroyCloudinaryAsset(video.thumbnailPublicId, "image"),
+  ]);
+  res
+    .status(200)
+    .json({ message: "Video and related comments deleted successfully" });
 });
 
 // ─────────────────────────────────────────────

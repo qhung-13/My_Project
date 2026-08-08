@@ -1,6 +1,8 @@
 import express from "express";
 import {
   startStream,
+  streamPublished,
+  streamUnpublished,
   endStream,
   getLiveStreams,
   getStreamById,
@@ -15,11 +17,14 @@ import {
   getStreamAnalytics,
 } from "../controllers/StreamController.controller.js";
 import protect from "../middlewares/Auth.middleware.js";
+import requireMediaService from "../middlewares/MediaServiceAuth.middleware.js";
 
 const router = express.Router();
 
 router.get("/", getLiveStreams);
 router.get("/top-hours", getTopStreamersByHours);
+router.post("/internal/publish", requireMediaService, streamPublished);
+router.post("/internal/unpublish", requireMediaService, streamUnpublished);
 router.post("/start", protect, startStream);
 router.post("/end", protect, endStream);
 router.put("/live/update", protect, updateLiveStream);

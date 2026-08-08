@@ -1,18 +1,19 @@
-import { Suspense, lazy, useState, useEffect } from "react";
-import { useDispatch } from "react-redux";
+import { Suspense, lazy, useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Link, Route, Routes, Navigate, useParams } from "react-router-dom";
 import { useGetProfileQuery } from "./store/api/userApi";
-import { setUser } from "./store/slices/authSlice";
-import { Route, Routes, Navigate, useParams } from "react-router-dom";
+import {
+  clearUser,
+  finishAuthInitialization,
+  setUser,
+} from "./store/slices/authSlice";
+import type { AppDispatch, RootState } from "./store/store";
 
 import Header from "./layout/Header/Header";
 import Footer from "./layout/Footer/Footer";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import "./index.css";
 
-// Route-level code splitting: each page is only downloaded when the user
-// actually navigates to it, instead of every page (Home, Admin, Upload,
-// Dashboard, ...) being bundled into the single main.js the app loads on
-// first paint. This keeps the initial load fast as more pages get added.
 const Home = lazy(() => import("./pages/Home/Home"));
 const Game = lazy(() => import("./pages/Game/Game"));
 const GameDetail = lazy(() => import("./pages/Game/GameDetail"));
@@ -28,43 +29,80 @@ const Admin = lazy(() => import("./pages/Admin/Admin"));
 const Channel = lazy(() => import("./pages/Channel/Channel"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback/AuthCallback"));
 
-const PageFallback = () => <div className="page-loading">Đang tải...</div>;
+const PageFallback = () => (
+  <div className="page-loading" role="status" aria-live="polite">
+    Đang tải...
+  </div>
+);
 
-// Remount WatchLive when the streamerId param changes so all of its
-// internal state (chat, socket connection, moderation selection, ...)
-// resets cleanly instead of being manually reset in effects.
 const WatchLiveRoute = () => {
   const { streamerId } = useParams<{ streamerId: string }>();
   return <WatchLive key={streamerId} />;
 };
 
-function App() {
-  const dispatch = useDispatch();
+const OwnChannelRoute = () => {
+  const userId = useSelector((state: RootState) => state.auth.user?._id);
+  return userId ? (
+    <Navigate to={`/channel/${userId}`} replace />
+  ) : (
+    <Navigate to="/home" replace />
+  );
+};
 
+const NotFound = () => (
+  <section className="not-found" aria-labelledby="not-found-title">
+    <p className="not-found__code">404</p>
+    <h1 id="not-found-title">Không tìm thấy trang</h1>
+    <p>Đường dẫn này không tồn tại hoặc đã được di chuyển.</p>
+    <Link className="not-found__link" to="/home">
+      Về trang chủ
+    </Link>
+  </section>
+);
+
+function App() {
+  const dispatch = useDispatch<AppDispatch>();
   const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem("darkMode") === "true";
+    const stored = localStorage.getItem("darkMode");
+    return stored
+      ? stored === "true"
+      : Boolean(window.matchMedia?.("(prefers-color-scheme: dark)").matches);
   });
 
-  const { data: profile } = useGetProfileQuery(undefined, {});
+  const {
+    data: profile,
+    isLoading,
+    isFetching,
+    isError,
+  } = useGetProfileQuery(undefined);
 
   useEffect(() => {
     if (profile) {
-      dispatch(setUser(profile));
+      dispatch(
+        setUser({
+          ...profile,
+          coins: profile.coins ?? 0,
+          role: profile.role ?? "user",
+        }),
+      );
+      return;
     }
-  }, [profile, dispatch]);
+
+    if (!isLoading && !isFetching) {
+      if (isError) dispatch(clearUser());
+      else dispatch(finishAuthInitialization());
+    }
+  }, [profile, isLoading, isFetching, isError, dispatch]);
 
   useEffect(() => {
-    if (darkMode) {
-      document.body.classList.add("dark-mode");
-      localStorage.setItem("darkMode", "true");
-    } else {
-      document.body.classList.remove("dark-mode");
-      localStorage.setItem("darkMode", "false");
-    }
+    document.documentElement.classList.toggle("dark-mode", darkMode);
+    document.documentElement.classList.toggle("light-mode", !darkMode);
+    document.documentElement.style.colorScheme = darkMode ? "dark" : "light";
+    localStorage.setItem("darkMode", String(darkMode));
   }, [darkMode]);
 
   return (
-    <main className={darkMode ? "dark-mode" : "light-mode"}>
+    <div className={darkMode ? "dark-mode" : "light-mode"}>
       <Header darkMode={darkMode} setDarkMode={setDarkMode} />
 
       <Suspense fallback={<PageFallback />}>
@@ -77,11 +115,11 @@ function App() {
           <Route path="/stream/:streamerId" element={<WatchLiveRoute />} />
           <Route path="/profile/me" element={<Profile />} />
           <Route path="/profile/:userId" element={<Profile />} />
+          <Route path="/channel/:userId" element={<Channel />} />
           <Route path="/video/:videoId" element={<WatchVideo />} />
           <Route path="/search" element={<Search />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
 
-          {/* Private routes: require login (see ProtectedRoute) */}
           <Route
             path="/upload"
             element={
@@ -110,7 +148,7 @@ function App() {
             path="/channel"
             element={
               <ProtectedRoute>
-                <Channel />
+                <OwnChannelRoute />
               </ProtectedRoute>
             }
           />
@@ -122,11 +160,12 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
 
       <Footer />
-    </main>
+    </div>
   );
 }
 

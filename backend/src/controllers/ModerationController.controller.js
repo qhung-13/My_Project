@@ -1,94 +1,101 @@
+import mongoose from "mongoose";
 import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
-import { io } from "../../index.js";
+import Stream from "../models/Stream.model.js";
+import {
+  banUserInStore,
+  unbanUserInStore,
+  timeoutUserInStore,
+} from "../sockets/moderation.store.js";
 
-// In-memory store cho timeout và ban list
-const timeoutList = new Map(); // "userId:streamId" -> expiry timestamp
-const banList = new Map(); // "streamId" -> Set of banned userIds
-
-// ─────────────────────────────────────────────
-// @desc    Timeout user trong stream
-// @route   POST /api/moderation/timeout
-// @access  Private (streamer only)
-// ─────────────────────────────────────────────
-const timeoutUser = asyncHandler(async (req, res) => {
-  const { userId, streamId, durationSeconds } = req.body;
-
-  const key = `${userId}:${streamId}`;
-  const expiry = Date.now() + durationSeconds * 1000;
-  timeoutList.set(key, expiry);
-
-  // Cleanup sau khi hết timeout
-  setTimeout(() => timeoutList.delete(key), durationSeconds * 1000);
-
-  // Notify user bị timeout qua Socket.io
-  io.to(`stream:${streamId}`).emit("user-moderated", {
-    userId,
-    action: "timeout",
-    durationSeconds,
-    message: `Bạn đã bị timeout ${durationSeconds} giây.`,
-  });
-
-  console.log(
-    `[Moderation] User ${userId} timed out in stream ${streamId} for ${durationSeconds}s`,
-  );
-  res.status(200).json({ success: true });
-});
-
-// ─────────────────────────────────────────────
-// @desc    Ban user khỏi stream
-// @route   POST /api/moderation/ban
-// @access  Private (streamer only)
-// ─────────────────────────────────────────────
-const banUser = asyncHandler(async (req, res) => {
-  const { userId, streamId, reason } = req.body;
-
-  if (!banList.has(streamId)) {
-    banList.set(streamId, new Set());
+const validateIds = (userId, streamId, res) => {
+  if (
+    !mongoose.isValidObjectId(userId) ||
+    !mongoose.isValidObjectId(streamId)
+  ) {
+    res.status(400);
+    throw new Error("Invalid user or stream id");
   }
-  banList.get(streamId).add(userId);
+};
 
-  // Notify user bị ban
-  io.to(`stream:${streamId}`).emit("user-moderated", {
-    userId,
-    action: "ban",
-    reason,
-    message: `Bạn đã bị ban khỏi stream này. Lý do: ${reason}`,
-  });
+const assertCanModerate = async (req, streamId, targetUserId, res) => {
+  if (req.isAgent) return;
+  const stream = await Stream.findById(streamId).select("userId");
+  if (!stream) {
+    res.status(404);
+    throw new Error("Stream not found");
+  }
+  const requesterId = req.user._id.toString();
+  if (stream.userId.toString() !== requesterId && req.user.role !== "admin") {
+    res.status(403);
+    throw new Error("Only the streamer or an admin can moderate this stream");
+  }
+  if (requesterId === String(targetUserId)) {
+    res.status(400);
+    throw new Error("You cannot moderate yourself");
+  }
+};
 
-  console.log(`[Moderation] User ${userId} banned from stream ${streamId}`);
+const timeoutUser = asyncHandler(async (req, res) => {
+  const { userId, streamId } = req.body;
+  const durationSeconds = Number(req.body.durationSeconds);
+  validateIds(userId, streamId, res);
+  if (
+    !Number.isInteger(durationSeconds) ||
+    durationSeconds < 10 ||
+    durationSeconds > 86_400
+  ) {
+    res.status(400);
+    throw new Error("Timeout duration must be between 10 and 86400 seconds");
+  }
+
+  await assertCanModerate(req, streamId, userId, res);
+  await timeoutUserInStore(String(userId), String(streamId), durationSeconds);
+  req.app
+    .get("io")
+    ?.to(`stream:${streamId}`)
+    .emit("user-moderated", {
+      userId: String(userId),
+      action: "timeout",
+      durationSeconds,
+      message: `Bạn đã bị timeout ${durationSeconds} giây.`,
+    });
   res.status(200).json({ success: true });
 });
 
-// ─────────────────────────────────────────────
-// @desc    Unban user
-// @route   POST /api/moderation/unban
-// @access  Private (streamer only)
-// ─────────────────────────────────────────────
+const banUser = asyncHandler(async (req, res) => {
+  const { userId, streamId } = req.body;
+  const reason = String(req.body.reason || "Vi phạm quy tắc cộng đồng")
+    .trim()
+    .slice(0, 200);
+  validateIds(userId, streamId, res);
+  await assertCanModerate(req, streamId, userId, res);
+
+  await banUserInStore(String(userId), String(streamId));
+  req.app
+    .get("io")
+    ?.to(`stream:${streamId}`)
+    .emit("user-moderated", {
+      userId: String(userId),
+      action: "ban",
+      reason,
+      message: `Bạn đã bị ban khỏi stream này. Lý do: ${reason}`,
+    });
+  res.status(200).json({ success: true });
+});
+
 const unbanUser = asyncHandler(async (req, res) => {
   const { userId, streamId } = req.body;
+  validateIds(userId, streamId, res);
+  await assertCanModerate(req, streamId, userId, res);
 
-  if (banList.has(streamId)) {
-    banList.get(streamId).delete(userId);
-  }
-
-  io.to(`stream:${streamId}`).emit("user-unmoderated", { userId });
+  await unbanUserInStore(String(userId), String(streamId));
+  req.app
+    .get("io")
+    ?.to(`stream:${streamId}`)
+    .emit("user-unmoderated", {
+      userId: String(userId),
+    });
   res.status(200).json({ success: true });
 });
-
-// Helper check timeout/ban — dùng trong Socket.io chat handler
-export const isUserBanned = (userId, streamId) => {
-  return banList.get(streamId)?.has(userId) || false;
-};
-
-export const isUserTimedOut = (userId, streamId) => {
-  const key = `${userId}:${streamId}`;
-  const expiry = timeoutList.get(key);
-  if (!expiry) return false;
-  if (Date.now() > expiry) {
-    timeoutList.delete(key);
-    return false;
-  }
-  return true;
-};
 
 export { timeoutUser, banUser, unbanUser };

@@ -14,13 +14,14 @@ const streamSchema = new mongoose.Schema(
     },
     description: {
       type: String,
-      required: true,
+      default: "",
+      maxlength: 1000,
     },
     category: { type: String, required: true },
     tags: [{ type: String }],
     streamKey: {
       type: String,
-      unique: true,
+      default: null,
     },
     thumbnailUrl: {
       type: String,
@@ -60,7 +61,7 @@ const streamSchema = new mongoose.Schema(
 
 streamSchema.index({ isLive: 1, viewers: -1 });
 streamSchema.index({ userId: 1 });
-streamSchema.index({ streamKey: 1 }, { unique: true, sparse: true });
+streamSchema.index({ streamKey: 1, createdAt: -1 });
 streamSchema.index({ createdAt: -1 });
 
 const Stream = mongoose.model("Stream", streamSchema);

@@ -1,85 +1,108 @@
-import { useState } from "react";
-import { Play } from "lucide-react";
-import { formatViewers, generateColor } from "../../utils/format";
-import "./Live.css";
+import { useMemo, useState } from "react";
+import { Play, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGetLiveStreamsQuery } from "../../store/api/streamApi";
+import { formatViewers, generateColor } from "../../utils/format";
 import type { Stream } from "../../types/index";
+import "./Live.css";
 
-// ============================================================
-// Constants
-// ============================================================
-const GAMES = ["All", "Valorant", "LOL", "PUBG", "CS2", "Dota 2", "FIFA", "MLBB", "COD"];
+type SortMode = "viewers" | "newest";
 
-// ============================================================
-// Component
-// ============================================================
 const Live = () => {
   const [activeGame, setActiveGame] = useState("All");
-  const [sortBy, setSortBy] = useState<"viewers" | "newest">("viewers");
+  const [sortBy, setSortBy] = useState<SortMode>("viewers");
   const navigate = useNavigate();
+  const { data, isLoading, isError, isFetching, refetch } =
+    useGetLiveStreamsQuery({ page: 1, limit: 50 });
 
-  const { data: result, isLoading } = useGetLiveStreamsQuery(undefined);
-
-  const filteredStreams = (result?.streams || [])
-    .filter((s: Stream) => activeGame === "All" || s.category === activeGame)
-    .slice()
-    .sort((a: Stream, b: Stream) =>
-      sortBy === "viewers"
-        ? b.viewers - a.viewers
-        : new Date(b.startedAt || b.createdAt).getTime() -
-          new Date(a.startedAt || a.createdAt).getTime(),
-    );
-
-  if (isLoading) {
-    return <div className="live-page__loading">Loading...</div>;
-  }
+  const streams = data?.streams ?? [];
+  const games = useMemo(
+    () => [
+      "All",
+      ...Array.from(
+        new Set(streams.map((stream) => stream.category).filter(Boolean)),
+      ),
+    ],
+    [streams],
+  );
+  const filteredStreams = useMemo(
+    () =>
+      streams
+        .filter(
+          (stream) => activeGame === "All" || stream.category === activeGame,
+        )
+        .slice()
+        .sort((first, second) =>
+          sortBy === "viewers"
+            ? second.viewers - first.viewers
+            : new Date(second.startedAt || second.createdAt).getTime() -
+              new Date(first.startedAt || first.createdAt).getTime(),
+        ),
+    [activeGame, sortBy, streams],
+  );
 
   return (
     <div className="live-page">
-      {/* Header */}
-      <div className="live-page__header">
-        <div className="live-page__title">
-          <span className="live-page__dot" />
+      <header className="live-page__header">
+        <h1 className="live-page__title">
+          <span className="live-page__dot" aria-hidden="true" />
           Live
           <span className="live-page__count">
             {filteredStreams.length} streams
           </span>
-        </div>
-      </div>
+        </h1>
+      </header>
 
-      {/* Game pills */}
       <div className="live-page__filter">
-        <div className="live-page__pills">
-          {GAMES.map((g) => (
+        <div className="live-page__pills" aria-label="Lọc theo game">
+          {games.map((game) => (
             <button
-              key={g}
-              className={`game-pill ${activeGame === g ? "game-pill--active" : ""}`}
-              onClick={() => setActiveGame(g)}
+              type="button"
+              key={game}
+              className={`game-pill ${activeGame === game ? "game-pill--active" : ""}`}
+              onClick={() => setActiveGame(game)}
+              aria-pressed={activeGame === game}
             >
-              {g}
+              {game === "All" ? "Tất cả" : game}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Sort row */}
       <div className="live-page__sort">
         <span className="live-page__sort-label">
           {filteredStreams.length} streams đang live
         </span>
         <button
+          type="button"
           className="live-page__sort-btn"
           onClick={() =>
-            setSortBy((prev) => (prev === "viewers" ? "newest" : "viewers"))
+            setSortBy((previous) =>
+              previous === "viewers" ? "newest" : "viewers",
+            )
           }
         >
-          {sortBy === "viewers" ? "Viewers ↓" : "Mới nhất ↓"}
+          {sortBy === "viewers" ? "Nhiều người xem" : "Mới nhất"}
         </button>
       </div>
 
-      {/* Stream grid */}
-      {filteredStreams.length > 0 ? (
+      {isLoading ? (
+        <div className="live-page__loading" role="status">
+          Đang tải livestream...
+        </div>
+      ) : isError ? (
+        <div className="live-page__empty" role="alert">
+          <p>Không thể tải danh sách livestream.</p>
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+          >
+            <RefreshCw size={16} aria-hidden="true" />
+            {isFetching ? "Đang thử lại..." : "Thử lại"}
+          </button>
+        </div>
+      ) : filteredStreams.length > 0 ? (
         <div className="live-page__grid">
           {filteredStreams.map((stream: Stream) => {
             const name =
@@ -90,64 +113,58 @@ const Live = () => {
               typeof stream.userId === "object" ? stream.userId.avatar : null;
 
             return (
-              <div
+              <button
+                type="button"
                 className="live-card"
                 key={stream._id}
                 onClick={() => navigate(`/stream/${stream._id}`)}
+                aria-label={`Xem ${stream.title} của ${name}`}
               >
-                {/* Thumbnail */}
-                <div
-                  className="live-card__thumb"
-                  style={{ background: "#0a1a2e" }}
-                >
-                  {stream.thumbnailUrl && (
-                    <img
-                      src={stream.thumbnailUrl}
-                      alt={stream.title}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
+                <span className="live-card__thumb">
+                  {stream.thumbnailUrl ? (
+                    <img src={stream.thumbnailUrl} alt="" loading="lazy" />
+                  ) : (
+                    <span className="live-card__placeholder" aria-hidden="true">
+                      {stream.category.slice(0, 2).toUpperCase()}
+                    </span>
                   )}
-                  <button className="live-card__play">
-                    <Play size={14} fill="white" />
-                  </button>
+                  <span className="live-card__play" aria-hidden="true">
+                    <Play size={14} fill="currentColor" />
+                  </span>
                   <span className="live-card__badge">LIVE</span>
                   <span className="live-card__viewers">
                     {formatViewers(stream.viewers)}
                   </span>
-                </div>
+                </span>
 
-                {/* Info */}
-                <div className="live-card__info">
-                  <div className="live-card__streamer">
-                    <div
+                <span className="live-card__info">
+                  <span className="live-card__streamer">
+                    <span
                       className="live-card__avatar"
                       style={{ background: generateColor(name) }}
                     >
                       {avatar ? (
-                        <img
-                          src={avatar}
-                          alt=""
-                          style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
-                        />
+                        <img src={avatar} alt="" loading="lazy" />
                       ) : (
                         name.slice(0, 2).toUpperCase()
                       )}
-                    </div>
+                    </span>
                     <span className="live-card__name">{name}</span>
-                  </div>
-                  <div className="live-card__title">{stream.title}</div>
-                  <div className="live-card__game">{stream.category}</div>
-                </div>
-              </div>
+                  </span>
+                  <span className="live-card__title">{stream.title}</span>
+                  <span className="live-card__game">{stream.category}</span>
+                </span>
+              </button>
             );
           })}
         </div>
       ) : (
-        /* Empty state */
         <div className="live-page__empty">
-          <div className="live-page__empty-icon">📭</div>
+          <div className="live-page__empty-icon" aria-hidden="true">
+            📭
+          </div>
           <p>Không có stream nào</p>
-          <span>Thử chọn game khác hoặc quay lại sau</span>
+          <span>Thử chọn game khác hoặc quay lại sau.</span>
         </div>
       )}
     </div>

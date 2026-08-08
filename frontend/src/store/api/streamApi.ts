@@ -1,10 +1,11 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { PaginatedStreams, GetLiveStreamsParams } from "../../types/index";
+import { API_BASE_URL } from "../../config/api";
 
 export const streamApi = createApi({
   reducerPath: "streamApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+    baseUrl: API_BASE_URL,
     credentials: "include",
   }),
   endpoints: (builder) => ({
@@ -20,8 +21,31 @@ export const streamApi = createApi({
     getStreamById: builder.query({
       query: (id) => `/streams/${id}`,
     }),
+    getStreamsByUser: builder.query<
+      PaginatedStreams,
+      { userId: string; page?: number; limit?: number }
+    >({
+      query: ({ userId, page = 1, limit = 12 }) =>
+        `/streams/user/${userId}?${new URLSearchParams({
+          page: String(page),
+          limit: String(limit),
+        }).toString()}`,
+    }),
     getTopStreamersByHours: builder.query({
       query: () => "/streams/top-hours",
+    }),
+    prepareStream: builder.mutation({
+      query: (data) => ({
+        url: "/streams/start",
+        method: "POST",
+        body: data,
+      }),
+    }),
+    endStream: builder.mutation({
+      query: () => ({
+        url: "/streams/end",
+        method: "POST",
+      }),
     }),
     timeoutUser: builder.mutation({
       query: ({ userId, streamId, durationSeconds }) => ({
@@ -73,7 +97,10 @@ export const streamApi = createApi({
 export const {
   useGetLiveStreamsQuery,
   useGetStreamByIdQuery,
+  useGetStreamsByUserQuery,
   useGetTopStreamersByHoursQuery,
+  usePrepareStreamMutation,
+  useEndStreamMutation,
   useTimeoutUserMutation,
   useBanUserMutation,
   useUnbanUserMutation,

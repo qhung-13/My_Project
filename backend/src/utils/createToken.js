@@ -1,31 +1,25 @@
 import jwt from "jsonwebtoken";
 
-/**
- * Generates a JSON Web Token (JWT) and sets it as a secure HTTP-only cookie
- *
- * @param {Object} res - Express response object
- * @param {string|ObjectId} userId - The unique identifier of the authenticated user
- * @returns {string} The generated JWT string
- */
-const isProduction = process.env.NODE_ENV !== "development";
-
-const createToken = (res, userId) => {
-  const token = jwt.sign({ userId }, process.env.JWT_SECRET, {
-    expiresIn: "30d",
-  });
-
-  res.cookie("jwt", token, {
+export const getAuthCookieOptions = () => {
+  const isProduction = process.env.NODE_ENV === "production";
+  return {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? "none" : "lax",
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days in milliseconds
-  });
-
-  return token;
+    path: "/",
+  };
 };
 
-export const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "30d" });
+export const generateToken = (userId) =>
+  jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "30d" });
+
+const createToken = (res, userId) => {
+  const token = generateToken(userId);
+  res.cookie("jwt", token, {
+    ...getAuthCookieOptions(),
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+  });
+  return token;
 };
 
 export default createToken;

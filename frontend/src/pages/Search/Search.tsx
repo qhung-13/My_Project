@@ -1,7 +1,11 @@
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useSearchVideosQuery } from "../../store/api/videoApi";
 import { useGetLiveStreamsQuery } from "../../store/api/streamApi";
-import { formatViewers, generateColor } from "../../utils/format";
+import {
+  formatDuration,
+  formatViewers,
+  generateColor,
+} from "../../utils/format";
 import { Play } from "lucide-react";
 import type { Video, Stream } from "../../types/index";
 import "./Search.css";
@@ -20,13 +24,15 @@ const ALL_CATEGORIES = [
 const Search = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const q = searchParams.get("q") || "";
+  const q = (searchParams.get("q") || "").trim();
+  const hasQuery = q.length > 0;
 
   const relatedCategories = ALL_CATEGORIES.filter((cat) =>
     cat.toLowerCase().includes(q.toLowerCase()),
   );
 
-  const { data: streamsResult } = useGetLiveStreamsQuery({});
+  const { data: streamsResult, isError: isStreamsError } =
+    useGetLiveStreamsQuery({ page: 1, limit: 50 }, { skip: !hasQuery });
   const relatedStreams = (streamsResult?.streams || [])
     .filter(
       (stream: Stream) =>
@@ -37,8 +43,23 @@ const Search = () => {
     )
     .slice(0, 6);
 
-  const { data: videosResult, isLoading } = useSearchVideosQuery({ q });
+  const {
+    data: videosResult,
+    isLoading,
+    isError: isVideosError,
+  } = useSearchVideosQuery({ q }, { skip: !hasQuery });
   const videos = videosResult?.videos || [];
+
+  if (!hasQuery) {
+    return (
+      <div className="search-page">
+        <section className="search-empty" aria-labelledby="search-empty-title">
+          <h2 id="search-empty-title">Tìm nội dung trên OmexLive</h2>
+          <p>Nhập tên video, livestream hoặc trò chơi trong thanh tìm kiếm.</p>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="search-page">
@@ -52,13 +73,18 @@ const Search = () => {
           <h3 className="search-section__title">Categories</h3>
           <div className="search-categories">
             {relatedCategories.map((cat) => (
-              <div
+              <button
+                type="button"
                 key={cat}
                 className="search-category-card"
-                onClick={() => navigate(`/search?q=${cat}`)}
+                onClick={() =>
+                  navigate(
+                    `/search?${new URLSearchParams({ q: cat }).toString()}`,
+                  )
+                }
               >
                 <span className="search-category-card__name">{cat}</span>
-              </div>
+              </button>
             ))}
           </div>
         </section>
@@ -75,7 +101,8 @@ const Search = () => {
                   ? stream.userId?.displayName || stream.userId?.username
                   : "Unknown";
               return (
-                <div
+                <button
+                  type="button"
                   key={stream._id}
                   className="search-stream-card"
                   onClick={() => navigate(`/stream/${stream._id}`)}
@@ -131,11 +158,17 @@ const Search = () => {
                       </p>
                     </div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
         </section>
+      )}
+
+      {isStreamsError && (
+        <div className="search-empty" role="alert">
+          <p>Không thể tải kết quả livestream.</p>
+        </div>
       )}
 
       {/* ── Section 3: Videos ── */}
@@ -146,7 +179,8 @@ const Search = () => {
         ) : videos.length > 0 ? (
           <div className="search-videos">
             {videos.map((video: Video) => (
-              <div
+              <button
+                type="button"
                 key={video._id}
                 className="search-video-card"
                 onClick={() => navigate(`/video/${video._id}`)}
@@ -160,17 +194,21 @@ const Search = () => {
                     </div>
                   )}
                   <span className="search-video-card__duration">
-                    {video.duration}s
+                    {formatDuration(video.duration)}
                   </span>
                 </div>
                 <div className="search-video-card__info">
                   <p className="search-video-card__title">{video.title}</p>
                   <p className="search-video-card__meta">
-                    {video.views} views · {video.category}
+                    {formatViewers(video.views)} lượt xem · {video.category}
                   </p>
                 </div>
-              </div>
+              </button>
             ))}
+          </div>
+        ) : isVideosError ? (
+          <div className="search-empty" role="alert">
+            <p>Không thể tải kết quả video. Vui lòng thử lại.</p>
           </div>
         ) : (
           <div className="search-empty">

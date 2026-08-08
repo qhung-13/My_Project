@@ -215,3 +215,28 @@
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
   }
 }
+.game-card {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.game-card__poster,
+.game-card__name,
+.game-card__viewers {
+  display: flex;
+}
+
+.game-card__name,
+.game-card__viewers {
+  display: block;
+}
+
+.game-card:focus-visible,
+.browse__more:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 42%, transparent);
+  outline-offset: 3px;
+}

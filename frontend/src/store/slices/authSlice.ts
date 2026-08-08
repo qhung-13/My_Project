@@ -1,40 +1,51 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 
-interface User {
+export interface AuthUser {
   _id: string;
   username: string;
   email: string;
   avatar: string | null;
   coins: number;
-  role: string;
+  role: "user" | "streamer" | "admin" | string;
+  displayName?: string;
+  bio?: string;
+  bannerImage?: string | null;
 }
 
 interface AuthState {
-  user: User | null;
+  user: AuthUser | null;
   isAuthenticated: boolean;
+  /** False until the initial cookie-backed profile request has settled. */
+  isInitialized: boolean;
 }
 
 const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
+  isInitialized: false,
 };
 
 const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    setUser: (state, action: PayloadAction<User>) => {
+    setUser: (state, action: PayloadAction<AuthUser>) => {
       state.user = action.payload;
       state.isAuthenticated = true;
+      state.isInitialized = true;
     },
     clearUser: (state) => {
       state.user = null;
       state.isAuthenticated = false;
+      state.isInitialized = true;
+    },
+    finishAuthInitialization: (state) => {
+      state.isInitialized = true;
     },
   },
 });
 
-export const { setUser, clearUser } = authSlice.actions;
-const authReducer = authSlice.reducer;
-export default authReducer;
+export const { setUser, clearUser, finishAuthInitialization } =
+  authSlice.actions;
+export default authSlice.reducer;

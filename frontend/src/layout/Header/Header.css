@@ -917,3 +917,41 @@
     transform: translateY(0);
   }
 }
+
+.header__avatar-button {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.header__avatar-button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 3px;
+}
+
+.header__country-item {
+  width: 100%;
+  border: 0;
+  text-align: left;
+}
+
+.header__country-empty {
+  margin: 0;
+  padding: 14px 12px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.mobile-menu__item--actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mobile-menu__link--danger {
+  color: var(--danger);
+}
