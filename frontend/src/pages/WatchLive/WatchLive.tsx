@@ -10,7 +10,10 @@ import {
   useUnfollowUserMutation,
   useGetUserByIdQuery,
 } from "../../store/api/userApi";
-import { useGetStreamByIdQuery, useGetLiveStreamsQuery } from "../../store/api/streamApi";
+import {
+  useGetStreamByIdQuery,
+  useGetLiveStreamsQuery,
+} from "../../store/api/streamApi";
 import VideoPlayer from "./VideoPlayer/VideoPlayer";
 import DonateModal from "./DonateModal/DonateModal";
 import UpdateStreamModal from "../../components/UpdateStreamModal/UpdateStreamModal";
@@ -41,18 +44,26 @@ const WatchLive = () => {
   const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showViewerList, setShowViewerList] = useState(false);
+  const [actionMessage, setActionMessage] = useState("");
 
   const { user: authUser } = useSelector((state: RootState) => state.auth);
-  const [followUser] = useFollowUserMutation();
-  const [unfollowUser] = useUnfollowUserMutation();
+  const [followUser, { isLoading: isFollowingUser }] = useFollowUserMutation();
+  const [unfollowUser, { isLoading: isUnfollowingUser }] =
+    useUnfollowUserMutation();
 
-  const { data: currentStream, isLoading: isStreamLoading } =
-    useGetStreamByIdQuery(id!, { skip: !id }) as {
-      data: Stream | undefined;
-      isLoading: boolean;
-    };
+  const {
+    data: currentStream,
+    isLoading: isStreamLoading,
+    isError: isStreamError,
+    refetch: refetchStream,
+  } = useGetStreamByIdQuery(id!, { skip: !id }) as {
+    data: Stream | undefined;
+    isLoading: boolean;
+    isError: boolean;
+    refetch: () => unknown;
+  };
 
-  const { data: result } = useGetLiveStreamsQuery(undefined);
+  const { data: result } = useGetLiveStreamsQuery({ page: 1, limit: 12 });
 
   const {
     messages,
@@ -96,12 +107,20 @@ const WatchLive = () => {
     ) ?? false;
 
   const handleFollow = async () => {
-    if (!streamerId) return;
+    if (!authUser) {
+      setActionMessage("Vui lòng đăng nhập để theo dõi streamer.");
+      return;
+    }
+    if (!streamerId || isFollowingUser || isUnfollowingUser) return;
+    setActionMessage("");
     try {
       if (isFollowing) await unfollowUser(streamerId).unwrap();
       else await followUser(streamerId).unwrap();
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      const apiError = error as { data?: { message?: string } };
+      setActionMessage(
+        apiError.data?.message || "Không thể cập nhật theo dõi.",
+      );
     }
   };
 
@@ -118,10 +137,21 @@ const WatchLive = () => {
     return <div className="watch-live__loading">Loading...</div>;
   }
 
+  if (isStreamError) {
+    return (
+      <div className="watch-live__loading" role="alert">
+        <p>Không thể tải livestream hoặc stream đã kết thúc.</p>
+        <button type="button" onClick={() => void refetchStream()}>
+          Thử lại
+        </button>
+      </div>
+    );
+  }
+
   if (!currentStream) {
     return (
       <div className="watch-live__loading">
-        Stream không tồn tại hoặc đã kết thúc
+        Stream không tồn tại hoặc đã kết thúc.
       </div>
     );
   }
@@ -140,16 +170,32 @@ const WatchLive = () => {
 
   const handleShare = async () => {
     const url = window.location.href;
-    if (navigator.share) {
-      await navigator.share({
-        title: currentStream.title,
-        text: `Đang xem ${streamerName} live trên OmexLive!`,
-        url,
-      });
-    } else {
-      navigator.clipboard.writeText(url);
-      alert("Đã copy link stream!");
+    setActionMessage("");
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: currentStream.title,
+          text: `Đang xem ${streamerName} live trên OmexLive!`,
+          url,
+        });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setActionMessage("Đã sao chép liên kết livestream.");
+      }
+    } catch (error) {
+      if ((error as DOMException)?.name !== "AbortError") {
+        setActionMessage("Không thể chia sẻ liên kết lúc này.");
+      }
     }
+  };
+
+  const handleDonate = () => {
+    if (!authUser) {
+      setActionMessage("Vui lòng đăng nhập để donate.");
+      return;
+    }
+    setActionMessage("");
+    setIsDonateModalOpen(true);
   };
 
   return (
@@ -158,15 +204,16 @@ const WatchLive = () => {
       <div className="watch-live__video">
         <div className="video-badges">
           <span className="badge-live">LIVE</span>
-          <span
+          <button
+            type="button"
             className="badge-viewers"
-            style={{ cursor: "pointer" }}
             onClick={() => setShowViewerList(true)}
+            aria-label={`Xem danh sách ${viewerCount} người xem`}
           >
             {formatViewers(viewerCount)} 👥
-          </span>
+          </button>
         </div>
-        <VideoPlayer streamKey={currentStream.streamKey || ""} />
+        <VideoPlayer streamUrl={currentStream.hlsUrl} />
         <ViewerList
           viewers={viewers}
           isOpen={showViewerList}
@@ -176,13 +223,14 @@ const WatchLive = () => {
 
       <StreamInfoBar
         stream={currentStream}
-        streamerId={streamerId}
         streamerName={streamerName}
         streamerAvatar={streamerAvatar}
         isOwnStream={isOwnStream}
         isFollowing={isFollowing}
+        isFollowPending={isFollowingUser || isUnfollowingUser}
+        actionMessage={actionMessage}
         onFollow={handleFollow}
-        onDonate={() => setIsDonateModalOpen(true)}
+        onDonate={handleDonate}
         onShare={handleShare}
         onEdit={() => setShowUpdateModal(true)}
         onAvatarClick={() => streamerId && navigate(`/profile/${streamerId}`)}

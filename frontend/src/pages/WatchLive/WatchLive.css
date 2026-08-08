@@ -20,6 +20,34 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
+.live-player {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: #000;
+}
+
+.live-player__video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.live-player__error {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: #f8fafc;
+  background: rgba(2, 6, 23, 0.82);
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .video-badges {
   position: absolute;
   top: 8px;
@@ -337,12 +365,17 @@
 }
 
 .chat-panel__tab {
+  width: 100%;
   height: 48px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
   cursor: pointer;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
 }
 
 .chat-panel__tab-left {
@@ -412,10 +445,33 @@
   flex-shrink: 0;
 }
 
+.chat-msg__body {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .chat-msg__user {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: transparent;
   font-size: 12px;
   font-weight: 700;
   color: var(--accent);
+}
+
+.chat-msg__user--action {
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.chat-panel__empty {
+  margin: auto;
+  padding: 24px 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
 }
 
 .chat-msg__text {
@@ -431,6 +487,7 @@
 
 .chat-panel__input input {
   flex: 1;
+  min-width: 0;
   height: 40px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
@@ -547,8 +604,9 @@
 
 .moderation-menu {
   position: absolute;
-  bottom: 60px;
+  bottom: 64px;
   left: 12px;
+  right: 12px;
   background: white;
   border: 1px solid var(--border-color);
   border-radius: 10px;
@@ -556,6 +614,7 @@
   padding: 8px;
   z-index: 100;
   min-width: 180px;
+  max-width: 320px;
 }
 
 .moderation-menu__header {
@@ -859,4 +918,93 @@
   .chat-panel__arrow {
     display: none;
   }
+}
+
+.chat-panel__send:disabled,
+.chat-panel__input input:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.chat-panel__tab:focus-visible,
+.chat-msg__user--action:focus-visible,
+.moderation-menu button:focus-visible,
+.reaction-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.badge-viewers {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.info-avatar {
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+}
+
+.info-avatar img,
+.suggested-card__thumb img,
+.suggested-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.info-avatar,
+.suggested-card__avatar {
+  overflow: hidden;
+}
+
+.info-message {
+  margin: 5px 0 0;
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.info-actions button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.suggested-card {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.suggested-card__thumb,
+.suggested-card__info,
+.suggested-card__title,
+.suggested-card__streamer {
+  display: flex;
+}
+
+.suggested-card__title {
+  display: block;
+}
+
+.badge-viewers:focus-visible,
+.info-avatar:focus-visible,
+.info-actions button:focus-visible,
+.suggested-card:focus-visible,
+.watch-live__loading button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 42%, transparent);
+  outline-offset: 3px;
+}
+
+.watch-live__loading button {
+  margin-top: 12px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
 }
