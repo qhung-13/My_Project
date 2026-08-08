@@ -35,6 +35,22 @@
   object-fit: contain;
 }
 
+.live-player > .plyr,
+.live-player .plyr__video-wrapper {
+  width: 100%;
+  height: 100%;
+}
+
+.live-player .plyr {
+  --plyr-video-background: #000;
+}
+
+.live-player .plyr video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .live-player__error {
   position: absolute;
   inset: 0;
@@ -496,7 +512,9 @@
   padding: 0 14px;
   font-size: 13px;
   outline: none;
-  transition: border-color var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease);
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
 }
 
 .chat-panel__input input:focus {
@@ -740,7 +758,9 @@
   cursor: pointer;
   border-radius: 8px;
   padding: 4px 8px;
-  transition: transform 0.1s, background 0.2s;
+  transition:
+    transform 0.1s,
+    background 0.2s;
 }
 
 .reaction-btn:hover {
@@ -764,8 +784,14 @@
 }
 
 @keyframes floatUp {
-  0% { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateY(-120px) scale(1.5); }
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-120px) scale(1.5);
+  }
 }
 
 /* --- Dark Mode --- */

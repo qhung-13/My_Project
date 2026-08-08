@@ -19,7 +19,9 @@ export const buildHlsUrl = (streamKey) => {
   if (!streamKey) return null;
 
   const base = (
-    process.env.CDN_BASE_URL || process.env.MEDIA_SERVICE_URL || "http://localhost:8000/live"
+    process.env.CDN_BASE_URL ||
+    process.env.MEDIA_SERVICE_URL ||
+    "http://localhost:8080/live"
   ).replace(/\/+$/, "");
 
   return `${base}/${streamKey}/index.m3u8`;
