@@ -1,361 +1,346 @@
-import User from "../models/User.model.js";
-import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
-import createToken from "../utils/createToken.js";
-import Otp from "../models/Otp.model.js";
-import sendOtpEmail from "../utils/sendEmail.js";
-import bcrypt from "bcryptjs";
+import { randomInt } from "node:crypto";
 import { v4 as uuidv4 } from "uuid";
+import User from "../models/User.model.js";
+import Otp from "../models/Otp.model.js";
+import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
+import destroyCloudinaryAsset from "../utils/cloudinaryAssets.js";
+import createToken, { getAuthCookieOptions } from "../utils/createToken.js";
+import sendOtpEmail from "../utils/sendEmail.js";
 
-// Note: Removed unused import { compare } from "bcryptjs"
-// comparePassword is already handled by the User model method
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,30}$/;
 
-// ─────────────────────────────────────────────
-// @desc    Register a new user
-// @route   POST /api/users/register
-// @access  Public
-// ─────────────────────────────────────────────
+const normalizeEmail = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase();
+const normalizeUsername = (value) => String(value || "").trim();
+const generateOtp = () => randomInt(100000, 1000000).toString();
+
+const serializeAuthUser = (user) => ({
+  _id: user._id,
+  username: user.username,
+  email: user.email,
+  displayName: user.displayName,
+  avatar: user.avatar,
+  bio: user.bio,
+  coins: user.coins ?? 0,
+  role: user.role || "user",
+  bannerImage: user.bannerImage,
+});
+
+const createAndSendOtp = async (email, type) => {
+  const otp = generateOtp();
+  await Otp.deleteMany({ email, type });
+  await Otp.create({ email, otp, type });
+  await sendOtpEmail(email, otp, type);
+};
+
+const requireOtpFields = (email, otp, res) => {
+  if (!email || !/^\d{6}$/.test(String(otp || ""))) {
+    res.status(400);
+    throw new Error("Email and a valid 6-digit OTP are required");
+  }
+};
+
+const consumeOtp = (email, otp, type) =>
+  Otp.findOneAndDelete({
+    email,
+    otp,
+    type,
+    expiresAt: { $gt: new Date() },
+  });
+
+const validatePassword = (password, res) => {
+  if (typeof password !== "string" || password.length < 8) {
+    res.status(400);
+    throw new Error("Password must contain at least 8 characters");
+  }
+};
+
+const normalizeOptionalHttpUrl = (value, fieldName, res) => {
+  const normalized = String(value || "").trim();
+  if (!normalized) return null;
+  if (normalized.length > 2048) {
+    res.status(400);
+    throw new Error(`${fieldName} URL is too long`);
+  }
+  try {
+    const parsed = new URL(normalized);
+    if (!["http:", "https:"].includes(parsed.protocol))
+      throw new Error("invalid protocol");
+    return parsed.toString();
+  } catch {
+    res.status(400);
+    throw new Error(`${fieldName} must be a valid HTTP or HTTPS URL`);
+  }
+};
+
 const userRegister = asyncHandler(async (req, res) => {
-  const { username, email, password } = req.body;
+  const username = normalizeUsername(req.body.username);
+  const email = normalizeEmail(req.body.email);
+  const { password } = req.body;
 
-  if (!username || !email || !password) {
+  if (!USERNAME_PATTERN.test(username)) {
     res.status(400);
-    throw new Error("Please fill all fields");
+    throw new Error(
+      "Username must be 3-30 characters and contain only letters, numbers, or underscores",
+    );
+  }
+  if (!EMAIL_PATTERN.test(email)) {
+    res.status(400);
+    throw new Error("Please provide a valid email address");
+  }
+  validatePassword(password, res);
+
+  const existing = await User.findOne({ $or: [{ username }, { email }] });
+  if (existing) {
+    res.status(409);
+    throw new Error(
+      existing.email === email
+        ? "Email already exists"
+        : "Username already exists",
+    );
   }
 
-  // Check if username already exists
-  const userExist = await User.findOne({ username });
-  if (userExist) {
-    res.status(400);
-    throw new Error("User already exists");
+  const newUser = await User.create({ username, email, password });
+  try {
+    await createAndSendOtp(email, "verify_email");
+  } catch (error) {
+    console.error("Registration OTP delivery failed:", error.message);
+    res.status(503);
+    throw error;
   }
-
-  const emailExist = await User.findOne({ email });
-  if (emailExist) {
-    res.status(400);
-    throw new Error("Email already exists");
-  }
-
-  const newUser = new User({ username, email, password });
-  await newUser.save();
-
-  createToken(res, newUser._id);
 
   res.status(201).json({
+    message: "Account created. Please verify the OTP sent to your email.",
     _id: newUser._id,
     username: newUser.username,
     email: newUser.email,
   });
 });
 
-// ─────────────────────────────────────────────
-// @desc    Login user
-// @route   POST /api/users/login
-// @access  Public
-// ─────────────────────────────────────────────
 const userLogin = asyncHandler(async (req, res) => {
-  const { username, password } = req.body;
+  const username = normalizeUsername(req.body.username);
+  const { password } = req.body;
 
-  // Find user and explicitly select password (hidden by default)
+  if (!username || !password) {
+    res.status(400);
+    throw new Error("Username and password are required");
+  }
+
   const existingUser = await User.findOne({ username }).select("+password");
-  if (!existingUser) {
-    res.status(404);
-    throw new Error("User not found");
-  }
+  const isPasswordValid = existingUser
+    ? await existingUser.comparePassword(password)
+    : false;
 
-  // Validate password using model method
-  const isPasswordValid = await existingUser.comparePassword(password);
-  if (!isPasswordValid) {
+  if (!existingUser || !isPasswordValid) {
     res.status(401);
-    throw new Error("Invalid password");
+    throw new Error("Invalid username or password");
+  }
+  if (!existingUser.isActive) {
+    res.status(403);
+    throw new Error("This account has been disabled");
+  }
+  if (!existingUser.isVerified) {
+    res.status(403);
+    throw new Error("Please verify your email before logging in");
   }
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  await Otp.deleteMany({ email: existingUser.email, type: "login" });
-  await Otp.create({ email: existingUser.email, otp, type: "login" });
-  sendOtpEmail(existingUser.email, otp, "login").catch((err) => {
-    console.error("Background email sending error:", err.message);
-  });
-
+  await createAndSendOtp(existingUser.email, "login");
   res.status(200).json({
     message: "OTP has been sent to your email",
     email: existingUser.email,
   });
 });
 
-// ─────────────────────────────────────────────
-// @desc    Send OTP to email for verification
-// @route   POST /api/users/send-otp
-// @access  Public
-// ─────────────────────────────────────────────
 const sendOtp = asyncHandler(async (req, res) => {
-  const { email } = req.body;
+  const email = normalizeEmail(req.body.email);
+  if (!EMAIL_PATTERN.test(email)) {
+    res.status(400);
+    throw new Error("Please provide a valid email address");
+  }
 
-  // Check if email exists in DB
   const user = await User.findOne({ email });
   if (!user) {
     res.status(404);
     throw new Error("Email does not exist");
   }
+  if (user.isVerified) {
+    res.status(409);
+    throw new Error("Email is already verified");
+  }
 
-  // Generate 6-digit OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-  // Remove any existing OTP for this email
-  await Otp.deleteMany({ email, type: "verify_email" });
-
-  // Save new OTP to DB
-  await Otp.create({ email, otp, type: "verify_email" });
-
-  // Send OTP via email
-  sendOtpEmail(email, otp, "verify_email").catch((err) => {
-    console.error("Lỗi gửi email xác thực:", err.message);
-  });
-
+  await createAndSendOtp(email, "verify_email");
   res.status(200).json({ message: "OTP has been sent to your email" });
 });
 
-// ─────────────────────────────────────────────
-// @desc    Verify OTP and activate account
-// @route   POST /api/users/verify-otp
-// @access  Public
-// ─────────────────────────────────────────────
 const verifyOtp = asyncHandler(async (req, res) => {
-  const { email, otp } = req.body;
+  const email = normalizeEmail(req.body.email);
+  const otp = String(req.body.otp || "").trim();
+  requireOtpFields(email, otp, res);
 
-  // Find OTP record in DB
-  const otpExist = await Otp.findOne({ email, type: "verify_email" });
-  if (!otpExist) {
-    res.status(404);
-    throw new Error("Invalid OTP");
-  }
-
-  // Check if OTP has expired
-  if (otpExist.expiresAt < new Date()) {
+  const otpRecord = await consumeOtp(email, otp, "verify_email");
+  if (!otpRecord) {
     res.status(400);
-    throw new Error("OTP has expired");
+    throw new Error("Invalid or expired OTP");
   }
 
-  // Compare OTP from body with OTP in DB
-  if (otp !== otpExist.otp) {
-    res.status(400);
-    throw new Error("Invalid OTP");
-  }
-
-  // Mark user as verified and clean up OTP
-  await User.findOneAndUpdate({ email }, { isVerified: true });
-  await Otp.deleteMany({ email, type: "verify_email" });
-
-  const user = await User.findOne({ email });
-  res.status(200).json({
-    message: "Email verified successfully",
-    _id: user._id,
-    username: user.username,
-    email: user.email,
-    avatar: user.avatar,
-  });
-});
-
-// ─────────────────────────────────────────────
-// @desc    Send OTP to email for password reset
-// @route   POST /api/users/forgot-password
-// @access  Public
-// ─────────────────────────────────────────────
-const forgotPassword = asyncHandler(async (req, res) => {
-  const { email } = req.body;
-
-  // Check if user exists
-  const user = await User.findOne({ email });
+  const user = await User.findOneAndUpdate(
+    { email },
+    { isVerified: true },
+    { new: true },
+  );
   if (!user) {
     res.status(404);
     throw new Error("User not found");
   }
 
-  // Generate 6-digit OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-  // Remove any existing reset OTP for this email
-  await Otp.deleteMany({ email, type: "reset_password" });
-
-  // Save new OTP to DB
-  await Otp.create({ email, otp, type: "reset_password" });
-
-  // Send OTP via email
-  endOtpEmail(email, otp, "reset_password").catch((err) => {
-    console.error("Lỗi gửi email reset password:", err.message);
+  createToken(res, user._id);
+  res.status(200).json({
+    message: "Email verified successfully",
+    ...serializeAuthUser(user),
   });
-
-  res
-    .status(200)
-    .json({ message: "Password reset OTP has been sent to your email" });
 });
 
-// ─────────────────────────────────────────────
-// @desc    Reset password using OTP
-// @route   POST /api/users/reset-password
-// @access  Public
-// ─────────────────────────────────────────────
+const forgotPassword = asyncHandler(async (req, res) => {
+  const email = normalizeEmail(req.body.email);
+  if (!EMAIL_PATTERN.test(email)) {
+    res.status(400);
+    throw new Error("Please provide a valid email address");
+  }
+
+  const user = await User.findOne({ email, isActive: true });
+  if (user) {
+    await createAndSendOtp(email, "reset_password");
+  }
+
+  // Do not reveal whether an account exists for this email.
+  res.status(200).json({
+    message: "If the account exists, a password reset OTP has been sent.",
+  });
+});
+
 const resetPassword = asyncHandler(async (req, res) => {
-  const { email, otp, newPassword } = req.body;
+  const email = normalizeEmail(req.body.email);
+  const otp = String(req.body.otp || "").trim();
+  const { newPassword } = req.body;
+  requireOtpFields(email, otp, res);
+  validatePassword(newPassword, res);
 
-  // Find OTP record in DB
-  const isValidOtp = await Otp.findOne({ email, type: "reset_password" });
-  if (!isValidOtp) {
+  const otpRecord = await consumeOtp(email, otp, "reset_password");
+  if (!otpRecord) {
+    res.status(400);
+    throw new Error("Invalid or expired OTP");
+  }
+
+  const user = await User.findOne({ email }).select("+password");
+  if (!user) {
     res.status(404);
-    throw new Error("OTP not found");
+    throw new Error("User not found");
   }
 
-  // Check if OTP has expired
-  if (isValidOtp.expiresAt < new Date()) {
-    res.status(400);
-    throw new Error("OTP has expired");
-  }
-
-  // Compare OTP
-  if (otp !== isValidOtp.otp) {
-    res.status(400);
-    throw new Error("Invalid OTP");
-  }
-
-  // Update password — pre('save') hook will hash it automatically
-  const user = await User.findOne({ email });
   user.password = newPassword;
   await user.save();
-
-  // Clean up OTP after successful reset
-  await Otp.deleteMany({ email, type: "reset_password" });
-
   res.status(200).json({ message: "Password reset successfully" });
 });
 
-// ─────────────────────────────────────────────
-// @desc    Logout user
-// @route   POST /api/users/logout
-// @access  Private
-// ─────────────────────────────────────────────
 const logout = asyncHandler(async (req, res) => {
-  const isProduction = process.env.NODE_ENV !== "development";
-  res.cookie("jwt", "", {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? "none" : "lax",
-    expires: new Date(0),
-  });
-
+  res.clearCookie("jwt", getAuthCookieOptions());
   res.status(200).json({ message: "Logged out successfully" });
 });
 
 const verifyLoginOtp = asyncHandler(async (req, res) => {
-  const { email, otp } = req.body;
+  const email = normalizeEmail(req.body.email);
+  const otp = String(req.body.otp || "").trim();
+  requireOtpFields(email, otp, res);
 
-  // Step 1: Find OTP in DB
-  const otpExist = await Otp.findOne({ email, type: "login" });
-  if (!otpExist) {
-    res.status(404);
-    throw new Error("Invalid OTP");
-  }
-
-  // Step 2: Check expired
-  if (otpExist.expiresAt < new Date()) {
+  const otpRecord = await consumeOtp(email, otp, "login");
+  if (!otpRecord) {
     res.status(400);
-    throw new Error("OTP has expired");
+    throw new Error("Invalid or expired OTP");
   }
 
-  // Step 3: Compare OTP
-  if (otp !== otpExist.otp) {
-    res.status(400);
-    throw new Error("Invalid OTP");
+  const user = await User.findOne({ email, isActive: true });
+  if (!user) {
+    res.status(401);
+    throw new Error("Account is unavailable");
   }
 
-  // Step 4: Find user by email
-  const user = await User.findOne({ email });
-
-  // Step 5: Clean up OTP
-  await Otp.deleteMany({ email, type: "login" });
-
-  // Step 6: Create token and return user info
   createToken(res, user._id);
-  res.status(200).json({
-    _id: user._id,
-    username: user.username,
-    email: user.email,
-    coins: user.coins,
-    role: user.role,
-  });
+  res.status(200).json(serializeAuthUser(user));
 });
 
 const getProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
-  if (user) {
-    res.json({
-      _id: user._id,
-      username: user.username,
-      email: user.email,
-      displayName: user.displayName,
-      avatar: user.avatar,
-      bio: user.bio,
-      role: user.role,
-      isVerified: user.isVerified,
-      followersCount: user.followersCount,
-      followingCount: user.followingCount,
-      bannerImage: user.bannerImage,
-    });
-  } else {
+  if (!user) {
     res.status(404);
     throw new Error("User not found");
   }
+
+  res.json({
+    ...serializeAuthUser(user),
+    isVerified: user.isVerified,
+    followersCount: user.followersCount,
+    followingCount: user.followingCount,
+  });
 });
 
 const updateProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).select("+password");
-  if (user) {
-    user.displayName = req.body.displayName || user.displayName;
-    user.bio = req.body.bio || user.bio;
-    user.avatar = req.body.avatar || user.avatar;
-    user.bannerImage = req.body.bannerImage || user.bannerImage;
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
 
-    if (req.body.password) {
+  if (Object.hasOwn(req.body, "displayName")) {
+    user.displayName = String(req.body.displayName || "")
+      .trim()
+      .slice(0, 50);
+  }
+  if (Object.hasOwn(req.body, "bio")) {
+    user.bio = String(req.body.bio || "")
+      .trim()
+      .slice(0, 200);
+  }
+  if (Object.hasOwn(req.body, "avatar")) {
+    user.avatar = normalizeOptionalHttpUrl(req.body.avatar, "Avatar", res);
+  }
+  if (Object.hasOwn(req.body, "bannerImage")) {
+    user.bannerImage = normalizeOptionalHttpUrl(
+      req.body.bannerImage,
+      "Banner image",
+      res,
+    );
+  }
+
+  if (req.body.password) {
+    validatePassword(req.body.password, res);
+    if (user.password) {
       if (!req.body.currentPassword) {
         res.status(400);
         throw new Error("Please provide current password");
       }
-
       const isMatch = await user.comparePassword(req.body.currentPassword);
       if (!isMatch) {
         res.status(401);
         throw new Error("Current password is incorrect");
       }
-
-      user.password = req.body.password;
     }
-
-    const updatedUser = await user.save();
-    res.json({
-      _id: updatedUser._id,
-      username: updatedUser.username,
-      email: updatedUser.email,
-      displayName: updatedUser.displayName,
-      bio: updatedUser.bio,
-      avatar: updatedUser.avatar,
-      role: updatedUser.role,
-      bannerImage: updatedUser.bannerImage,
-    });
-  } else {
-    res.status(404);
-    throw new Error("User not found");
+    user.password = req.body.password;
   }
+
+  const updatedUser = await user.save();
+  res.json(serializeAuthUser(updatedUser));
 });
 
 const getUserById = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+  const id = String(req.params.id || "").trim();
+  const user = /^[0-9a-fA-F]{24}$/.test(id)
+    ? await User.findById(id)
+    : await User.findOne({ username: id });
 
-  let user;
-  if (id.match(/^[0-9a-fA-F]{24}$/)) {
-    user = await User.findById(id);
-  } else {
-    user = await User.findOne({ username: id });
-  }
-
-  if (!user) {
+  if (!user || !user.isActive) {
     res.status(404);
     throw new Error("User not found");
   }
@@ -370,74 +355,77 @@ const getUserById = asyncHandler(async (req, res) => {
     followersCount: user.followersCount,
     followingCount: user.followingCount,
     followers: user.followers,
+    bannerImage: user.bannerImage,
+    isLive: user.isLive,
   });
 });
 
-// ─────────────────────────────────────────────
-// @desc    Get stream key
-// @route   GET /api/users/stream-key
-// @access  Private
-// ─────────────────────────────────────────────
+const getRtmpServerUrl = () =>
+  (process.env.RTMP_SERVER_URL || "rtmp://localhost/live").replace(/\/+$/, "");
+
 const getStreamKey = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   if (!user) {
     res.status(404);
     throw new Error("User not found");
   }
-
   if (!user.streamKey) {
     user.streamKey = uuidv4();
     await user.save();
   }
-
-  res.status(200).json({ streamKey: user.streamKey });
+  res.status(200).json({
+    streamKey: user.streamKey,
+    rtmpServerUrl: getRtmpServerUrl(),
+  });
 });
 
-// ─────────────────────────────────────────────
-// @desc    Reset stream key
-// @route   POST /api/users/stream-key/reset
-// @access  Private
-// ─────────────────────────────────────────────
 const resetStreamKey = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   if (!user) {
     res.status(404);
     throw new Error("User not found");
   }
-
   user.streamKey = uuidv4();
   await user.save();
-
-  res.status(200).json({ streamKey: user.streamKey });
+  res.status(200).json({
+    streamKey: user.streamKey,
+    rtmpServerUrl: getRtmpServerUrl(),
+  });
 });
 
-// ─────────────────────────────────────────────
-// @desc    Get top users by followers
-// @route   GET /api/users/top
-// @access  Public
-// ─────────────────────────────────────────────
 const getTopUsers = asyncHandler(async (req, res) => {
-  const users = await User.find({})
+  const users = await User.find({ isActive: true })
     .sort({ followersCount: -1 })
     .limit(5)
     .select("username displayName avatar followersCount");
-
   res.status(200).json(users);
 });
 
 const updateBanner = asyncHandler(async (req, res) => {
   const bannerUrl = req.file?.path;
+  const bannerPublicId = req.file?.filename;
   if (!bannerUrl) {
     res.status(400);
     throw new Error("Please upload an image");
   }
 
-  const user = await User.findByIdAndUpdate(
-    req.user._id,
-    { bannerImage: bannerUrl },
-    { new: true },
-  );
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    await destroyCloudinaryAsset(bannerPublicId, "image");
+    res.status(404);
+    throw new Error("User not found");
+  }
 
+  const previousBannerPublicId = user.bannerPublicId;
+  user.bannerImage = bannerUrl;
+  user.bannerPublicId = bannerPublicId;
+  try {
+    await user.save();
+  } catch (error) {
+    await destroyCloudinaryAsset(bannerPublicId, "image");
+    throw error;
+  }
+  await destroyCloudinaryAsset(previousBannerPublicId, "image");
   res.status(200).json({ bannerImage: user.bannerImage });
 });
 
