@@ -18,6 +18,7 @@ import {
   updateBanner,
 } from "../controllers/UserController.controller.js";
 import createToken from "../utils/createToken.js";
+import { isGoogleOAuthConfigured } from "../config/passport.config.js";
 import protect from "../middlewares/Auth.middleware.js";
 import {
   followUser,
@@ -45,10 +46,10 @@ router.post("/logout", logout);
 // ==========================================
 // 2. OTP & Password Recovery
 // ==========================================
-router.post("/send-otp", sendOtp);
-router.post("/verify-otp", verifyOtp);
-router.post("/forgot-password", forgotPassword);
-router.post("/reset-password", resetPassword);
+router.post("/send-otp", authLimiter, sendOtp);
+router.post("/verify-otp", authLimiter, verifyOtp);
+router.post("/forgot-password", authLimiter, forgotPassword);
+router.post("/reset-password", authLimiter, resetPassword);
 
 // ==========================================
 // 3. Google OAuth 2.0 Integration
@@ -58,6 +59,14 @@ router.post("/reset-password", resetPassword);
  */
 router.get(
   "/auth/google",
+  (req, res, next) => {
+    if (!isGoogleOAuthConfigured()) {
+      return res
+        .status(503)
+        .json({ message: "Google OAuth is not configured" });
+    }
+    next();
+  },
   passport.authenticate("google", { scope: ["profile", "email"] }),
 );
 
@@ -69,28 +78,13 @@ router.get(
   "/auth/google/callback",
   passport.authenticate("google", {
     session: false,
-    failureRedirect:
-      process.env.NODE_ENV === "production"
-        ? "https://my-project-omega-roan.vercel.app/home"
-        : "http://localhost:5173/home",
+    failureRedirect: `${(process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "")}/home?auth=failed`,
   }),
   (req, res) => {
-    // AUTH FIX: previously this used `generateToken` (no cookie) and put
-    // the raw JWT in the redirect URL query string
-    // (`/auth/callback?token=...`), which the frontend then read out of
-    // the URL and stored in localStorage — a second, less secure auth
-    // mechanism living alongside the httpOnly cookie used by normal
-    // login/register (see createToken.js / axios.ts). Using createToken()
-    // here sets the same httpOnly cookie, so OAuth login now behaves
-    // identically to normal login and the token never touches the URL or
-    // client-side JS.
     createToken(res, req.user._id);
-
-    const frontendURL =
-      process.env.NODE_ENV === "production"
-        ? "https://my-project-omega-roan.vercel.app"
-        : "http://localhost:5173";
-
+    const frontendURL = (
+      process.env.FRONTEND_URL || "http://localhost:5173"
+    ).replace(/\/$/, "");
     res.redirect(`${frontendURL}/auth/callback`);
   },
 );
@@ -113,7 +107,7 @@ router.put(
 );
 router.get("/stream-key", protect, getStreamKey);
 router.post("/stream-key/reset", protect, resetStreamKey);
-router.post("/verify-login-otp", verifyLoginOtp);
+router.post("/verify-login-otp", authLimiter, verifyLoginOtp);
 router.get("/:id", getUserById);
 router.post("/:id/follow", protect, followUser);
 router.post("/:id/unfollow", protect, unfollowUser);
