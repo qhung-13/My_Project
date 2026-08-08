@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { Dispatch, KeyboardEvent, SetStateAction } from "react";
 import {
   Search,
   TvMinimalPlay,
@@ -8,27 +9,24 @@ import {
   Moon,
   Sun,
 } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
 import Logo from "../../assets/images/Logo.png";
 import Login from "../../components/Login/Login";
 import Register from "../../components/Register/Register";
+import GoLiveModal from "../../components/GoLiveModal/GoLiveModal";
+import NotificationBell from "../../components/NotificationBell/NotificationBell";
 import CountrySelector from "./CountrySelector";
 import NavMenu from "./NavMenu";
 import MobileMenu from "./MobileMenu";
-import { useSelector, useDispatch } from "react-redux";
 import type { RootState, AppDispatch } from "../../store/store";
 import { clearUser } from "../../store/slices/authSlice";
 import { useLogoutMutation } from "../../store/api/userApi";
 import "./Header.css";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import GoLiveModal from "../../components/GoLiveModal/GoLiveModal";
-import NotificationBell from "../../components/NotificationBell/NotificationBell";
 
-// ============================================================
-// Types
-// ============================================================
 interface DarkModeProps {
   darkMode: boolean;
-  setDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
+  setDarkMode: Dispatch<SetStateAction<boolean>>;
 }
 
 interface Country {
@@ -37,25 +35,26 @@ interface Country {
   code: string;
 }
 
-// ============================================================
-// Constants
-// ============================================================
-const MOBILE_NAV_ITEMS = [
-  { label: "Home", path: "/home", icon: <House /> },
-  { label: "Live", path: "/live", icon: <TvMinimalPlay /> },
-  { label: "Game", path: "/game", icon: <Gamepad2 /> },
+const DEFAULT_COUNTRY: Country = { name: "Vietnam", flag: "🇻🇳", code: "VN" };
+const FALLBACK_COUNTRIES: Country[] = [
+  DEFAULT_COUNTRY,
+  { name: "United States", flag: "🇺🇸", code: "US" },
 ];
 
-// ============================================================
-// Component
-// ============================================================
+const MOBILE_NAV_ITEMS = [
+  { label: "Home", path: "/home", icon: <House aria-hidden="true" /> },
+  { label: "Live", path: "/live", icon: <TvMinimalPlay aria-hidden="true" /> },
+  { label: "Game", path: "/game", icon: <Gamepad2 aria-hidden="true" /> },
+];
+
 const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [activePopup, setActivePopup] = useState<"Login" | "Register" | null>(
     null,
   );
-  const [countries, setCountries] = useState<Country[]>([]);
-  const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
+  const [countries, setCountries] = useState<Country[]>(FALLBACK_COUNTRIES);
+  const [selectedCountry, setSelectedCountry] =
+    useState<Country>(DEFAULT_COUNTRY);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showGoLive, setShowGoLive] = useState(false);
@@ -66,160 +65,220 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
   const { user, isAuthenticated } = useSelector(
     (state: RootState) => state.auth,
   );
-  const [logout] = useLogoutMutation();
+  const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
 
-  const handleLogout = async () => {
-    await logout(undefined).unwrap();
-    dispatch(clearUser());
-    setShowUserMenu(false);
-    navigate("/home");
+  const submitSearch = useCallback(() => {
+    const query = searchQuery.trim();
+    if (!query) return;
+    navigate(`/search?${new URLSearchParams({ q: query }).toString()}`);
+    setSearchQuery("");
+  }, [navigate, searchQuery]);
+
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") submitSearch();
   };
 
-  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && searchQuery.trim()) {
-      navigate(`/search?q=${searchQuery.trim()}`);
-      setSearchQuery("");
+  const handleLogout = async () => {
+    try {
+      await logout(undefined).unwrap();
+    } catch (error) {
+      console.error(
+        "Logout request failed; clearing local session anyway.",
+        error,
+      );
+    } finally {
+      dispatch(clearUser());
+      setShowUserMenu(false);
+      navigate("/home");
     }
   };
 
-  // Fetch countries
+  const handleGoLive = () => {
+    if (!isAuthenticated) {
+      setActivePopup("Login");
+      return;
+    }
+    setShowGoLive(true);
+  };
+
   useEffect(() => {
+    setMobileMenu(false);
+    setShowUserMenu(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
     const fetchCountries = async () => {
       try {
-        const res = await fetch(
+        const response = await fetch(
           "https://restcountries.com/v3.1/all?fields=name,flag,cca2",
+          { signal: controller.signal },
         );
-        if (!res.ok) throw Error("Failed to fetch countries");
-        const data = await res.json();
+        if (!response.ok) throw new Error("Failed to fetch countries");
+        const data: Array<{
+          name: { common: string };
+          flag: string;
+          cca2: string;
+        }> = await response.json();
+        const formatted = data
+          .map((country) => ({
+            name: country.name.common,
+            flag: country.flag,
+            code: country.cca2,
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name));
 
-        const formatted: Country[] = data
-          .map(
-            (c: { name: { common: string }; flag: string; cca2: string }) => ({
-              name: c.name.common,
-              flag: c.flag,
-              code: c.cca2,
-            }),
-          )
-          .sort((a: Country, b: Country) => a.name.localeCompare(b.name));
-
-        setCountries(formatted);
-        const vietnam = formatted.find((c: Country) => c.code === "VN");
-        setSelectedCountry(vietnam || formatted[0]);
+        if (formatted.length > 0) {
+          setCountries(formatted);
+          setSelectedCountry(
+            formatted.find((country) => country.code === "VN") ??
+              formatted[0] ??
+              DEFAULT_COUNTRY,
+          );
+        }
       } catch (error) {
-        console.log("Error fetching countries:", error);
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          console.warn(
+            "Country list unavailable; using local fallback.",
+            error,
+          );
+        }
       }
     };
 
-    fetchCountries();
+    void fetchCountries();
+    return () => controller.abort();
   }, []);
 
-  // ============================================================
-  // Render
-  // ============================================================
   return (
     <>
       <header className="header">
         <div className="container mx-auto px-4 header__container">
-          {/* Logo */}
           <div className="header__logo">
-            <Link to="/">
+            <Link to="/home" aria-label="OmexLive home">
               <img src={Logo} alt="OmexLive" className="header__logo-img" />
             </Link>
           </div>
 
-          {/* Desktop Nav */}
           <NavMenu />
 
-          {/* Search */}
-          <div className="header__search">
+          <div className="header__search" role="search">
+            <label className="sr-only" htmlFor="site-search">
+              Search streams and videos
+            </label>
             <input
-              type="text"
+              id="site-search"
+              type="search"
               placeholder="Search..."
               className="header__search-input"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleSearch}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              maxLength={100}
             />
-            <button className="header__search-btn">
-              <Search className="header__icon" />
+            <button
+              type="button"
+              className="header__search-btn"
+              onClick={submitSearch}
+              aria-label="Search"
+              disabled={!searchQuery.trim()}
+            >
+              <Search className="header__icon" aria-hidden="true" />
             </button>
           </div>
 
-          {/* Country */}
           <CountrySelector
             selectedCountry={selectedCountry}
             countries={countries}
             onSelect={setSelectedCountry}
           />
 
-          {/* Desktop Actions */}
           <div className="header__actions">
             <button
+              type="button"
               className="header__btn header__btn--live"
-              onClick={() => {
-                setShowGoLive(true);
-              }}
+              onClick={handleGoLive}
             >
-              <TvMinimalPlay className="header__icon" />
+              <TvMinimalPlay className="header__icon" aria-hidden="true" />
               Go Live
             </button>
 
             <button
+              type="button"
               className="header__btn-icon"
-              onClick={() => setDarkMode(!darkMode)}
+              onClick={() => setDarkMode((current) => !current)}
+              aria-label={
+                darkMode ? "Chuyển sang Light Mode" : "Chuyển sang Dark Mode"
+              }
               title={
                 darkMode ? "Chuyển sang Light Mode" : "Chuyển sang Dark Mode"
               }
             >
               {darkMode ? (
-                <Sun className="header__icon" />
+                <Sun className="header__icon" aria-hidden="true" />
               ) : (
-                <Moon className="header__icon" />
+                <Moon className="header__icon" aria-hidden="true" />
               )}
             </button>
 
             {isAuthenticated && <NotificationBell />}
 
-            {/* Auth */}
             <div className="header__auth">
               {isAuthenticated ? (
                 <div className="header__user">
-                  <img
-                    src={
-                      user?.avatar ||
-                      `https://api.dicebear.com/7.x/initials/svg?seed=${user?.username}`
-                    }
-                    alt={user?.username}
-                    className="header__avatar"
-                    width={36}
-                    height={36}
-                    onClick={() => setShowUserMenu(!showUserMenu)}
-                  />
+                  <button
+                    type="button"
+                    className="header__avatar-button"
+                    onClick={() => setShowUserMenu((current) => !current)}
+                    aria-label="Mở menu tài khoản"
+                    aria-expanded={showUserMenu}
+                  >
+                    <img
+                      src={
+                        user?.avatar ||
+                        `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user?.username ?? "User")}`
+                      }
+                      alt=""
+                      className="header__avatar"
+                      width={36}
+                      height={36}
+                    />
+                  </button>
                   {showUserMenu && (
-                    <div className="header__user-menu">
+                    <div className="header__user-menu" role="menu">
                       <button
+                        type="button"
+                        role="menuitem"
                         className="header__user-menu-item"
-                        onClick={() => {
-                          navigate("/profile/me");
-                          setShowUserMenu(false);
-                        }}
+                        onClick={() => navigate("/profile/me")}
                       >
                         👤 Profile
                       </button>
                       <button
-                        className="header__user-menu-item header__user-menu-item--logout"
-                        onClick={handleLogout}
+                        type="button"
+                        role="menuitem"
+                        className="header__user-menu-item"
+                        onClick={() => navigate("/channel")}
                       >
-                        🚪 Logout
+                        📺 My channel
                       </button>
                       <button
+                        type="button"
+                        role="menuitem"
                         className="header__user-menu-item"
-                        onClick={() => {
-                          navigate("/topup");
-                          setShowUserMenu(false);
-                        }}
+                        onClick={() => navigate("/topup")}
                       >
-                        💰 Nạp Xu ({user?.coins || 0})
+                        💰 Nạp Xu ({user?.coins ?? 0})
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="header__user-menu-item header__user-menu-item--logout"
+                        onClick={handleLogout}
+                        disabled={isLoggingOut}
+                      >
+                        🚪 {isLoggingOut ? "Logging out..." : "Logout"}
                       </button>
                     </div>
                   )}
@@ -227,12 +286,14 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
               ) : (
                 <>
                   <button
+                    type="button"
                     className="header__btn header__btn--outline"
                     onClick={() => setActivePopup("Login")}
                   >
                     Login
                   </button>
                   <button
+                    type="button"
                     className="header__btn header__btn--primary"
                     onClick={() => setActivePopup("Register")}
                   >
@@ -243,36 +304,38 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
             </div>
           </div>
 
-          {/* Hamburger */}
           <div className="header__menu">
             <button
+              type="button"
               className="header__menu-btn"
-              onClick={() => setMobileMenu(!mobileMenu)}
+              onClick={() => setMobileMenu((current) => !current)}
+              aria-label="Mở menu"
+              aria-expanded={mobileMenu}
             >
-              <Menu className="header__icon" />
+              <Menu className="header__icon" aria-hidden="true" />
             </button>
           </div>
         </div>
 
-        {/* Mobile Menu */}
         {mobileMenu && (
           <MobileMenu
             darkMode={darkMode}
             setDarkMode={setDarkMode}
             onLogin={() => setActivePopup("Login")}
             onRegister={() => setActivePopup("Register")}
+            onClose={() => setMobileMenu(false)}
           />
         )}
       </header>
 
-      {/* Mobile Nav */}
-      <div className="mobile-nav">
+      <nav className="mobile-nav" aria-label="Mobile navigation">
         <ul className="mobile-nav__list">
           {MOBILE_NAV_ITEMS.map((item) => (
             <li key={item.path} className="mobile-nav__item">
               <Link
                 to={item.path}
                 className={`mobile-nav__link ${pathname === item.path ? "mobile-nav__link--active" : ""}`}
+                aria-current={pathname === item.path ? "page" : undefined}
               >
                 <span>{item.icon}</span>
                 {item.label}
@@ -280,9 +343,8 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
             </li>
           ))}
         </ul>
-      </div>
+      </nav>
 
-      {/* Popups */}
       {activePopup === "Login" && (
         <Login
           onClose={() => setActivePopup(null)}
@@ -295,7 +357,6 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
           onSwitch={() => setActivePopup("Login")}
         />
       )}
-
       {showGoLive && <GoLiveModal onClose={() => setShowGoLive(false)} />}
     </>
   );
