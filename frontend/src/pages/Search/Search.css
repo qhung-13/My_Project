@@ -280,3 +280,18 @@
     grid-template-columns: 1fr;
   }
 }
+.search-category-card,
+.search-stream-card,
+.search-video-card {
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.search-category-card:focus-visible,
+.search-stream-card:focus-visible,
+.search-video-card:focus-visible {
+  outline: 3px solid var(--accent-light);
+  outline-offset: 3px;
+}
