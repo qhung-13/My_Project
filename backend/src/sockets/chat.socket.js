@@ -1,44 +1,76 @@
-import { isUserBanned, isUserTimedOut } from "../controllers/ModerationController.controller.js";
+import {
+  getTimeoutRemainingSeconds,
+  isUserBanned,
+} from "./moderation.store.js";
 
-/**
- * Registers "chat-message" and "send-reaction" handlers for a single
- * connected socket.
- */
+const CHAT_WINDOW_MS = 5_000;
+const CHAT_LIMIT = 6;
+
 const registerChatHandlers = (io, socket) => {
-  socket.on("chat-message", async ({ streamId, message, user }) => {
-    if (!streamId || !message?.trim()) return;
+  const recentMessages = [];
 
-    // SECURITY FIX: previously `userId` came straight from the client
-    // payload, so a banned/timed-out viewer could just send a different
-    // userId and bypass moderation. We now use the id resolved from the
-    // verified JWT cookie (see auth.socket.js) whenever the user is logged
-    // in, and only fall back to "anonymous" for guests.
-    const userId = socket.data.userId || null;
+  socket.on("chat-message", async (payload = {}) => {
+    const streamId = String(payload.streamId || "")
+      .trim()
+      .slice(0, 100);
+    const message = String(payload.message || "")
+      .trim()
+      .slice(0, 500);
+    if (!streamId || !message) return;
 
-    if (userId && isUserBanned(userId, streamId)) {
+    const now = Date.now();
+    while (recentMessages.length && recentMessages[0] <= now - CHAT_WINDOW_MS) {
+      recentMessages.shift();
+    }
+    if (recentMessages.length >= CHAT_LIMIT) {
       socket.emit("chat-blocked", {
+        reason: "rate-limit",
+        retryAfterSeconds: Math.ceil(CHAT_WINDOW_MS / 1000),
+        message: "Bạn đang gửi tin nhắn quá nhanh.",
+      });
+      return;
+    }
+    recentMessages.push(now);
+
+    const userId = socket.data.userId || null;
+    if (userId && (await isUserBanned(String(userId), streamId))) {
+      socket.emit("chat-blocked", {
+        reason: "ban",
         message: "Bạn đã bị ban khỏi stream này.",
       });
       return;
     }
-
-    if (userId && isUserTimedOut(userId, streamId)) {
-      socket.emit("chat-blocked", {
-        message: "Bạn đang bị timeout, vui lòng đợi.",
-      });
-      return;
+    if (userId) {
+      const retryAfterSeconds = await getTimeoutRemainingSeconds(
+        String(userId),
+        streamId,
+      );
+      if (retryAfterSeconds > 0) {
+        socket.emit("chat-blocked", {
+          reason: "timeout",
+          retryAfterSeconds,
+          message: `Bạn đang bị timeout. Hãy thử lại sau ${retryAfterSeconds} giây.`,
+        });
+        return;
+      }
     }
 
     io.to(`stream:${streamId}`).emit("chat-message", {
-      id: Date.now(),
-      user,
+      id: `${socket.id}:${now}`,
+      user: socket.data.username || `Guest-${socket.id.slice(0, 4)}`,
       userId,
-      message: message.trim().slice(0, 500), // basic length guard
-      timestamp: new Date(),
+      message,
+      timestamp: new Date().toISOString(),
     });
   });
 
-  socket.on("send-reaction", ({ streamId, reaction }) => {
+  socket.on("send-reaction", (payload = {}) => {
+    const streamId = String(payload.streamId || "")
+      .trim()
+      .slice(0, 100);
+    const reaction = String(payload.reaction || "")
+      .trim()
+      .slice(0, 16);
     if (!streamId || !reaction) return;
     io.to(`stream:${streamId}`).emit("reaction-received", {
       reaction,
