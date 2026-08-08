@@ -1,100 +1,94 @@
 import { Play } from "lucide-react";
-import { formatViewers, generateColor } from "../../../../utils/format";
-import "./LiveNow.css";
 import { useNavigate } from "react-router-dom";
 import { useGetLiveStreamsQuery } from "../../../../store/api/streamApi";
 import type { Stream } from "../../../../types/index";
+import { formatViewers, generateColor } from "../../../../utils/format";
+import "./LiveNow.css";
 
 const LiveNow = () => {
   const navigate = useNavigate();
-  const { data: result, isLoading } = useGetLiveStreamsQuery(undefined);
-  const streams = result?.streams || [];
+  const { data, isLoading, isError } = useGetLiveStreamsQuery({
+    page: 1,
+    limit: 12,
+  });
+  const streams = data?.streams ?? [];
 
-  if (isLoading) {
-    return <div className="live-now__loading">Loading...</div>;
-  }
-
-  if (!streams) {
-    return null;
-  }
+  if (isLoading)
+    return (
+      <div className="live-now__loading" role="status">
+        Đang tải livestream...
+      </div>
+    );
+  if (isError || streams.length === 0) return null;
 
   return (
-    <div className="live-now">
+    <section className="live-now" aria-labelledby="live-now-heading">
       <div className="live-now__header">
-        <div className="live-now__title">
-          <span className="live-now__dot"></span>
-          Live Now
-        </div>
-        <button className="live-now__more">Xem tất cả</button>
+        <h2 id="live-now-heading" className="live-now__title">
+          <span className="live-now__dot" aria-hidden="true" />
+          Đang trực tiếp
+        </h2>
+        <button
+          type="button"
+          className="live-now__more"
+          onClick={() => navigate("/live")}
+        >
+          Xem tất cả
+        </button>
       </div>
 
       <div className="live-now__scroll">
-        {streams.map((stream: Stream) => (
-          <div
-            className="stream-card"
-            key={stream._id}
-            onClick={() => navigate(`/stream/${stream._id}`)}
-          >
-            {/* Thumbnail */}
-            <div
-              className="stream-card__thumb"
-              style={{
-                background: generateColor(stream.userId?.username || ""),
-              }}
+        {streams.map((stream: Stream) => {
+          const streamerName =
+            stream.userId?.displayName || stream.userId?.username || "Streamer";
+          return (
+            <button
+              type="button"
+              className="stream-card"
+              key={stream._id}
+              onClick={() => navigate(`/stream/${stream._id}`)}
+              aria-label={`Xem ${stream.title} của ${streamerName}`}
             >
-              {stream.thumbnailUrl && (
-                <img
-                  src={stream.thumbnailUrl}
-                  alt={stream.title}
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              )}
-              <button className="stream-card__play">
-                <Play size={16} fill="white" />
-              </button>
-              <span className="stream-card__badge">LIVE</span>
-              <span className="stream-card__viewers">
-                {formatViewers(stream.viewers)} viewers
-              </span>
-            </div>
-
-            <div className="stream-card__info">
-              <div className="stream-card__streamer">
-                <div
-                  className="stream-card__avatar"
-                  style={{
-                    background: generateColor(stream.userId?.username) || "",
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/profile/${stream.userId?._id}`);
-                  }}
-                >
-                  {stream.userId?.avatar ? (
-                    <img
-                      src={stream.userId.avatar}
-                      alt=""
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        borderRadius: "50%",
-                      }}
-                    />
-                  ) : (
-                    stream.userId?.username?.slice(0, 2).toUpperCase()
-                  )}
-                </div>
-                <span className="stream-card__name">
-                  {stream.userId?.displayName || stream.userId?.username}
+              <span
+                className="stream-card__thumb"
+                style={{
+                  background: generateColor(stream.userId?.username || ""),
+                }}
+              >
+                {stream.thumbnailUrl && (
+                  <img src={stream.thumbnailUrl} alt="" loading="lazy" />
+                )}
+                <span className="stream-card__play" aria-hidden="true">
+                  <Play size={16} fill="currentColor" />
                 </span>
-              </div>
-              <div className="stream-card__title">{stream.title}</div>
-              <div className="stream-card__game">{stream.category}</div>
-            </div>
-          </div>
-        ))}
+                <span className="stream-card__badge">LIVE</span>
+                <span className="stream-card__viewers">
+                  {formatViewers(stream.viewers)} người xem
+                </span>
+              </span>
+
+              <span className="stream-card__info">
+                <span className="stream-card__streamer">
+                  <span
+                    className="stream-card__avatar"
+                    style={{ background: generateColor(streamerName) }}
+                  >
+                    {stream.userId?.avatar ? (
+                      <img src={stream.userId.avatar} alt="" loading="lazy" />
+                    ) : (
+                      streamerName.slice(0, 2).toUpperCase()
+                    )}
+                  </span>
+                  <span className="stream-card__name">{streamerName}</span>
+                </span>
+                <span className="stream-card__title">{stream.title}</span>
+                <span className="stream-card__game">{stream.category}</span>
+              </span>
+            </button>
+          );
+        })}
       </div>
-    </div>
+    </section>
   );
 };
 
