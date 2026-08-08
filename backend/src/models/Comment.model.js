@@ -15,6 +15,8 @@ const commentSchema = new mongoose.Schema(
     content: {
       type: String,
       required: true,
+      trim: true,
+      maxlength: 1000,
     },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     likesCount: {
