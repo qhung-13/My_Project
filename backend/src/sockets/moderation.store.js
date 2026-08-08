@@ -62,6 +62,23 @@ export const timeoutUserInStore = async (userId, streamId, durationSeconds) => {
   await redis.set(timeoutKey(userId, streamId), "1", "EX", durationSeconds);
 };
 
+export const getTimeoutRemainingSeconds = async (userId, streamId) => {
+  const redis = getRedisDataClient();
+  if (!redis) {
+    const key = `${userId}:${streamId}`;
+    const expiry = memoryTimeouts.get(key);
+    if (!expiry) return 0;
+    const remaining = Math.ceil((expiry - Date.now()) / 1000);
+    if (remaining <= 0) {
+      memoryTimeouts.delete(key);
+      return 0;
+    }
+    return remaining;
+  }
+  const ttl = await redis.ttl(timeoutKey(userId, streamId));
+  return ttl > 0 ? ttl : 0;
+};
+
 export const isUserTimedOut = async (userId, streamId) => {
   const redis = getRedisDataClient();
   if (!redis) {
