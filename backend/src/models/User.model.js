@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import { type } from "node:os";
 
 /**
  * Mongoose schema and model for Users
@@ -16,7 +15,7 @@ import { type } from "node:os";
  * @property {string} [avatar] - URL to the user's avatar image
  * @property {string} [bio] - Short biography (max 200 chars)
  * @property {string} [refreshToken] - JWT refresh token (excluded from default queries)
- * @property {string} role - User role (enum: "user", "stream", "admin")
+ * @property {string} role - User role (enum: "user", "stream" (legacy), "streamer", "admin")
  * @property {boolean} isVerified - Indicates if the user's email is verified
  * @property {boolean} isActive - Indicates if the account is active/unbanned
  * @property {Date} createdAt - Automatically generated creation timestamp
@@ -44,7 +43,7 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      minlength: 6,
+      minlength: 8,
       select: false,
     },
 
@@ -81,7 +80,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["user", "stream", "admin"],
+      enum: ["user", "stream", "streamer", "admin"],
       default: "user",
     },
     isVerified: {
@@ -132,6 +131,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    bannerPublicId: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true, // auto create createdAt & updatedAt
@@ -161,9 +164,6 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 userSchema.index({ googleId: 1 });
 userSchema.index({ facebookId: 1 });
 
-userSchema.index({ username: 1 }, { unique: true });
-userSchema.index({ email: 1 }, { unique: true });
-userSchema.index({ streamKey: 1 }, { sparse: true });
 userSchema.index({ followersCount: -1 });
 
 const User = mongoose.model("User", userSchema);
