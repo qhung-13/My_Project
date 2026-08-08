@@ -366,3 +366,67 @@
   50% { opacity: 0.5; transform: scale(1.3); }
   100% { opacity: 1; transform: scale(1); }
 }
+.live-card {
+  width: 100%;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.live-card__thumb,
+.live-card__info,
+.live-card__streamer,
+.live-card__name,
+.live-card__title,
+.live-card__game {
+  display: block;
+}
+
+.live-card__streamer {
+  display: flex;
+}
+
+.live-card__thumb > img,
+.live-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.live-card__avatar {
+  overflow: hidden;
+}
+
+.live-card__placeholder {
+  color: var(--text-muted);
+  font-size: clamp(28px, 8vw, 52px);
+  font-weight: 800;
+  opacity: 0.35;
+}
+
+.live-card:focus-visible,
+.game-pill:focus-visible,
+.live-page__sort-btn:focus-visible,
+.live-page__empty button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 42%, transparent);
+  outline-offset: 3px;
+}
+
+.live-page__loading {
+  display: grid;
+  min-height: 280px;
+  place-items: center;
+  color: var(--text-muted);
+}
+
+.dark-mode .game-pill--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.live-page__empty button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
