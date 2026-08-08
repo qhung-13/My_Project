@@ -39,7 +39,15 @@ const markAllAsRead = asyncHandler(async (req, res) => {
 // @access  Private
 // ─────────────────────────────────────────────
 const markAsRead = asyncHandler(async (req, res) => {
-  await Notification.findByIdAndUpdate(req.params.id, { isRead: true });
+  const notification = await Notification.findOneAndUpdate(
+    { _id: req.params.id, userId: req.user._id },
+    { isRead: true },
+    { new: true },
+  );
+  if (!notification) {
+    res.status(404);
+    throw new Error("Notification not found");
+  }
   res.status(200).json({ message: "Notification marked as read" });
 });
 
@@ -60,4 +68,53 @@ export const createNotification = async ({
   }
 };
 
-export { getNotifications, markAllAsRead, markAsRead };
+const createScheduleAnnouncement = asyncHandler(async (req, res) => {
+  const userId = String(req.body.userId || "").trim();
+  const proposedTime = new Date(req.body.proposedTime);
+  const message = String(req.body.message || "")
+    .trim()
+    .slice(0, 300);
+
+  if (!userId || Number.isNaN(proposedTime.getTime()) || !message) {
+    res.status(400);
+    throw new Error("User, proposed time, and message are required");
+  }
+  if (
+    !req.isAgent &&
+    req.user?._id.toString() !== userId &&
+    req.user?.role !== "admin"
+  ) {
+    res.status(403);
+    throw new Error("Not authorized to create this announcement");
+  }
+
+  const User = (await import("../models/User.model.js")).default;
+  const user = await User.findById(userId).select("followers username");
+  if (!user) {
+    res.status(404);
+    throw new Error("Streamer not found");
+  }
+
+  const documents = (user.followers || []).map((followerId) => ({
+    userId: followerId,
+    fromUserId: user._id,
+    type: "stream_live",
+    message,
+    link: `/channel/${user._id}`,
+  }));
+  if (documents.length > 0)
+    await Notification.insertMany(documents, { ordered: false });
+
+  res.status(201).json({
+    success: true,
+    recipients: documents.length,
+    proposedTime: proposedTime.toISOString(),
+  });
+});
+
+export {
+  getNotifications,
+  markAllAsRead,
+  markAsRead,
+  createScheduleAnnouncement,
+};
