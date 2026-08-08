@@ -2,23 +2,17 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.model.js";
 import asyncHandler from "./AsyncHandler.middleware.js";
 
-/**
- * Middleware to protect routes by verifying JWT authentication
- * Extracts the token from cookies, verifies it, and attaches the authenticated user to the request object
- *
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @param {Function} next - Express next middleware function
- * @throws {Error} 401 - If token is missing, invalid, or the user is not found in the database
- */
+const resolveUserFromToken = async (token) => {
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  return User.findById(decoded.userId).select("-password");
+};
+
 const protect = asyncHandler(async (req, res, next) => {
-  let token;
-
-  token = req.cookies.jwt;
-
-  if (!token && req.headers.authorization?.startsWith("Bearer")) {
-    token = req.headers.authorization.split(" ")[1];
-  }
+  const cookieToken = req.cookies?.jwt;
+  const bearerToken = req.headers.authorization?.startsWith("Bearer ")
+    ? req.headers.authorization.slice(7)
+    : null;
+  const token = cookieToken || bearerToken;
 
   if (!token) {
     res.status(401);
@@ -26,18 +20,11 @@ const protect = asyncHandler(async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId).select("-password");
-
-    // BUG FIX: previously req.user could be `null` here (e.g. account
-    // deleted after the token was issued) and the request was still allowed
-    // through, letting downstream code crash on `req.user._id` or silently
-    // treat the request as authenticated with no user.
-    if (!user) {
+    const user = await resolveUserFromToken(token);
+    if (!user || !user.isActive) {
       res.status(401);
-      throw new Error("Not authorized, user no longer exists");
+      throw new Error("Not authorized, account unavailable");
     }
-
     req.user = user;
     next();
   } catch (error) {
@@ -46,13 +33,23 @@ const protect = asyncHandler(async (req, res, next) => {
   }
 });
 
-const authorizeAdmin = (req, res, next) => {
-  if (req.user && req.user.role === "admin") {
-    next();
-  } else {
-    res.status(403);
-    throw new Error("Not authorized as admin");
+/** Allows either a normal authenticated user or the trusted internal agent. */
+const protectOrAgent = asyncHandler(async (req, res, next) => {
+  const suppliedSecret = req.get("x-agent-secret");
+  const configuredSecret = process.env.AGENT_SERVICE_SECRET;
+
+  if (configuredSecret && suppliedSecret === configuredSecret) {
+    req.isAgent = true;
+    return next();
   }
+
+  return protect(req, res, next);
+});
+
+const authorizeAdmin = (req, res, next) => {
+  if (req.user?.role === "admin") return next();
+  res.status(403);
+  throw new Error("Not authorized as admin");
 };
 
-export { protect as default, authorizeAdmin };
+export { protect as default, protectOrAgent, authorizeAdmin };
