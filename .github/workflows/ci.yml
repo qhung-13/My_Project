@@ -1,124 +1,74 @@
-# =========================================================
-# WORKFLOW: OmexLive CI/CD Pipeline
-# =========================================================
-name: OmexLive_Pipeline 
+name: OmexLive CI
 
-# ---------------------------------------------------------
-# TRIGGERS
-# Automatically trigger this workflow on specific events
-# ---------------------------------------------------------
 on:
   push:
-    branches: [ "main" ] # Trigger on direct pushes to the main branch
+    branches: [main]
   pull_request:
-    branches: [ "main" ] # Trigger on pull requests targeting the main branch (Great for testing before merging)
+    branches: [main]
 
-# ---------------------------------------------------------
-# JOBS
-# Define the processes that will run sequentially or in parallel
-# ---------------------------------------------------------
+permissions:
+  contents: read
+
 jobs:
-  # ==========================================
-  # 1. Backend CI Job (Setup & Test)
-  # ==========================================
   backend:
-    name: Build & Test Backend
     runs-on: ubuntu-latest
-
-    # [Future-Proofing] Spin up an ephemeral MongoDB instance for backend integration tests
-    services:
-      mongodb:
-        image: mongo:latest
-        ports:
-          - 27017:27017
-        options: >-
-          --health-cmd "echo 'db.runCommand(\"ping\").ok' | mongosh localhost:27017/test --quiet"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
-      # Step 1: Clone source code from GitHub to the runner
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      # Step 2: Setup Node.js environment with caching for faster subsequent runs
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: 22
+          cache: npm
           cache-dependency-path: backend/package-lock.json
-
-      # Step 3: Install exact dependencies for the CI environment
-      - name: Install backend dependencies
-        working-directory: ./backend
+      - working-directory: backend
         run: npm ci
-
-      # Step 4: Execute Unit / Integration Tests
-      # Note: This connects to the MongoDB service created above via localhost:27017
-      - name: Run backend tests
-        working-directory: ./backend
+      - working-directory: backend
+        run: npm run check
+      - working-directory: backend
         run: npm test
         env:
           NODE_ENV: test
-          MONGO_URI: mongodb://localhost:27017/omexlive_test
-          JWT_SECRET: temporary_secret_key_for_testing_only
-          EMAIL_USER: test@gmail.com
-          EMAIL_PASS: test_pass
+          JWT_SECRET: temporary_secret_key_for_testing_only_32_chars
 
-  # ==========================================
-  # 2. Frontend CI Job (Setup & Build Production)
-  # ==========================================
   frontend:
-    name: Build Frontend
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: 22
+          cache: npm
           cache-dependency-path: frontend/package-lock.json
-
-      - name: Install frontend dependencies
-        working-directory: ./frontend
+      - working-directory: frontend
         run: npm ci
-
-      # Step: Build React/Vite source code into static HTML/CSS/JS for deployment
-      - name: Build frontend production
-        working-directory: ./frontend
+      - working-directory: frontend
+        run: npm run typecheck
+      - working-directory: frontend
+        run: npm run lint
+      - working-directory: frontend
+        run: npm test
+      - working-directory: frontend
         run: npm run build
 
-  # ==========================================
-  # 3. Deployment Job (Deploy to Server)
-  # ==========================================
-  deploy:
-    name: Deploy to Production
-    # Prerequisite: Only run if BOTH 'backend' and 'frontend' jobs succeed
-    needs: [backend, frontend]
+  media:
     runs-on: ubuntu-latest
-    
-    # Crucial: Only execute the deployment step if the event is a push to the main branch
-    # (Prevents deploying unfinished code from Pull Requests)
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
     steps:
-      - name: Execute Deployment
-        run: echo "🚀 All tests passed successfully! Initiating deployment of the OmexLive platform to the production server..."
-        
-      # [Future-Proofing] Below is an example of how you might deploy to a VPS using SSH in the future:
-      # - name: Deploy via SSH to VPS
-      #   uses: appleboy/ssh-action@v1.0.0
-      #   with:
-      #     host: ${{ secrets.SERVER_HOST }}
-      #     username: ${{ secrets.SERVER_USER }}
-      #     key: ${{ secrets.SSH_PRIVATE_KEY }}
-      #     script: |
-      #       cd /var/www/omexlive
-      #       git pull origin main
-      #       cd backend && npm install && pm2 restart omexlive-backend
-      #       cd ../frontend && npm install && npm run build
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: media-service/package-lock.json
+      - working-directory: media-service
+        run: npm ci
+      - working-directory: media-service
+        run: npm test
+      - run: find media-service -path '*/node_modules' -prune -o -name '*.js' -print0 | xargs -0 -n1 node --check
+
+  agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m compileall -q agent-service
