@@ -1,5 +1,6 @@
 import NodeMediaServer from "node-media-server";
 import { mkdirSync, writeFileSync } from "fs";
+import { rm } from "fs/promises";
 import { spawn } from "child_process";
 import path from "path";
 import User from "../model/User.model.js";
@@ -7,12 +8,62 @@ import { startHlsUploader } from "../services/hlsUploader.service.js";
 import { extractStreamKey } from "../utils/streamPath.js";
 
 const ffmpegProcesses = new Map();
+const hlsCleanupTimers = new Map();
+const HLS_CLEANUP_DELAY_MS = Number(process.env.HLS_CLEANUP_DELAY_MS || 15_000);
 const MEDIA_ROOT = path.resolve("./media");
 const HTTP_PORT = Number(process.env.MEDIA_HTTP_PORT || 8000);
 const RTMP_PORT = Number(process.env.MEDIA_RTMP_PORT || 1935);
 const BACKEND_INTERNAL_URL = (
   process.env.BACKEND_INTERNAL_URL || "http://localhost:5000/api/v1"
 ).replace(/\/+$/, "");
+
+const getHlsFolderPath = (streamKey) =>
+  path.join(MEDIA_ROOT, "live", streamKey);
+
+const cancelScheduledCleanup = (streamKey) => {
+  const timer = hlsCleanupTimers.get(streamKey);
+
+  if (!timer) return;
+
+  clearTimeout(timer);
+  hlsCleanupTimers.delete(streamKey);
+
+  console.log(`[media-service] Cancelled pending HLS cleanup for ${streamKey}`);
+};
+
+const removeHlsFolder = async (streamKey) => {
+  const folderPath = getHlsFolderPath(streamKey);
+
+  await rm(folderPath, {
+    recursive: true,
+    force: true,
+  });
+
+  console.log(`[media-service] Removed HLS folder: ${folderPath}`);
+};
+
+const scheduleHlsCleanup = (streamKey) => {
+  cancelScheduledCleanup(streamKey);
+
+  const timer = setTimeout(() => {
+    hlsCleanupTimers.delete(streamKey);
+
+    void removeHlsFolder(streamKey).catch((error) => {
+      console.error(
+        `[media-service] Failed to clean HLS folder for ${streamKey}:`,
+        error.message,
+      );
+    });
+  }, HLS_CLEANUP_DELAY_MS);
+
+  timer.unref?.();
+
+  hlsCleanupTimers.set(streamKey, timer);
+
+  console.log(
+    `[media-service] HLS cleanup scheduled for ${streamKey} in ${HLS_CLEANUP_DELAY_MS}ms`,
+  );
+};
 
 const notifyBackend = async (event, streamKey) => {
   const response = await fetch(
@@ -69,8 +120,6 @@ const configureMediaServer = () => {
     nms.getSession?.(sessionId)?.reject?.();
   };
 
-  // Sync HLS output to object storage/CDN as segments are written (no-op
-  // if S3_BUCKET isn't configured — see hlsUploader.service.js).
   startHlsUploader(path.join(MEDIA_ROOT, "live"));
 
   nms.on("prePublish", async (id, StreamPath, args) => {
@@ -90,6 +139,7 @@ const configureMediaServer = () => {
       return;
     }
     console.log(`Valid stream key for user: ${user.username || user._id}`);
+    cancelScheduledCleanup(streamKey);
 
     try {
       await notifyBackend("publish", streamKey);
@@ -102,6 +152,18 @@ const configureMediaServer = () => {
     }
 
     const folderPath = path.join(MEDIA_ROOT, "live", streamKey);
+    try {
+      await removeHlsFolder(streamKey);
+    } catch (error) {
+      console.error(
+        `[media-service] Failed to reset old HLS files for ${streamKey}:`,
+        error.message,
+      );
+
+      await notifyBackend("unpublish", streamKey).catch(() => {});
+      rejectSession(id);
+      return;
+    }
     mkdirSync(folderPath, { recursive: true });
     mkdirSync(`${folderPath}/1080p`, { recursive: true });
     mkdirSync(`${folderPath}/720p`, { recursive: true });
@@ -244,20 +306,39 @@ const configureMediaServer = () => {
 
   nms.on("donePublish", async (id, StreamPath, args) => {
     const streamPath = typeof id === "object" ? id.streamPath : StreamPath;
-    console.log("Stream ended", streamPath);
 
-    if (streamPath && ffmpegProcesses.has(streamPath)) {
-      ffmpegProcesses.get(streamPath).kill();
+    console.log("Stream ended:", streamPath);
+
+    const streamKey = extractStreamKey(streamPath);
+
+    if (!streamKey) {
+      console.warn(
+        "[media-service] Could not extract stream key during donePublish:",
+        streamPath,
+      );
+      return;
+    }
+
+    const ffmpeg = ffmpegProcesses.get(streamPath);
+
+    if (ffmpeg) {
+      ffmpeg.kill("SIGTERM");
       ffmpegProcesses.delete(streamPath);
+
       console.log("ffmpeg stopped for:", streamPath);
     }
 
     try {
-      const streamKey = extractStreamKey(streamPath);
-      if (!streamKey) return;
       await notifyBackend("unpublish", streamKey);
+
+      console.log(`[media-service] Backend marked ${streamKey} offline`);
     } catch (error) {
-      console.error("Error while finalizing donePublish:", error.message);
+      console.error(
+        "[media-service] Failed to mark stream offline:",
+        error.message,
+      );
+    } finally {
+      scheduleHlsCleanup(streamKey);
     }
   });
 
@@ -272,8 +353,18 @@ const configureMediaServer = () => {
 
   return {
     stop: () => {
-      for (const process of ffmpegProcesses.values()) process.kill("SIGTERM");
+      for (const process of ffmpegProcesses.values()) {
+        process.kill("SIGTERM");
+      }
+
       ffmpegProcesses.clear();
+
+      for (const timer of hlsCleanupTimers.values()) {
+        clearTimeout(timer);
+      }
+
+      hlsCleanupTimers.clear();
+
       nms.stop?.();
     },
   };
