@@ -117,3 +117,30 @@
   border-color: var(--border-hover);
   color: var(--text-primary);
 }
+.update-stream-modal__overlay {
+  border: 0;
+  padding: 0;
+}
+
+.update-stream-modal__card {
+  background: var(--bg-card);
+  outline: none;
+}
+
+.update-stream-modal__close:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 520px) {
+  .update-stream-modal {
+    align-items: flex-end;
+  }
+
+  .update-stream-modal__card {
+    width: 100%;
+    max-width: none;
+    padding: 24px 16px max(20px, env(safe-area-inset-bottom));
+    border-radius: 16px 16px 0 0;
+  }
+}
