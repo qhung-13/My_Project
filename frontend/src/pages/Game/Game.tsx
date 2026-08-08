@@ -4,7 +4,7 @@ import { Radio, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGetLiveStreamsQuery } from "../../store/api/streamApi";
 import { formatViewers } from "../../utils/format";
-import type { Stream } from "../../types/index";
+// import type { Stream } from "../../types/index";
 import "./Game.css";
 
 interface GameSummary {
