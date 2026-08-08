@@ -6,12 +6,12 @@ interface DonationAlertsProps {
 
 const DonationAlerts = ({ alerts }: DonationAlertsProps) => {
   return (
-    <div className="donation-alerts">
-      {alerts.map((alert, index) => (
-        <div className="donation-alert" key={index}>
-          <div className="donation-alert__avatar">
+    <div className="donation-alerts" aria-live="polite" aria-atomic="false">
+      {alerts.map((alert) => (
+        <div className="donation-alert" key={alert.id}>
+          <div className="donation-alert__avatar" aria-hidden="true">
             {alert.fromAvatar ? (
-              <img src={alert.fromAvatar} alt={alert.fromUsername} />
+              <img src={alert.fromAvatar} alt="" />
             ) : (
               alert.fromUsername.slice(0, 2).toUpperCase()
             )}
