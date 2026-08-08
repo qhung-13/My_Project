@@ -398,3 +398,44 @@
     max-width: 800px;
   }
 }
+.podium-item,
+.list-item {
+  border: 0;
+  color: inherit;
+  font: inherit;
+}
+
+.podium-item {
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.avatar {
+  overflow: hidden;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.list-item {
+  width: 100%;
+  text-align: left;
+}
+
+.podium-item:focus-visible,
+.list-item:focus-visible,
+.leaderboard__tabs button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 42%, transparent);
+  outline-offset: 3px;
+}
+
+.leaderboard__empty {
+  margin: 0;
+  padding: 40px 16px;
+  color: var(--text-muted);
+  text-align: center;
+}
