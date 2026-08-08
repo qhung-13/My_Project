@@ -1,10 +1,11 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { GetVideosParams, PaginatedVideos } from "../../types/index";
+import { API_BASE_URL } from "../../config/api";
 
 export const videoApi = createApi({
   reducerPath: "videoApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+    baseUrl: API_BASE_URL,
     credentials: "include",
   }),
   tagTypes: ["Video", "Comment"],
@@ -23,16 +24,30 @@ export const videoApi = createApi({
     }),
 
     // Get videos by user
-    getVideosByUser: builder.query({
+    getVideosByUser: builder.query<
+      PaginatedVideos,
+      { userId: string; page?: number; limit?: number }
+    >({
       query: ({ userId, page = 1, limit = 12 }) =>
-        `/videos/user/${userId}?page=${page}&limit=${limit}`,
+        `/videos/user/${userId}?${new URLSearchParams({
+          page: String(page),
+          limit: String(limit),
+        }).toString()}`,
       providesTags: ["Video"],
     }),
 
     // Search videos
     searchVideos: builder.query({
-      query: ({ q, category, sort, page = 1, limit = 12 }) =>
-        `/videos/search?${q ? `q=${q}&` : ""}${category ? `category=${category}&` : ""}${sort ? `sort=${sort}&` : ""}page=${page}&limit=${limit}`,
+      query: ({ q, category, sort, page = 1, limit = 12 }) => {
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: String(limit),
+        });
+        if (q?.trim()) params.set("q", q.trim());
+        if (category?.trim()) params.set("category", category.trim());
+        if (sort) params.set("sort", sort);
+        return `/videos/search?${params.toString()}`;
+      },
       providesTags: ["Video"],
     }),
 

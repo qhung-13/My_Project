@@ -3,7 +3,6 @@ import { store } from "../store";
 import { adminApi } from "../api/adminApi";
 import { userApi } from "../api/userApi";
 import { videoApi } from "../api/videoApi";
-import { donationApi } from "../api/donationApi";
 import { coinApi } from "../api/coinApi";
 import { streamApi } from "../api/streamApi";
 import { notificationApi } from "../api/notificationApi";
@@ -14,7 +13,6 @@ describe("Redux store", () => {
     const apis = [
       userApi,
       videoApi,
-      donationApi,
       coinApi,
       streamApi,
       notificationApi,

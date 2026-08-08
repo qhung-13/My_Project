@@ -61,11 +61,11 @@ export interface Comment {
 }
 
 export interface ChatMessage {
-  id: number;
+  id: string;
   user: string;
-  userId: string;
+  userId: string | null;
   message: string;
-  timestamp: Date;
+  timestamp: string;
 }
 
 export interface CoinPackage {
@@ -77,11 +77,12 @@ export interface CoinPackage {
 }
 
 export interface DonationAlert {
+  id: string;
   fromUsername: string;
   fromAvatar: string | null;
   coins: number;
   message: string;
-  timestamp: Date;
+  timestamp: string;
 }
 
 export interface StreamUser {
@@ -109,7 +110,7 @@ export interface Stream {
   vodUrl?: string | null;
   createdAt: string;
   updatedAt: string;
-  scheduledAt: string;
+  scheduledAt?: string | null;
 }
 
 export interface LeaderboardItem {
@@ -150,7 +151,7 @@ export interface AdminUser {
 export interface AdminVideo {
   _id: string;
   title: string;
-  userId: { _id: string; username: string };
+  userId: { _id: string; username: string } | null;
   category: string;
   views: number;
   status: string;
@@ -160,7 +161,7 @@ export interface AdminVideo {
 export interface AdminStream {
   _id: string;
   title: string;
-  userId: { _id: string; username: string };
+  userId: { _id: string; username: string } | null;
   category: string;
   viewers: number;
   isLive: boolean;

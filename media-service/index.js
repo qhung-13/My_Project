@@ -1,68 +1,59 @@
-/**
- * @fileoverview media-service entrypoint.
- *
- * This is a standalone service, deployed and scaled independently from the
- * main API (backend/). It owns:
- *  - the RTMP ingest port (streamers push here via OBS/ffmpeg)
- *  - ffmpeg transcoding to multiple HLS renditions
- *  - (optionally) syncing HLS output to object storage/CDN
- *
- * Why split it out: transcoding 3 renditions per active stream is CPU
- * intensive. Running it in the same process as the REST API meant a busy
- * stream could add latency/jank to unrelated API requests (login, chat
- * REST fallbacks, admin actions, ...) served by that same process. Now the
- * API can be scaled independently (more instances, no GPU/CPU needed) from
- * the media pipeline (fewer, beefier instances with ffmpeg + hardware
- * encoding if available).
- */
-import dotenv from "dotenv";
+import "dotenv/config";
 import express from "express";
 import path from "path";
+import mongoose from "mongoose";
 import connectDB from "./src/config/db.config.js";
 import configureMediaServer from "./src/config/mediaServer.config.js";
+import { stopHlsUploader } from "./src/services/hlsUploader.service.js";
 
-dotenv.config();
-
-if (!process.env.MONGO_URI) {
-  console.error("[media-service] Missing required env var: MONGO_URI");
+const requiredEnv = ["MONGO_URI", "MEDIA_SERVICE_SECRET"];
+const missingEnv = requiredEnv.filter((key) => !process.env[key]?.trim());
+if (missingEnv.length > 0) {
+  console.error(
+    `[media-service] Missing required env vars: ${missingEnv.join(", ")}`,
+  );
+  process.exit(1);
+}
+if (process.env.MEDIA_SERVICE_SECRET.length < 32) {
+  console.error(
+    "[media-service] MEDIA_SERVICE_SECRET must contain at least 32 characters",
+  );
   process.exit(1);
 }
 
 const app = express();
-const port = process.env.PORT || 8080;
-
+const port = Number(process.env.PORT || 8080);
+app.disable("x-powered-by");
 app.get("/health", (req, res) => res.json({ status: "ok" }));
-
-// Local fallback: serve HLS directly from disk. This is what gets used
-// whenever CDN_BASE_URL / S3_BUCKET aren't configured (local dev, small
-// single-instance deployments) — see backend/src/utils/hlsUrl.js and
-// src/services/hlsUploader.service.js for the CDN path.
 app.use(
   "/live",
   (req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     next();
   },
   express.static(path.join(process.cwd(), "media/live"), {
+    fallthrough: false,
     setHeaders: (res, filePath) => {
       const ext = path.extname(filePath).toLowerCase();
       if (ext === ".m3u8") {
         res.setHeader("Content-Type", "application/vnd.apple.mpegurl");
-        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
       } else if (ext === ".ts") {
         res.setHeader("Content-Type", "video/MP2T");
+        res.setHeader("Cache-Control", "public, max-age=30");
       }
     },
   }),
 );
 
+let httpServer;
+let mediaServer;
+
 const start = async () => {
   try {
     await connectDB();
-    configureMediaServer();
-
-    app.listen(port, () => {
+    mediaServer = configureMediaServer();
+    httpServer = app.listen(port, () => {
       console.log(`[media-service] HTTP (health + local HLS) on :${port}`);
     });
   } catch (error) {
@@ -71,12 +62,22 @@ const start = async () => {
   }
 };
 
-start();
+const shutdown = async (signal) => {
+  console.log(`[media-service] ${signal}: shutting down`);
+  mediaServer?.stop?.();
+  await stopHlsUploader();
+  await mongoose.connection.close();
+  if (httpServer) {
+    httpServer.close(() => process.exit(0));
+    setTimeout(() => process.exit(1), 5000).unref();
+  } else {
+    process.exit(0);
+  }
+};
 
-process.on("SIGTERM", () => process.exit(0));
-process.on("SIGINT", () => process.exit(0));
+void start();
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));
 process.on("unhandledRejection", (reason) => {
-  // Unlike the API service, an unhandled rejection here shouldn't take
-  // down active ffmpeg transcodes for other streamers — log and continue.
   console.error("[media-service] Unhandled Rejection:", reason);
 });

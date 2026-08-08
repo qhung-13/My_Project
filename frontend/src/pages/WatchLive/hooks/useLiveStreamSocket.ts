@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import socket from "../../../utils/socket";
 import type { ChatMessage, DonationAlert, Viewer } from "../../../types/index";
 
+const MAX_CHAT_MESSAGES = 300;
+const MAX_VISIBLE_REACTIONS = 40;
+const MAX_DONATION_ALERTS = 5;
+
 interface AuthUserLike {
   _id?: string;
   username?: string;
@@ -20,19 +24,7 @@ interface UseLiveStreamSocketResult {
   sendReaction: (emoji: string) => void;
 }
 
-/**
- * Owns the entire realtime lifecycle for a single stream: connecting,
- * joining/leaving the room, and all the socket event listeners
- * (chat, viewer count/list, donations, reactions, moderation).
- *
- * This used to live inline inside WatchLive.tsx, mixed together with the
- * JSX for the whole page. Pulling it into a hook means:
- *  - WatchLive.tsx only has to think about "what do I render", not
- *    "how do sockets work"
- *  - the socket logic can be unit-tested or reused (e.g. a future
- *    "mini player" that also needs chat) without dragging the whole page
- *    along with it
- */
+/** Owns the realtime lifecycle for one stream room. */
 export function useLiveStreamSocket(
   streamId: string | undefined,
   authUser: AuthUserLike | null | undefined,
@@ -47,33 +39,54 @@ export function useLiveStreamSocket(
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockMessage, setBlockMessage] = useState("");
 
-  // NOTE: this hook is remounted fresh for every stream because the parent
-  // page is rendered with `key={streamerId}` at the route level (App.tsx),
-  // so there's no need to manually reset state when `streamId` changes.
-
   useEffect(() => {
-    if (!streamId) return;
+    if (!streamId) return undefined;
+
+    const timers = new Set<ReturnType<typeof setTimeout>>();
+    const schedule = (callback: () => void, delay: number) => {
+      const timer = setTimeout(() => {
+        timers.delete(timer);
+        callback();
+      }, delay);
+      timers.add(timer);
+    };
+
+    setMessages([]);
+    setViewerCount(0);
+    setViewers([]);
+    setDonationAlerts([]);
+    setReactions([]);
+    setIsBlocked(false);
+    setBlockMessage("");
 
     socket.connect();
     socket.emit("join-stream", streamId, {
-      userId: authUser?._id || "anonymous",
-      username: authUser?.username || "Anonymous",
-      avatar: authUser?.avatar || null,
+      username: authUser?.username,
+      avatar: authUser?.avatar,
     });
 
-    const onChatMessage = (data: ChatMessage) =>
-      setMessages((prev) => [...prev, data]);
-
-    const onViewerCount = (count: number) => setViewerCount(count);
-
-    const onDonation = (data: DonationAlert) => {
-      setDonationAlerts((prev) => [...prev, data]);
-      setTimeout(() => {
-        setDonationAlerts((prev) => prev.filter((_, i) => i !== 0));
-      }, 5000);
+    const onChatMessage = (data: ChatMessage) => {
+      setMessages((previous) => [...previous, data].slice(-MAX_CHAT_MESSAGES));
     };
 
-    const onViewerList = (data: Viewer[]) => setViewers(data);
+    const onViewerCount = (count: number) => {
+      setViewerCount(Number.isFinite(count) && count >= 0 ? count : 0);
+    };
+
+    const onDonation = (data: DonationAlert) => {
+      setDonationAlerts((previous) =>
+        [...previous, data].slice(-MAX_DONATION_ALERTS),
+      );
+      schedule(() => {
+        setDonationAlerts((previous) =>
+          previous.filter((alert) => alert.id !== data.id),
+        );
+      }, 5_000);
+    };
+
+    const onViewerList = (data: Viewer[]) => {
+      setViewers(Array.isArray(data) ? data : []);
+    };
 
     const onReaction = ({
       reaction,
@@ -82,30 +95,60 @@ export function useLiveStreamSocket(
       reaction: string;
       userId: string;
     }) => {
-      const reactionId = `${userId}-${Date.now()}`;
-      setReactions((prev) => [...prev, { id: reactionId, emoji: reaction }]);
-      setTimeout(() => {
-        setReactions((prev) => prev.filter((r) => r.id !== reactionId));
-      }, 3000);
+      const reactionId = `${userId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      setReactions((previous) =>
+        [...previous, { id: reactionId, emoji: reaction }].slice(
+          -MAX_VISIBLE_REACTIONS,
+        ),
+      );
+      schedule(() => {
+        setReactions((previous) =>
+          previous.filter((item) => item.id !== reactionId),
+        );
+      }, 3_000);
     };
 
-    const onChatBlocked = ({ message }: { message: string }) => {
-      setIsBlocked(true);
-      setBlockMessage(message);
+    const onChatBlocked = ({
+      reason,
+      retryAfterSeconds,
+      message,
+    }: {
+      reason?: "rate-limit" | "timeout" | "ban";
+      retryAfterSeconds?: number;
+      message: string;
+    }) => {
+      const shouldBlockInput = reason === "timeout" || reason === "ban";
+      setIsBlocked(shouldBlockInput);
+      setBlockMessage(message || "Bạn hiện không thể gửi tin nhắn.");
+
+      if (reason !== "ban") {
+        const delay = Math.max(1, retryAfterSeconds || 5) * 1_000;
+        schedule(() => {
+          setIsBlocked(false);
+          setBlockMessage("");
+        }, delay);
+      }
     };
 
     const onUserModerated = ({
       userId,
       action,
+      durationSeconds,
       message,
     }: {
       userId: string;
       action: string;
+      durationSeconds?: number;
       message: string;
     }) => {
-      if (userId === authUser?._id) {
-        setIsBlocked(action === "ban");
-        setBlockMessage(message);
+      if (userId !== authUser?._id) return;
+      setIsBlocked(action === "ban" || action === "timeout");
+      setBlockMessage(message || "Bạn hiện không thể gửi tin nhắn.");
+      if (action === "timeout" && durationSeconds) {
+        schedule(() => {
+          setIsBlocked(false);
+          setBlockMessage("");
+        }, durationSeconds * 1_000);
       }
     };
 
@@ -115,7 +158,15 @@ export function useLiveStreamSocket(
     socket.on("viewer-list", onViewerList);
     socket.on("reaction-received", onReaction);
     socket.on("chat-blocked", onChatBlocked);
+    const onUserUnmoderated = ({ userId }: { userId: string }) => {
+      if (userId === authUser?._id) {
+        setIsBlocked(false);
+        setBlockMessage("");
+      }
+    };
+
     socket.on("user-moderated", onUserModerated);
+    socket.on("user-unmoderated", onUserUnmoderated);
 
     return () => {
       socket.emit("leave-stream", streamId);
@@ -126,23 +177,21 @@ export function useLiveStreamSocket(
       socket.off("reaction-received", onReaction);
       socket.off("chat-blocked", onChatBlocked);
       socket.off("user-moderated", onUserModerated);
+      socket.off("user-unmoderated", onUserUnmoderated);
+      timers.forEach((timer) => clearTimeout(timer));
+      timers.clear();
       socket.disconnect();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [streamId, authUser?._id]);
+  }, [streamId, authUser?._id, authUser?.username, authUser?.avatar]);
 
   const sendMessage = (text: string) => {
-    if (!text.trim() || !streamId) return;
-    socket.emit("chat-message", {
-      streamId,
-      message: text.trim(),
-      user: authUser?.username || "Anonymous",
-      userId: authUser?._id || null,
-    });
+    const message = text.trim();
+    if (!message || !streamId || isBlocked) return;
+    socket.emit("chat-message", { streamId, message: message.slice(0, 500) });
   };
 
   const sendReaction = (emoji: string) => {
-    if (!streamId) return;
+    if (!streamId || !emoji) return;
     socket.emit("send-reaction", { streamId, reaction: emoji });
   };
 

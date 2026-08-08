@@ -113,11 +113,16 @@ const deleteFile = async (localPath, mediaRoot) => {
  * S3. Safe to call even when uploads are disabled — it just does nothing.
  */
 export const startHlsUploader = (mediaRoot) => {
+  if (watcher) return watcher;
   if (!isCdnUploadEnabled()) {
     console.log(
       "[hlsUploader] S3_BUCKET not set — CDN sync disabled, serving HLS locally only.",
     );
-    return;
+    return null;
+  }
+
+  if (!process.env.S3_ACCESS_KEY_ID || !process.env.S3_SECRET_ACCESS_KEY) {
+    throw new Error("S3 credentials are required when S3_BUCKET is configured");
   }
 
   watcher = chokidar.watch(mediaRoot, {
@@ -133,9 +138,12 @@ export const startHlsUploader = (mediaRoot) => {
   console.log(
     `[hlsUploader] Watching ${mediaRoot} → syncing to s3://${process.env.S3_BUCKET}`,
   );
+  return watcher;
 };
 
 export const stopHlsUploader = async () => {
-  if (watcher) await watcher.close();
+  if (watcher) {
+    await watcher.close();
+    watcher = null;
+  }
 };
-
