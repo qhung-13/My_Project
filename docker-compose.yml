@@ -7,25 +7,34 @@ services:
       - "5000:5000"
     environment:
       - NODE_ENV=production
-      - MONGO_URI=mongodb://mongodb:27017/omexlive
+      - MONGO_URI=mongodb://mongodb:27017/omexlive?replicaSet=rs0
       - REDIS_URL=redis://redis:6379
       - JWT_SECRET=${JWT_SECRET}
+      - MEDIA_SERVICE_SECRET=${MEDIA_SERVICE_SECRET}
+      - AGENT_SERVICE_SECRET=${AGENT_SERVICE_SECRET}
       - CORS_ORIGINS=${CORS_ORIGINS}
+      - BACKEND_PUBLIC_URL=${BACKEND_PUBLIC_URL:-http://localhost:5000}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
+      - RTMP_SERVER_URL=${RTMP_SERVER_URL:-rtmp://localhost:1935/live}
       # HLS playback URL returned to the frontend — point at the CDN in
       # front of your S3 bucket if media-service has S3_BUCKET configured,
       # otherwise point at the media-service's own host:port.
       - CDN_BASE_URL=${CDN_BASE_URL}
-      - MEDIA_SERVICE_URL=http://media-service:8000/live
-      - EMAIL_USER=${EMAIL_USER}
-      - EMAIL_PASS=${EMAIL_PASS}
+      - MEDIA_SERVICE_URL=${MEDIA_SERVICE_URL:-http://localhost:8000/live}
+      - BREVO_SMTP_USER=${BREVO_SMTP_USER}
+      - BREVO_SMTP_PASS=${BREVO_SMTP_PASS}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
     depends_on:
-      - mongodb
-      - redis
+      mongo-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
 
   # Split out from `backend` so a heavy ffmpeg transcode load never adds
   # latency to unrelated REST API requests, and so each can be scaled
@@ -37,14 +46,19 @@ services:
       - "8000:8000" # local HLS HTTP fallback (used when S3_BUCKET is unset)
       - "8080:8080" # health check
     environment:
-      - MONGO_URI=mongodb://mongodb:27017/omexlive
+      - MONGO_URI=mongodb://mongodb:27017/omexlive?replicaSet=rs0
+      - BACKEND_INTERNAL_URL=http://backend:5000/api/v1
+      - MEDIA_SERVICE_SECRET=${MEDIA_SERVICE_SECRET}
       - S3_BUCKET=${S3_BUCKET}
       - S3_REGION=${S3_REGION}
       - S3_ENDPOINT=${S3_ENDPOINT}
       - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
       - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
     depends_on:
-      - mongodb
+      mongo-init:
+        condition: service_completed_successfully
+      backend:
+        condition: service_started
     volumes:
       - ./media-service/media:/app/media
 
@@ -61,10 +75,31 @@ services:
 
   mongodb:
     image: mongo:7
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     ports:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mongo-init:
+    image: mongo:7
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    restart: "no"
+    entrypoint:
+      - bash
+      - -c
+      - >-
+        mongosh --host mongodb:27017 --quiet --eval
+        'try { rs.status() } catch (error) {
+          rs.initiate({_id: "rs0", members: [{_id: 0, host: "mongodb:27017"}]})
+        }'
 
   # Required for Socket.IO to work correctly once `backend` is scaled to
   # more than 1 replica (see backend/src/sockets/index.js and
