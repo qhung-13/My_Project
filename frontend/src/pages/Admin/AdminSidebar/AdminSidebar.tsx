@@ -17,21 +17,27 @@ const AdminSidebar = ({ activeTab, onTabChange }: AdminSidebarProps) => {
   const navigate = useNavigate();
 
   return (
-    <div className="admin__sidebar">
+    <aside className="admin__sidebar" aria-label="Admin navigation">
       <h2 className="admin__logo">⚙️ Admin</h2>
       {(Object.keys(TAB_ICONS) as TabType[]).map((tab) => (
         <button
+          type="button"
           key={tab}
+          aria-pressed={activeTab === tab}
           className={`admin__nav-btn ${activeTab === tab ? "admin__nav-btn--active" : ""}`}
           onClick={() => onTabChange(tab)}
         >
           {TAB_ICONS[tab]} {tab}
         </button>
       ))}
-      <button className="admin__nav-btn" onClick={() => navigate("/")}>
+      <button
+        type="button"
+        className="admin__nav-btn"
+        onClick={() => navigate("/")}
+      >
         ← Back to Site
       </button>
-    </div>
+    </aside>
   );
 };
 
