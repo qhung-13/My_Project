@@ -1,60 +1,108 @@
-import {
-  MessageSquare,
-  MoreHorizontal,
-  Send,
-  ThumbsUp,
-  ThumbsDown,
-} from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { MessageSquare, Send, ThumbsDown, ThumbsUp } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../store/store";
-import type { Video, Comment } from "../../types/index";
+import type { Comment, Video } from "../../types/index";
 import {
-  useGetVideoByIdQuery,
-  useGetVideosQuery,
-  useGetCommentsQuery,
   useCreateCommentMutation,
   useDeleteCommentMutation,
-  useLikeVideoMutation,
-  useUnlikeVideoMutation,
   useDislikeVideoMutation,
-  useUndislikeVideoMutation,
+  useGetCommentsQuery,
+  useGetVideoByIdQuery,
+  useGetVideosQuery,
   useIncreaseViewMutation,
+  useLikeVideoMutation,
+  useUndislikeVideoMutation,
+  useUnlikeVideoMutation,
 } from "../../store/api/videoApi";
 import {
   useFollowUserMutation,
-  useUnfollowUserMutation,
   useGetUserByIdQuery,
+  useUnfollowUserMutation,
 } from "../../store/api/userApi";
 import ClipCreator from "../../components/ClipCreator/ClipCreator";
 import "./WatchVideo.css";
 
+const formatDuration = (seconds: number) => {
+  const total = Math.max(0, Math.floor(seconds || 0));
+  const minutes = Math.floor(total / 60);
+  const remainder = total % 60;
+  return `${minutes}:${remainder.toString().padStart(2, "0")}`;
+};
+
+const getApiError = (error: unknown, fallback: string) => {
+  const apiError = error as { data?: { message?: string } };
+  return apiError.data?.message || fallback;
+};
+
 const WatchVideo = () => {
   const { videoId } = useParams<{ videoId: string }>();
   const navigate = useNavigate();
+  const hasViewed = useRef(false);
   const [isCommentOpen, setIsCommentOpen] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [showClipCreator, setShowClipCreator] = useState(false);
-  const hasViewed = useRef(false);
+  const [actionError, setActionError] = useState("");
 
   const { user: authUser } = useSelector((state: RootState) => state.auth);
-
-  const { data: video, isLoading } = useGetVideoByIdQuery(videoId!, {
-    skip: !videoId,
-  }) as { data: Video | undefined; isLoading: boolean };
+  const {
+    data: video,
+    isLoading,
+    isError,
+  } = useGetVideoByIdQuery(videoId!, { skip: !videoId }) as {
+    data: Video | undefined;
+    isLoading: boolean;
+    isError: boolean;
+  };
   const { data: result } = useGetVideosQuery(undefined);
-  const { data: comments } = useGetCommentsQuery(videoId!, { skip: !videoId });
+  const {
+    data: comments = [],
+    isLoading: areCommentsLoading,
+    isError: commentsError,
+  } = useGetCommentsQuery(videoId!, { skip: !videoId }) as {
+    data: Comment[] | undefined;
+    isLoading: boolean;
+    isError: boolean;
+  };
 
   const uploaderId =
-    typeof video?.userId === "object" ? video?.userId?._id : video?.userId;
-  const streamerId = uploaderId;
+    typeof video?.userId === "object" ? video.userId._id : video?.userId;
   const uploaderPopulated =
-    typeof video?.userId === "object" ? video?.userId : null;
-
+    typeof video?.userId === "object" ? video.userId : null;
   const { data: uploaderData } = useGetUserByIdQuery(uploaderId!, {
     skip: !uploaderId,
   });
+
+  const [followUser, { isLoading: isFollowing }] = useFollowUserMutation();
+  const [unfollowUser, { isLoading: isUnfollowing }] =
+    useUnfollowUserMutation();
+  const [likeVideo, { isLoading: isLiking }] = useLikeVideoMutation();
+  const [unlikeVideo, { isLoading: isUnliking }] = useUnlikeVideoMutation();
+  const [dislikeVideo, { isLoading: isDisliking }] = useDislikeVideoMutation();
+  const [undislikeVideo, { isLoading: isUndisliking }] =
+    useUndislikeVideoMutation();
+  const [createComment, { isLoading: isCreatingComment }] =
+    useCreateCommentMutation();
+  const [deleteComment] = useDeleteCommentMutation();
+  const [increaseView] = useIncreaseViewMutation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    hasViewed.current = false;
+    setActionError("");
+    setCommentText("");
+  }, [videoId]);
+
+  useEffect(() => {
+    if (!videoId || !video || hasViewed.current) return;
+    hasViewed.current = true;
+    void increaseView(videoId)
+      .unwrap()
+      .catch(() => {
+        // View tracking must never block video playback.
+      });
+  }, [videoId, video, increaseView]);
 
   const uploaderName =
     uploaderPopulated?.displayName ||
@@ -62,243 +110,234 @@ const WatchVideo = () => {
     uploaderData?.displayName ||
     uploaderData?.username ||
     "Unknown";
-
-  const [followUser] = useFollowUserMutation();
-  const [unfollowUser] = useUnfollowUserMutation();
-  const [likeVideo] = useLikeVideoMutation();
-  const [unlikeVideo] = useUnlikeVideoMutation();
-  const [createComment] = useCreateCommentMutation();
-  const [deleteComment] = useDeleteCommentMutation();
-  const [dislikeVideo] = useDislikeVideoMutation();
-  const [undislikeVideo] = useUndislikeVideoMutation();
-  const [increaseView] = useIncreaseViewMutation();
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [videoId]);
-
-  useEffect(() => {
-    hasViewed.current = false;
-  }, [videoId]);
-
-  useEffect(() => {
-    if (videoId && !hasViewed.current) {
-      hasViewed.current = true;
-      increaseView(videoId);
-    }
-  }, [videoId, increaseView]);
-
-  const isFollowing =
+  const isOwnVideo = uploaderId === authUser?._id;
+  const isFollowingUploader =
     uploaderData?.followers?.some(
       (id: string) => id.toString() === authUser?._id,
     ) ?? false;
-
   const isLiked =
     video?.likes?.some((id: string) => id.toString() === authUser?._id) ??
     false;
-
-  const handleFollow = async () => {
-    if (!uploaderId) return;
-    try {
-      if (isFollowing) await unfollowUser(uploaderId).unwrap();
-      else await followUser(uploaderId).unwrap();
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  const handleLike = async () => {
-    if (!videoId) return;
-    try {
-      if (isLiked) await unlikeVideo(videoId).unwrap();
-      else await likeVideo(videoId).unwrap();
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  const handleComment = async () => {
-    if (!commentText.trim() || !videoId) return;
-    try {
-      await createComment({ videoId, content: commentText }).unwrap();
-      setCommentText("");
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  const handleDeleteComment = async (commentId: string) => {
-    try {
-      await deleteComment(commentId).unwrap();
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  const suggestedVideos =
-    result?.videos?.filter((v: Video) => v._id !== videoId).slice(0, 10) || [];
-
-  if (isLoading) return <div className="watch-video__loading">Loading...</div>;
-  if (!video)
-    return <div className="watch-video__loading">Video not found</div>;
-
   const isDisliked =
     video?.dislikes?.some((id: string) => id.toString() === authUser?._id) ??
     false;
 
+  const requireAuthentication = () => {
+    if (authUser) return true;
+    setActionError("Bạn cần đăng nhập để thực hiện thao tác này.");
+    return false;
+  };
+
+  const handleFollow = async () => {
+    if (!uploaderId || isOwnVideo || !requireAuthentication()) return;
+    setActionError("");
+    try {
+      if (isFollowingUploader) await unfollowUser(uploaderId).unwrap();
+      else await followUser(uploaderId).unwrap();
+    } catch (error) {
+      setActionError(
+        getApiError(error, "Không thể cập nhật trạng thái theo dõi."),
+      );
+    }
+  };
+
+  const handleLike = async () => {
+    if (!videoId || !requireAuthentication()) return;
+    setActionError("");
+    try {
+      if (isLiked) await unlikeVideo(videoId).unwrap();
+      else await likeVideo(videoId).unwrap();
+    } catch (error) {
+      setActionError(getApiError(error, "Không thể cập nhật lượt thích."));
+    }
+  };
+
   const handleDislike = async () => {
-    if (!videoId) return;
+    if (!videoId || !requireAuthentication()) return;
+    setActionError("");
     try {
       if (isDisliked) await undislikeVideo(videoId).unwrap();
       else await dislikeVideo(videoId).unwrap();
-    } catch (err) {
-      console.log(err);
+    } catch (error) {
+      setActionError(
+        getApiError(error, "Không thể cập nhật lượt không thích."),
+      );
     }
   };
+
+  const handleComment = async () => {
+    const content = commentText.trim();
+    if (!videoId || !content || !requireAuthentication()) return;
+    setActionError("");
+    try {
+      await createComment({ videoId, content }).unwrap();
+      setCommentText("");
+    } catch (error) {
+      setActionError(getApiError(error, "Không thể đăng bình luận."));
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    setActionError("");
+    try {
+      await deleteComment(commentId).unwrap();
+    } catch (error) {
+      setActionError(getApiError(error, "Không thể xóa bình luận."));
+    }
+  };
+
+  const suggestedVideos =
+    result?.videos
+      ?.filter((item: Video) => item._id !== videoId)
+      .slice(0, 10) || [];
+
+  if (isLoading) {
+    return (
+      <div className="watch-video__loading" role="status">
+        Đang tải...
+      </div>
+    );
+  }
+  if (isError || !video) {
+    return (
+      <div className="watch-video__loading" role="alert">
+        Video không tồn tại hoặc không còn công khai.
+      </div>
+    );
+  }
 
   return (
     <div className="watch-live">
       <div className="watch-live__video">
         <video
           src={video.videoUrl}
+          poster={video.thumbnailUrl || undefined}
           controls
-          style={{ width: "100%", height: "100%", objectFit: "contain" }}
+          playsInline
+          preload="metadata"
+          aria-label={`Video: ${video.title}`}
+          className="watch-video__player"
         />
       </div>
 
       <div className="watch-live__info">
         <div className="info-header">
-          <div
-            className="info-avatar"
-            style={{ background: "#6366f1", cursor: "pointer" }}
-            onClick={() => {
-              if (streamerId) navigate(`/channel/${streamerId}`);
-            }}
+          <button
+            type="button"
+            className="info-avatar watch-video__avatar-button"
+            onClick={() => uploaderId && navigate(`/channel/${uploaderId}`)}
+            disabled={!uploaderId}
+            aria-label={`Mở kênh của ${uploaderName}`}
           >
             {uploaderData?.avatar ? (
-              <img
-                src={uploaderData.avatar}
-                alt={uploaderName}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  borderRadius: "50%",
-                  objectFit: "cover",
-                }}
-              />
+              <img src={uploaderData.avatar} alt="" loading="lazy" />
             ) : (
               uploaderName.slice(0, 2).toUpperCase()
             )}
-          </div>
+          </button>
           <div className="info-details">
-            <h2 className="info-title">{video.title}</h2>
+            <h1 className="info-title">{video.title}</h1>
             <p className="info-meta">
-              {uploaderName} · {video.category} · {video.views} views
+              {uploaderName} · {video.category} · {video.views.toLocaleString()}{" "}
+              lượt xem
             </p>
           </div>
         </div>
+
+        {actionError && (
+          <p className="watch-video__action-error" role="alert">
+            {actionError}
+          </p>
+        )}
+
         <div className="info-actions">
-          {/* Follow */}
           <button
+            type="button"
             className="btn-follow"
             onClick={handleFollow}
-            disabled={uploaderId === authUser?._id}
-            style={{
-              opacity: uploaderId === authUser?._id ? 0.4 : 1,
-              cursor: uploaderId === authUser?._id ? "not-allowed" : "pointer",
-            }}
+            disabled={isOwnVideo || isFollowing || isUnfollowing}
+            title={isOwnVideo ? "Bạn không thể theo dõi chính mình" : undefined}
           >
-            {isFollowing ? "Following" : "Follow"}
+            {isFollowingUploader ? "Following" : "Follow"}
           </button>
-
-          {/* Like */}
           <button
+            type="button"
             className={`btn-follow ${isLiked ? "btn-follow--active" : ""}`}
             onClick={handleLike}
-            disabled={uploaderId === authUser?._id}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              opacity: uploaderId === authUser?._id ? 0.4 : 1,
-              cursor: uploaderId === authUser?._id ? "not-allowed" : "pointer",
-            }}
+            disabled={isLiking || isUnliking}
+            aria-pressed={isLiked}
           >
-            <ThumbsUp size={16} />
+            <ThumbsUp size={16} aria-hidden="true" />
             {video.likesCount}
           </button>
-
-          {/* Dislike */}
           <button
+            type="button"
             className={`btn-follow ${isDisliked ? "btn-follow--active" : ""}`}
             onClick={handleDislike}
-            disabled={uploaderId === authUser?._id}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              opacity: uploaderId === authUser?._id ? 0.4 : 1,
-              cursor: uploaderId === authUser?._id ? "not-allowed" : "pointer",
-            }}
+            disabled={isDisliking || isUndisliking}
+            aria-pressed={isDisliked}
           >
-            <ThumbsDown size={16} />
+            <ThumbsDown size={16} aria-hidden="true" />
             {video.dislikesCount}
           </button>
           <button
+            type="button"
             className="btn-follow"
-            onClick={() => setShowClipCreator(true)}
-            style={{ display: "flex", alignItems: "center", gap: "4px" }}
+            onClick={() => {
+              if (requireAuthentication()) setShowClipCreator(true);
+            }}
           >
             ✂️ Clip
-          </button>
-          <button className="btn-more">
-            <MoreHorizontal size={18} />
           </button>
         </div>
       </div>
 
       <div className="watch-live__interactive">
-        <div
+        <section
           className={`chat-panel ${isCommentOpen ? "chat-panel--open" : ""}`}
         >
-          <div
+          <button
+            type="button"
             className="chat-panel__tab"
-            onClick={() => setIsCommentOpen(!isCommentOpen)}
+            onClick={() => setIsCommentOpen((current) => !current)}
+            aria-expanded={isCommentOpen}
           >
-            <div className="chat-panel__tab-left">
-              <MessageSquare size={14} />
-              <span>Bình luận ({comments?.length || 0})</span>
+            <span className="chat-panel__tab-left">
+              <MessageSquare size={14} aria-hidden="true" />
+              <span>Bình luận ({comments.length})</span>
               {!isCommentOpen && (
                 <span className="chat-panel__hint">
                   · Hãy để lại bình luận!
                 </span>
               )}
-            </div>
+            </span>
             <span
               className={`chat-panel__arrow ${isCommentOpen ? "chat-panel__arrow--up" : ""}`}
+              aria-hidden="true"
             >
               ↑
             </span>
-          </div>
+          </button>
 
           <div className="chat-panel__content">
-            <div className="chat-panel__messages">
-              {comments && comments.length > 0 ? (
-                comments.map((comment: Comment) => (
-                  <div className="chat-msg" key={comment._id}>
-                    <div
-                      className="chat-msg__avatar"
-                      style={{ background: "#6366f1" }}
-                    >
+            <div className="chat-panel__messages" aria-live="polite">
+              {areCommentsLoading ? (
+                <p className="watch-video__comment-state">
+                  Đang tải bình luận...
+                </p>
+              ) : commentsError ? (
+                <p className="watch-video__comment-state" role="alert">
+                  Không thể tải bình luận.
+                </p>
+              ) : comments.length > 0 ? (
+                comments.map((comment) => (
+                  <article className="chat-msg" key={comment._id}>
+                    <div className="chat-msg__avatar">
                       {comment.userId?.avatar ? (
                         <img
                           src={comment.userId.avatar}
                           alt=""
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            borderRadius: "50%",
-                          }}
+                          loading="lazy"
                         />
                       ) : (
                         (
@@ -310,112 +349,105 @@ const WatchVideo = () => {
                           .toUpperCase()
                       )}
                     </div>
-                    <div style={{ flex: 1 }}>
+                    <div className="chat-msg__body">
                       <span className="chat-msg__user">
                         {comment.userId?.displayName ||
-                          comment.userId?.username}
+                          comment.userId?.username ||
+                          "Người dùng"}
                       </span>
                       <span className="chat-msg__text"> {comment.content}</span>
-                      {authUser?._id === comment.userId?._id && (
+                      {(authUser?._id === comment.userId?._id ||
+                        authUser?.role === "admin") && (
                         <button
+                          type="button"
+                          className="watch-video__delete-comment"
                           onClick={() => handleDeleteComment(comment._id)}
-                          style={{
-                            fontSize: "11px",
-                            color: "#ef4444",
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            marginLeft: "8px",
-                          }}
                         >
                           Xóa
                         </button>
                       )}
                     </div>
-                  </div>
+                  </article>
                 ))
               ) : (
-                <p
-                  style={{
-                    textAlign: "center",
-                    color: "#999",
-                    padding: "20px",
-                  }}
-                >
-                  Chưa có bình luận nào
+                <p className="watch-video__comment-state">
+                  Chưa có bình luận nào.
                 </p>
               )}
             </div>
 
-            {authUser && (
-              <div className="chat-panel__input">
+            {authUser ? (
+              <form
+                className="chat-panel__input"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void handleComment();
+                }}
+              >
+                <label className="sr-only" htmlFor="video-comment">
+                  Viết bình luận
+                </label>
                 <input
+                  id="video-comment"
                   type="text"
                   placeholder="Viết bình luận..."
                   value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleComment()}
+                  onChange={(event) => setCommentText(event.target.value)}
+                  maxLength={1000}
                 />
-                <button className="chat-panel__send" onClick={handleComment}>
-                  <Send size={14} />
+                <button
+                  type="submit"
+                  className="chat-panel__send"
+                  disabled={!commentText.trim() || isCreatingComment}
+                  aria-label="Gửi bình luận"
+                >
+                  <Send size={14} aria-hidden="true" />
                 </button>
-              </div>
+              </form>
+            ) : (
+              <p className="watch-video__comment-state">
+                Đăng nhập để bình luận.
+              </p>
             )}
           </div>
-        </div>
+        </section>
 
-        <div
+        <section
           className={`suggested ${isCommentOpen ? "suggested--hidden-mobile" : ""}`}
         >
-          <h3 className="suggested__title">Video khác</h3>
+          <h2 className="suggested__title">Video khác</h2>
           <div className="suggested__list">
-            {suggestedVideos.map((v: Video) => (
-              <div
+            {suggestedVideos.map((item: Video) => (
+              <button
+                type="button"
                 className="suggested-card"
-                key={v._id}
-                onClick={() => navigate(`/video/${v._id}`)}
+                key={item._id}
+                onClick={() => navigate(`/video/${item._id}`)}
               >
-                <div
-                  className="suggested-card__thumb"
-                  style={{ background: "#1a1a2e" }}
-                >
-                  {v.thumbnailUrl ? (
-                    <img
-                      src={v.thumbnailUrl}
-                      alt={v.title}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                      }}
-                    />
+                <div className="suggested-card__thumb">
+                  {item.thumbnailUrl ? (
+                    <img src={item.thumbnailUrl} alt="" loading="lazy" />
                   ) : (
-                    <span
-                      style={{
-                        color: "#fff",
-                        fontSize: "12px",
-                        padding: "4px",
-                      }}
-                    >
-                      {v.category}
-                    </span>
+                    <span>{item.category}</span>
                   )}
+                  <span className="suggested-card__duration">
+                    {formatDuration(item.duration)}
+                  </span>
                 </div>
                 <div className="suggested-card__info">
-                  <div className="suggested-card__title">{v.title}</div>
-                  <div className="suggested-card__streamer">
-                    <span>
-                      {typeof v.userId === "object"
-                        ? v.userId?.username
-                        : "Unknown"}
-                    </span>
-                  </div>
+                  <span className="suggested-card__title">{item.title}</span>
+                  <span className="suggested-card__streamer">
+                    {typeof item.userId === "object"
+                      ? item.userId.displayName || item.userId.username
+                      : "Unknown"}
+                  </span>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
-        </div>
+        </section>
       </div>
+
       {showClipCreator && (
         <ClipCreator
           videoId={video._id}
