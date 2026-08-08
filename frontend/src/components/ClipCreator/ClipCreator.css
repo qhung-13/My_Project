@@ -129,3 +129,32 @@
   border-color: var(--border-hover);
   color: var(--text-primary);
 }
+.clip-creator__overlay,
+.schedule-modal__overlay,
+.update-stream-modal__overlay {
+  border: 0;
+  padding: 0;
+}
+
+.clip-creator__card {
+  background: var(--bg-card);
+  outline: none;
+}
+
+.clip-creator__close:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 520px) {
+  .clip-creator {
+    align-items: flex-end;
+  }
+
+  .clip-creator__card {
+    width: 100%;
+    max-width: none;
+    padding: 24px 16px max(20px, env(safe-area-inset-bottom));
+    border-radius: 16px 16px 0 0;
+  }
+}
