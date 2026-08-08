@@ -4,12 +4,11 @@ import {
   banUser,
   unbanUser,
 } from "../controllers/ModerationController.controller.js";
-import protect from "../middlewares/Auth.middleware.js";
+import { protectOrAgent } from "../middlewares/Auth.middleware.js";
 
 const router = express.Router();
-
-router.post("/timeout", protect, timeoutUser);
-router.post("/ban", protect, banUser);
-router.post("/unban", protect, unbanUser);
-
+router.use(protectOrAgent);
+router.post("/timeout", timeoutUser);
+router.post("/ban", banUser);
+router.post("/unban", unbanUser);
 export default router;
