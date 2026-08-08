@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { formatViewers } from "../../../utils/format";
+import { formatDuration, formatViewers } from "../../../utils/format";
 import type { Video } from "../../../types/index";
 
 interface VideoGridProps {
@@ -14,7 +14,7 @@ const VideoGrid = ({ videos, emptyIcon, emptyText }: VideoGridProps) => {
   if (videos.length === 0) {
     return (
       <div className="channel__empty">
-        <span>{emptyIcon}</span>
+        <span aria-hidden="true">{emptyIcon}</span>
         <p>{emptyText}</p>
       </div>
     );
@@ -23,34 +23,31 @@ const VideoGrid = ({ videos, emptyIcon, emptyText }: VideoGridProps) => {
   return (
     <div className="channel__grid">
       {videos.map((video) => (
-        <div
+        <button
           key={video._id}
+          type="button"
           className="channel__video-card"
           onClick={() => navigate(`/video/${video._id}`)}
         >
-          <div className="channel__video-thumb">
+          <span className="channel__video-thumb">
             {video.thumbnailUrl ? (
-              <img
-                src={video.thumbnailUrl}
-                alt={video.title}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
+              <img src={video.thumbnailUrl} alt="" />
             ) : (
-              <div className="channel__video-placeholder">
+              <span className="channel__video-placeholder">
                 {video.category}
-              </div>
+              </span>
             )}
             <span className="channel__video-duration">
-              {video.duration}s
+              {formatDuration(video.duration)}
             </span>
-          </div>
-          <div className="channel__video-info">
-            <p className="channel__video-title">{video.title}</p>
-            <p className="channel__video-meta">
+          </span>
+          <span className="channel__video-info">
+            <span className="channel__video-title">{video.title}</span>
+            <span className="channel__video-meta">
               {formatViewers(video.views)} views
-            </p>
-          </div>
-        </div>
+            </span>
+          </span>
+        </button>
       ))}
     </div>
   );
