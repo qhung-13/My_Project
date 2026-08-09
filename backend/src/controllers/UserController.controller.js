@@ -107,9 +107,15 @@ const userRegister = asyncHandler(async (req, res) => {
   try {
     await createAndSendOtp(email, "verify_email");
   } catch (error) {
+    // Avoid leaving an unusable account that makes the next registration
+    // attempt fail with "email already exists" after SMTP temporarily fails.
+    await Promise.allSettled([
+      User.deleteOne({ _id: newUser._id, isVerified: false }),
+      Otp.deleteMany({ email, type: "verify_email" }),
+    ]);
     console.error("Registration OTP delivery failed:", error.message);
     res.status(503);
-    throw error;
+    throw new Error("Could not send the verification email. Please try again.");
   }
 
   res.status(201).json({
@@ -361,7 +367,10 @@ const getUserById = asyncHandler(async (req, res) => {
 });
 
 const getRtmpServerUrl = () =>
-  (process.env.RTMP_SERVER_URL || "rtmp://localhost/live").replace(/\/+$/, "");
+  (process.env.RTMP_SERVER_URL || "rtmp://localhost:1935/live").replace(
+    /\/+$/,
+    "",
+  );
 
 const getStreamKey = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
@@ -385,6 +394,13 @@ const resetStreamKey = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error("User not found");
   }
+  if (user.isLive) {
+    res.status(409);
+    throw new Error(
+      "Stop the active stream before regenerating the stream key",
+    );
+  }
+
   user.streamKey = uuidv4();
   await user.save();
   res.status(200).json({
