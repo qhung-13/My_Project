@@ -26,7 +26,7 @@ export const getRedisClients = () => {
   if (!isRedisEnabled()) return null;
   if (!pubClient) {
     pubClient = new Redis(process.env.REDIS_URL, {
-      maxRetriesPerRequest: null, 
+      maxRetriesPerRequest: null,
       retryStrategy,
     });
     subClient = pubClient.duplicate();
@@ -50,9 +50,28 @@ export const getRedisDataClient = () => {
   if (!isRedisEnabled()) return null;
   if (!dataClient) {
     dataClient = new Redis(process.env.REDIS_URL, { maxRetriesPerRequest: 3 });
-    dataClient.on("error", (err) => console.error("Redis (data) error:", err));
+    dataClient.on("error", (err) =>
+      console.error("Redis (data) error:", err.message),
+    );
   }
   return dataClient;
+};
+
+export const closeRedisClients = async () => {
+  const clients = [dataClient, pubClient, subClient].filter(Boolean);
+  dataClient = null;
+  pubClient = null;
+  subClient = null;
+
+  await Promise.allSettled(
+    clients.map(async (client) => {
+      try {
+        await client.quit();
+      } catch {
+        client.disconnect();
+      }
+    }),
+  );
 };
 
 export default getRedisClients;
