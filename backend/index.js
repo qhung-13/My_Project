@@ -23,13 +23,13 @@ import {
   getAllowedOrigins,
 } from "./src/config/env.config.js";
 import createSocketServer from "./src/sockets/index.js";
+import { closeRedisClients } from "./src/config/redis.config.js";
 
 // Routes
 import userRoute from "./src/routes/UserRoute.route.js";
 import videoRoute from "./src/routes/VideoRoute.route.js";
 import commentRoute from "./src/routes/CommentRoute.route.js";
 import streamRoute from "./src/routes/StreamRoute.route.js";
-import donateRoute from "./src/routes/DonateRoute.route.js";
 import coinRoute from "./src/routes/CoinRoute.route.js";
 import adminRoute from "./src/routes/AdminRoute.route.js";
 import notification from "./src/routes/Notification.route.js";
@@ -67,13 +67,20 @@ app.use(
 // Global Middlewares
 // ==========================================
 app.use((req, res, next) => {
-  if (req.originalUrl === "/api/coins/webhook") {
-    next();
-  } else {
-    express.json()(req, res, next);
+  // Stripe verifies the signature against the *raw* request body. Keep both
+  // the versioned endpoint and the temporary legacy alias raw; parsing either
+  // one as JSON first makes every valid Stripe signature fail verification.
+  const isStripeWebhook = /^\/api(?:\/v1)?\/coins\/webhook(?:\?|$)/.test(
+    req.originalUrl,
+  );
+
+  if (isStripeWebhook) {
+    express.raw({ type: "application/json" })(req, res, next);
+    return;
   }
+
+  express.json()(req, res, next);
 });
-app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use(
@@ -83,12 +90,41 @@ app.use(
   }),
 );
 
+// Cookie auth may use SameSite=None when frontend/API live on different
+// HTTPS sites (for example Vercel + Render). CORS controls what JavaScript
+// can read, but does not by itself prevent a cross-site form/request from
+// reaching a state-changing endpoint. Browser requests carrying our JWT
+// cookie must therefore originate from an allow-listed frontend. Internal
+// service calls and bearer-token/API clients do not carry the jwt cookie and
+// are unaffected.
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+app.use((req, res, next) => {
+  if (SAFE_METHODS.has(req.method) || !req.cookies?.jwt) return next();
+
+  const origin = req.get("origin")?.replace(/\/$/, "");
+  const fetchSite = req.get("sec-fetch-site");
+  const originAllowed = origin ? allowedOrigins.includes(origin) : false;
+
+  if ((origin && !originAllowed) || (!origin && fetchSite === "cross-site")) {
+    return res.status(403).json({ message: "Cross-site request rejected" });
+  }
+
+  return next();
+});
+
 app.use(passport.initialize());
+
+app.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok" });
+});
 
 // ==========================================
 // Socket.IO (see ./src/sockets for handlers)
 // ==========================================
 const io = createSocketServer(httpServer, allowedOrigins);
+// Controllers (stream lifecycle, donations, moderation) publish realtime
+// events through req.app.get("io"). Keep a single shared Socket.IO instance.
+app.set("io", io);
 
 // ==========================================
 // API Routes
@@ -101,17 +137,16 @@ const io = createSocketServer(httpServer, allowedOrigins);
 const v1 = express.Router();
 v1.use("/users", userRoute);
 v1.use("/videos", videoRoute);
-v1.use("/comments", globalLimiter, commentRoute);
-v1.use("/streams", globalLimiter, streamRoute);
-v1.use("/donations", globalLimiter, donateRoute);
-v1.use("/coins", globalLimiter, coinRoute);
-v1.use("/admin", globalLimiter, adminRoute);
+v1.use("/comments", commentRoute);
+v1.use("/streams", streamRoute);
+v1.use("/coins", coinRoute);
+v1.use("/admin", adminRoute);
 v1.use("/notifications", notification);
 v1.use("/moderation", moderationRoute);
 v1.use("/clips", clipRoute);
 
-app.use("/api/v1", v1);
-app.use("/api", v1); // TODO(deprecate): remove once all clients use /api/v1
+app.use("/api/v1", globalLimiter, v1);
+app.use("/api", globalLimiter, v1); // TODO(deprecate): remove once all clients use /api/v1
 
 // NOTE: HLS playback (`/live/...`) used to be served directly from this
 // process's local disk. That has moved to the standalone media-service
@@ -136,12 +171,24 @@ app.use((req, res) => {
 // unexpected exception) was reported to the client as HTTP 200 with an error
 // message in the body — very easy to misread as success.
 app.use((err, req, res, next) => {
-  const statusCode =
+  let statusCode =
     err.statusCode ||
     (res.statusCode && res.statusCode !== 200 ? res.statusCode : 500);
+  let message = err.message || "Internal Server Error";
+
+  if (err?.name === "CastError") {
+    statusCode = 400;
+    message = "Invalid resource id";
+  } else if (err?.name === "ValidationError") {
+    statusCode = 400;
+    message = "Invalid request data";
+  } else if (err?.code === 11000) {
+    statusCode = 409;
+    message = "A resource with the same unique value already exists";
+  }
 
   res.status(statusCode).json({
-    message: err.message || "Internal Server Error",
+    message,
     ...(process.env.NODE_ENV === "development" ? { stack: err.stack } : {}),
   });
 });
@@ -163,35 +210,36 @@ const start = async () => {
 start();
 
 // Graceful shutdown helpers
+let isShuttingDown = false;
 const shutdown = async (signal) => {
-  console.log(`Received ${signal}. Shutting down gracefully...`);
+  if (isShuttingDown) return;
+  isShuttingDown = true;
 
-  // Decide exit code: non-zero for error-like signals
+  console.log(`Received ${signal}. Shutting down gracefully...`);
   const errorSignals = new Set(["uncaughtException", "unhandledRejection"]);
   const exitCode = errorSignals.has(signal) ? 1 : 0;
+  const forceExitTimer = setTimeout(() => {
+    console.warn("Forcing process exit after graceful-shutdown timeout.");
+    process.exit(exitCode || 1);
+  }, 5000);
 
   try {
-    httpServer.close(() => {
-      console.log("HTTP server closed.");
-      process.exit(exitCode);
-    });
+    // Socket.IO owns the underlying HTTP server, so closing it drains both
+    // realtime sockets and HTTP connections without racing two close calls.
+    await new Promise((resolve) => io.close(() => resolve()));
+    console.log("Socket.IO and HTTP server closed.");
 
-    // Attempt to close mongoose connection if present
-    try {
-      const mongoose = (await import("mongoose")).default;
-      await mongoose.connection.close();
-      console.log("MongoDB connection closed.");
-    } catch (e) {
-      // ignore if mongoose not available
-    }
+    await closeRedisClients();
 
-    // If server.close does not call the callback in a timely manner, force exit
-    setTimeout(() => {
-      console.warn("Forcing process exit.");
-      process.exit(exitCode);
-    }, 5000);
-  } catch (e) {
-    console.error("Error during shutdown:", e);
+    const mongoose = (await import("mongoose")).default;
+    await mongoose.connection.close();
+    console.log("MongoDB connection closed.");
+
+    clearTimeout(forceExitTimer);
+    process.exit(exitCode);
+  } catch (error) {
+    clearTimeout(forceExitTimer);
+    console.error("Error during shutdown:", error);
     process.exit(1);
   }
 };
