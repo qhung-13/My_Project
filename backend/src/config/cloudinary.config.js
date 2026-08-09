@@ -55,4 +55,5 @@ export const uploadImage = multer({
   fileFilter: fileFilterFor(IMAGE_MIME_TYPES, "image"),
 });
 
+export { cloudinary };
 export default configureCloudinary;

@@ -3,11 +3,12 @@ import {
   startStream,
   streamPublished,
   streamUnpublished,
+  streamHeartbeat,
   endStream,
   getLiveStreams,
+  getCurrentStream,
   getStreamById,
   getStreamsByUser,
-  updateViewers,
   getTopStreamersByHours,
   scheduleStream,
   getScheduledStreams,
@@ -16,25 +17,28 @@ import {
   getViewerList,
   getStreamAnalytics,
 } from "../controllers/StreamController.controller.js";
-import protect from "../middlewares/Auth.middleware.js";
+import protect, { protectOrAgent } from "../middlewares/Auth.middleware.js";
 import requireMediaService from "../middlewares/MediaServiceAuth.middleware.js";
 
+import { askCreatorCoach } from "../controllers/CreatorCoachController.controller.js";
 const router = express.Router();
 
 router.get("/", getLiveStreams);
 router.get("/top-hours", getTopStreamersByHours);
 router.post("/internal/publish", requireMediaService, streamPublished);
 router.post("/internal/unpublish", requireMediaService, streamUnpublished);
+router.post("/internal/heartbeat", requireMediaService, streamHeartbeat);
 router.post("/start", protect, startStream);
 router.post("/end", protect, endStream);
 router.put("/live/update", protect, updateLiveStream);
+router.get("/me/current", protect, getCurrentStream);
 router.get("/user/:userId", getStreamsByUser);
-router.get("/analytics/:userId", protect, getStreamAnalytics);
+router.get("/analytics/:userId", protectOrAgent, getStreamAnalytics);
+router.post("/creator-coach", protect, askCreatorCoach);
 router.post("/schedule", protect, scheduleStream);
 router.get("/scheduled", getScheduledStreams);
 router.get("/scheduled/:userId", getScheduledStreamsByUser);
 router.get("/:id", getStreamById);
-router.put("/:id/viewers", protect, updateViewers);
 router.get("/:id/viewers", getViewerList);
 
 export default router;

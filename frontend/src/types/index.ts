@@ -1,25 +1,3 @@
-export interface darkModeProps {
-  darkMode: boolean;
-  setDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
-}
-
-export interface Country {
-  name: string;
-  flag: string;
-  code: string;
-}
-
-export interface LoginProps {
-  onClose: () => void;
-  onSwitch: () => void;
-}
-
-export interface RegisterProps {
-  onClose: () => void;
-  onSwitch: () => void;
-}
-
-//
 export interface Video {
   _id: string;
   userId:
@@ -29,7 +7,8 @@ export interface Video {
         displayName?: string;
         avatar?: string | null;
       }
-    | string; // Có thể là object (populated) hoặc string (id)
+    | string
+    | null; // populated user can be null if the account was deleted
   title: string;
   description: string;
   videoUrl: string;
@@ -54,7 +33,7 @@ export interface Comment {
     username: string;
     displayName?: string;
     avatar?: string | null;
-  };
+  } | null;
   content: string;
   likesCount: number;
   createdAt: string;
@@ -94,12 +73,11 @@ export interface StreamUser {
 
 export interface Stream {
   _id: string;
-  userId: StreamUser;
+  userId: StreamUser | string | null;
   title: string;
   description?: string;
   category: string;
   tags?: string[];
-  streamKey?: string;
   hlsUrl?: string | null;
   thumbnailUrl?: string | null;
   isLive: boolean;
@@ -111,6 +89,7 @@ export interface Stream {
   createdAt: string;
   updatedAt: string;
   scheduledAt?: string | null;
+  isScheduled?: boolean;
 }
 
 export interface LeaderboardItem {
@@ -213,6 +192,20 @@ export interface Viewer {
   username: string;
   avatar?: string | null;
   streamId: string;
+}
+
+export interface ReactionParticle {
+  id: string;
+  emoji: string;
+  x: number;
+  driftA: number;
+  driftB: number;
+  driftC: number;
+  rotateA: number;
+  rotateB: number;
+  rotateC: number;
+  scale: number;
+  duration: number;
 }
 
 export interface ViewerHistory {

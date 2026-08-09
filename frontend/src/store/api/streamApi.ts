@@ -21,6 +21,9 @@ export const streamApi = createApi({
     getStreamById: builder.query({
       query: (id) => `/streams/${id}`,
     }),
+    getCurrentStream: builder.query({
+      query: () => "/streams/me/current",
+    }),
     getStreamsByUser: builder.query<
       PaginatedStreams,
       { userId: string; page?: number; limit?: number }
@@ -91,12 +94,20 @@ export const streamApi = createApi({
     getStreamAnalytics: builder.query({
       query: (userId) => `/streams/analytics/${userId}`,
     }),
+    askCreatorCoach: builder.mutation<{ answer: string }, { message: string }>({
+      query: ({ message }) => ({
+        url: "/streams/creator-coach",
+        method: "POST",
+        body: { message },
+      }),
+    }),
   }),
 });
 
 export const {
   useGetLiveStreamsQuery,
   useGetStreamByIdQuery,
+  useGetCurrentStreamQuery,
   useGetStreamsByUserQuery,
   useGetTopStreamersByHoursQuery,
   usePrepareStreamMutation,
@@ -109,4 +120,5 @@ export const {
   useGetScheduledStreamsByUserQuery,
   useUpdateLiveStreamMutation,
   useGetStreamAnalyticsQuery,
+  useAskCreatorCoachMutation,
 } = streamApi;

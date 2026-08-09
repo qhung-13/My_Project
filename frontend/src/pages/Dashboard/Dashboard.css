@@ -18,7 +18,7 @@
 }
 
 .dashboard__card {
-  background: white;
+  background: var(--bg-card, #fff);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 24px;
@@ -77,7 +77,7 @@
   font-weight: 500;
   cursor: pointer;
   border: 1px solid var(--border-color);
-  background: white;
+  background: var(--bg-card, #fff);
   color: var(--text-primary);
   transition: all 0.2s;
   white-space: nowrap;

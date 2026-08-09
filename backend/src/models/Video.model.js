@@ -60,7 +60,15 @@ const videoSchema = new mongoose.Schema(
     type: {
       type: String,
       enum: ["clip", "vod"],
-      default: "clip",
+      default: "vod",
+    },
+    // Clips generated from a Cloudinary transformation still depend on the
+    // source asset. Track that relationship so deleting a VOD can cascade its
+    // derived clips instead of leaving broken playback URLs.
+    sourceVideoId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Video",
+      default: null,
     },
   },
   {
@@ -73,6 +81,7 @@ videoSchema.index({ views: -1 });
 videoSchema.index({ likesCount: -1 });
 videoSchema.index({ category: 1, status: 1 });
 videoSchema.index({ createdAt: -1 });
+videoSchema.index({ sourceVideoId: 1 });
 
 const Video = mongoose.model("Video", videoSchema);
 export default Video;

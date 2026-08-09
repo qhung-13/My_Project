@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
 import socket from "../../../utils/socket";
-import type { ChatMessage, DonationAlert, Viewer } from "../../../types/index";
+import type {
+  ChatMessage,
+  DonationAlert,
+  ReactionParticle,
+  Viewer,
+} from "../../../types/index";
 
 const MAX_CHAT_MESSAGES = 300;
 const MAX_VISIBLE_REACTIONS = 40;
 const MAX_DONATION_ALERTS = 5;
+const VIEWER_HEARTBEAT_MS = 45_000;
 
 interface AuthUserLike {
   _id?: string;
@@ -17,12 +23,15 @@ interface UseLiveStreamSocketResult {
   viewerCount: number;
   viewers: Viewer[];
   donationAlerts: DonationAlert[];
-  reactions: { id: string; emoji: string }[];
+  reactions: ReactionParticle[];
   isBlocked: boolean;
   blockMessage: string;
   sendMessage: (text: string) => void;
   sendReaction: (emoji: string) => void;
 }
+
+const randomBetween = (min: number, max: number) =>
+  Math.round((Math.random() * (max - min) + min) * 100) / 100;
 
 /** Owns the realtime lifecycle for one stream room. */
 export function useLiveStreamSocket(
@@ -33,9 +42,7 @@ export function useLiveStreamSocket(
   const [viewerCount, setViewerCount] = useState(0);
   const [viewers, setViewers] = useState<Viewer[]>([]);
   const [donationAlerts, setDonationAlerts] = useState<DonationAlert[]>([]);
-  const [reactions, setReactions] = useState<{ id: string; emoji: string }[]>(
-    [],
-  );
+  const [reactions, setReactions] = useState<ReactionParticle[]>([]);
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockMessage, setBlockMessage] = useState("");
 
@@ -50,20 +57,6 @@ export function useLiveStreamSocket(
       }, delay);
       timers.add(timer);
     };
-
-    setMessages([]);
-    setViewerCount(0);
-    setViewers([]);
-    setDonationAlerts([]);
-    setReactions([]);
-    setIsBlocked(false);
-    setBlockMessage("");
-
-    socket.connect();
-    socket.emit("join-stream", streamId, {
-      username: authUser?.username,
-      avatar: authUser?.avatar,
-    });
 
     const onChatMessage = (data: ChatMessage) => {
       setMessages((previous) => [...previous, data].slice(-MAX_CHAT_MESSAGES));
@@ -96,16 +89,32 @@ export function useLiveStreamSocket(
       userId: string;
     }) => {
       const reactionId = `${userId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const direction = Math.random() > 0.5 ? 1 : -1;
+      const particle: ReactionParticle = {
+        id: reactionId,
+        emoji: reaction,
+        x: randomBetween(8, 88),
+        driftA: randomBetween(10, 42) * direction,
+        driftB: randomBetween(18, 70) * -direction,
+        driftC: randomBetween(30, 95) * direction,
+        rotateA: randomBetween(-18, 18),
+        rotateB: randomBetween(-30, 30),
+        rotateC: randomBetween(-42, 42),
+        scale: randomBetween(0.85, 1.25),
+        duration: randomBetween(2.4, 3.5),
+      };
+
       setReactions((previous) =>
-        [...previous, { id: reactionId, emoji: reaction }].slice(
-          -MAX_VISIBLE_REACTIONS,
-        ),
+        [...previous, particle].slice(-MAX_VISIBLE_REACTIONS),
       );
-      schedule(() => {
-        setReactions((previous) =>
-          previous.filter((item) => item.id !== reactionId),
-        );
-      }, 3_000);
+      schedule(
+        () => {
+          setReactions((previous) =>
+            previous.filter((item) => item.id !== reactionId),
+          );
+        },
+        Math.ceil(particle.duration * 1_000) + 250,
+      );
     };
 
     const onChatBlocked = ({
@@ -113,7 +122,7 @@ export function useLiveStreamSocket(
       retryAfterSeconds,
       message,
     }: {
-      reason?: "rate-limit" | "timeout" | "ban";
+      reason?: "rate-limit" | "timeout" | "ban" | "authentication-required";
       retryAfterSeconds?: number;
       message: string;
     }) => {
@@ -152,12 +161,6 @@ export function useLiveStreamSocket(
       }
     };
 
-    socket.on("chat-message", onChatMessage);
-    socket.on("viewer-count", onViewerCount);
-    socket.on("donation-received", onDonation);
-    socket.on("viewer-list", onViewerList);
-    socket.on("reaction-received", onReaction);
-    socket.on("chat-blocked", onChatBlocked);
     const onUserUnmoderated = ({ userId }: { userId: string }) => {
       if (userId === authUser?._id) {
         setIsBlocked(false);
@@ -165,11 +168,47 @@ export function useLiveStreamSocket(
       }
     };
 
+    const onStreamEnded = () => {
+      setViewerCount(0);
+      setViewers([]);
+    };
+
+    const onPresenceError = ({ message }: { message?: string }) => {
+      console.warn("[presence]", message || "Unable to join stream presence");
+    };
+
+    const joinStream = () => {
+      socket.emit("join-stream", streamId);
+    };
+
+    // Register every listener before joining. Otherwise a very fast
+    // viewer-count response can be emitted before the component subscribes.
+    socket.on("chat-message", onChatMessage);
+    socket.on("viewer-count", onViewerCount);
+    socket.on("donation-received", onDonation);
+    socket.on("viewer-list", onViewerList);
+    socket.on("reaction-received", onReaction);
+    socket.on("chat-blocked", onChatBlocked);
     socket.on("user-moderated", onUserModerated);
     socket.on("user-unmoderated", onUserUnmoderated);
+    socket.on("stream-ended", onStreamEnded);
+    socket.on("presence-error", onPresenceError);
+
+    // Rejoin after every Socket.IO reconnect, not just the first connection.
+    // The server removes presence on disconnect, so failing to rejoin would
+    // leave the viewer count at zero while the HLS video keeps playing.
+    socket.on("connect", joinStream);
+    if (socket.connected) joinStream();
+    else socket.connect();
+
+    const heartbeat = window.setInterval(() => {
+      if (socket.connected) socket.emit("viewer-heartbeat");
+    }, VIEWER_HEARTBEAT_MS);
 
     return () => {
-      socket.emit("leave-stream", streamId);
+      window.clearInterval(heartbeat);
+      socket.off("connect", joinStream);
+      if (socket.connected) socket.emit("leave-stream", streamId);
       socket.off("chat-message", onChatMessage);
       socket.off("viewer-count", onViewerCount);
       socket.off("donation-received", onDonation);
@@ -178,11 +217,13 @@ export function useLiveStreamSocket(
       socket.off("chat-blocked", onChatBlocked);
       socket.off("user-moderated", onUserModerated);
       socket.off("user-unmoderated", onUserUnmoderated);
+      socket.off("stream-ended", onStreamEnded);
+      socket.off("presence-error", onPresenceError);
       timers.forEach((timer) => clearTimeout(timer));
       timers.clear();
       socket.disconnect();
     };
-  }, [streamId, authUser?._id, authUser?.username, authUser?.avatar]);
+  }, [streamId, authUser?._id]);
 
   const sendMessage = (text: string) => {
     const message = text.trim();

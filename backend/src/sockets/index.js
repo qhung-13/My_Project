@@ -3,7 +3,11 @@ import { createAdapter } from "@socket.io/redis-adapter";
 import socketAuth from "./auth.socket.js";
 import registerStreamPresenceHandlers from "./stream.socket.js";
 import registerChatHandlers from "./chat.socket.js";
-import { getRedisClients, isRedisEnabled } from "../config/redis.config.js";
+import {
+  getRedisClients,
+  isRedisEnabled,
+  probeRedis,
+} from "../config/redis.config.js";
 
 /**
  * Creates and wires up the Socket.IO server.
@@ -22,7 +26,7 @@ import { getRedisClients, isRedisEnabled } from "../config/redis.config.js";
  * B). The adapter makes broadcasts fan out across all instances via
  * Redis pub/sub.
  */
-const createSocketServer = (httpServer, corsOrigins) => {
+const createSocketServer = async (httpServer, corsOrigins) => {
   const io = new Server(httpServer, {
     cors: {
       origin: corsOrigins,
@@ -31,9 +35,21 @@ const createSocketServer = (httpServer, corsOrigins) => {
   });
 
   if (isRedisEnabled()) {
-    const { pubClient, subClient } = getRedisClients();
-    io.adapter(createAdapter(pubClient, subClient));
-    console.log("Socket.IO: Redis adapter enabled (horizontal scaling ready)");
+    const redisHealthy = await probeRedis();
+    if (redisHealthy) {
+      const { pubClient, subClient } = getRedisClients();
+      io.adapter(createAdapter(pubClient, subClient));
+      console.log(
+        "Socket.IO: Redis adapter enabled (horizontal scaling ready)",
+      );
+    } else {
+      // Do not create persistent pub/sub clients when the startup probe fails;
+      // this keeps local development usable without a reconnect/log storm.
+      console.warn(
+        "Socket.IO: Redis is configured but unavailable; using the in-memory adapter. " +
+          "Use a healthy Redis before running multiple backend instances.",
+      );
+    }
   } else {
     console.warn(
       "Socket.IO: REDIS_URL not set — running with in-memory adapter. " +
@@ -46,6 +62,7 @@ const createSocketServer = (httpServer, corsOrigins) => {
   io.use(socketAuth);
 
   io.on("connection", (socket) => {
+    if (socket.data.userId) socket.join(`user:${socket.data.userId}`);
     registerStreamPresenceHandlers(io, socket);
     registerChatHandlers(io, socket);
   });

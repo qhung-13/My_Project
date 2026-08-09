@@ -26,6 +26,11 @@ const donationSchema = new mongoose.Schema(
       enum: ["pending", "completed", "failed"],
       default: "pending",
     },
+    idempotencyKey: {
+      type: String,
+      default: null,
+      maxlength: 128,
+    },
   },
   {
     timestamps: true,
@@ -33,6 +38,13 @@ const donationSchema = new mongoose.Schema(
 );
 
 donationSchema.index({ fromUserId: 1, createdAt: -1 });
+donationSchema.index(
+  { fromUserId: 1, idempotencyKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { idempotencyKey: { $type: "string" } },
+  },
+);
 donationSchema.index({ toUserId: 1, createdAt: -1 });
 
 const Donation = mongoose.model("Donation", donationSchema);

@@ -33,7 +33,7 @@ const AdminSidebar = ({ activeTab, onTabChange }: AdminSidebarProps) => {
       <button
         type="button"
         className="admin__nav-btn"
-        onClick={() => navigate("/")}
+        onClick={() => navigate("/home")}
       >
         ← Back to Site
       </button>

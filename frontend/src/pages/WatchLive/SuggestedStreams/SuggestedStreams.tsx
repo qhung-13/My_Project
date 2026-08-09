@@ -1,6 +1,7 @@
 import { Play } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Stream } from "../../../types/index";
+import { getStreamUser } from "../../../utils/streamUser";
 import { formatViewers, generateColor } from "../../../utils/format";
 
 interface SuggestedStreamsProps {
@@ -22,12 +23,10 @@ const SuggestedStreams = ({ streams, hideOnMobile }: SuggestedStreamsProps) => {
       </h2>
       <div className="suggested__list">
         {streams.map((stream) => {
+          const streamUser = getStreamUser(stream.userId);
           const name =
-            typeof stream.userId === "object"
-              ? stream.userId.displayName || stream.userId.username
-              : "Unknown";
-          const avatar =
-            typeof stream.userId === "object" ? stream.userId.avatar : null;
+            streamUser?.displayName || streamUser?.username || "Unknown";
+          const avatar = streamUser?.avatar ?? null;
           return (
             <button
               type="button"

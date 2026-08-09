@@ -13,6 +13,7 @@ interface PlaybackError {
 }
 
 const MAX_NETWORK_RETRIES = 3;
+const MAX_MEDIA_RECOVERIES = 2;
 
 const VideoPlayer = ({ streamUrl }: VideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -22,6 +23,7 @@ const VideoPlayer = ({ streamUrl }: VideoPlayerProps) => {
 
   const retryTimerRef = useRef<number | null>(null);
   const networkRetryCountRef = useRef(0);
+  const mediaRecoveryCountRef = useRef(0);
 
   /*
    * Error gắn với streamUrl.
@@ -140,6 +142,7 @@ const VideoPlayer = ({ streamUrl }: VideoPlayerProps) => {
     }
 
     networkRetryCountRef.current = 0;
+    mediaRecoveryCountRef.current = 0;
 
     /*
      * Autoplay:
@@ -150,59 +153,11 @@ const VideoPlayer = ({ streamUrl }: VideoPlayerProps) => {
     video.playsInline = true;
 
     /**
-     * Debug lifecycle.
-     *
-     * Những log này rất hữu ích để kiểm tra màn hình đen.
-     */
-    const handleLoadedMetadata = () => {
-      console.log("[VideoPlayer] metadata loaded", {
-        width: video.videoWidth,
-        height: video.videoHeight,
-        duration: video.duration,
-      });
-    };
-
-    const handleCanPlay = () => {
-      console.log("[VideoPlayer] canplay");
-    };
-
-    const handlePlaying = () => {
-      console.log("[VideoPlayer] playing", {
-        currentTime: video.currentTime,
-        readyState: video.readyState,
-        networkState: video.networkState,
-        width: video.videoWidth,
-        height: video.videoHeight,
-      });
-    };
-
-    const handleWaiting = () => {
-      console.log("[VideoPlayer] waiting...");
-    };
-
-    const handleStalled = () => {
-      console.warn("[VideoPlayer] stalled");
-    };
-
-    const handleVideoError = () => {
-      console.error("[VideoPlayer] native video error", video.error);
-    };
-
-    video.addEventListener("loadedmetadata", handleLoadedMetadata);
-    video.addEventListener("canplay", handleCanPlay);
-    video.addEventListener("playing", handlePlaying);
-    video.addEventListener("waiting", handleWaiting);
-    video.addEventListener("stalled", handleStalled);
-    video.addEventListener("error", handleVideoError);
-
-    /**
      * Không nuốt lỗi play() nữa.
      */
     const startPlayback = async () => {
       try {
         await video.play();
-
-        console.log("[VideoPlayer] play() success");
       } catch (error) {
         /*
          * Không coi autoplay block là stream failure.
@@ -234,8 +189,6 @@ const VideoPlayer = ({ streamUrl }: VideoPlayerProps) => {
      * Chrome / Edge / Firefox nên dùng Hls.js.
      */
     if (Hls.isSupported()) {
-      console.log("[VideoPlayer] Using Hls.js:", streamUrl);
-
       const hls = new Hls({
         enableWorker: true,
 
@@ -261,21 +214,12 @@ const VideoPlayer = ({ streamUrl }: VideoPlayerProps) => {
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-        console.log("[VideoPlayer] HLS media attached");
-
         hls.loadSource(streamUrl);
       });
 
-      hls.on(Hls.Events.MANIFEST_LOADING, () => {
-        console.log("[VideoPlayer] Loading manifest:", streamUrl);
-      });
-
       hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
-        console.log("[VideoPlayer] Manifest parsed:", {
-          levels: data.levels.length,
-        });
-
         networkRetryCountRef.current = 0;
+        mediaRecoveryCountRef.current = 0;
 
         const availableQualities = data.levels
           .map((level: Level) => level.height)
@@ -284,26 +228,9 @@ const VideoPlayer = ({ streamUrl }: VideoPlayerProps) => {
           )
           .sort((a, b) => b - a);
 
-        console.log("[VideoPlayer] Available qualities:", availableQualities);
-
         initPlyr(availableQualities);
 
         void startPlayback();
-      });
-
-      hls.on(Hls.Events.LEVEL_LOADED, (_, data) => {
-        console.log("[VideoPlayer] Level loaded:", {
-          live: data.details.live,
-          fragments: data.details.fragments.length,
-        });
-      });
-
-      hls.on(Hls.Events.FRAG_LOADED, (_, data) => {
-        console.debug("[VideoPlayer] Fragment loaded:", data.frag.sn);
-      });
-
-      hls.on(Hls.Events.FRAG_BUFFERED, (_, data) => {
-        console.debug("[VideoPlayer] Fragment buffered:", data.frag.sn);
       });
 
       hls.on(Hls.Events.ERROR, (_, data) => {
@@ -348,11 +275,15 @@ const VideoPlayer = ({ streamUrl }: VideoPlayerProps) => {
         /*
          * MEDIA ERROR
          */
-        if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-          console.warn("[VideoPlayer] Recovering media error...");
-
+        if (
+          data.type === Hls.ErrorTypes.MEDIA_ERROR &&
+          mediaRecoveryCountRef.current < MAX_MEDIA_RECOVERIES
+        ) {
+          mediaRecoveryCountRef.current += 1;
+          console.warn(
+            `[VideoPlayer] Recovering media error ${mediaRecoveryCountRef.current}/${MAX_MEDIA_RECOVERIES}`,
+          );
           hls.recoverMediaError();
-
           return;
         }
 
@@ -374,21 +305,7 @@ const VideoPlayer = ({ streamUrl }: VideoPlayerProps) => {
         }
       });
 
-      return () => {
-        video.removeEventListener("loadedmetadata", handleLoadedMetadata);
-
-        video.removeEventListener("canplay", handleCanPlay);
-
-        video.removeEventListener("playing", handlePlaying);
-
-        video.removeEventListener("waiting", handleWaiting);
-
-        video.removeEventListener("stalled", handleStalled);
-
-        video.removeEventListener("error", handleVideoError);
-
-        cleanup();
-      };
+      return cleanup;
     }
 
     /*
@@ -399,29 +316,13 @@ const VideoPlayer = ({ streamUrl }: VideoPlayerProps) => {
      * Chủ yếu dành cho Safari.
      */
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      console.log("[VideoPlayer] Using native HLS:", streamUrl);
-
       video.src = streamUrl;
 
       initPlyr([]);
 
       void startPlayback();
 
-      return () => {
-        video.removeEventListener("loadedmetadata", handleLoadedMetadata);
-
-        video.removeEventListener("canplay", handleCanPlay);
-
-        video.removeEventListener("playing", handlePlaying);
-
-        video.removeEventListener("waiting", handleWaiting);
-
-        video.removeEventListener("stalled", handleStalled);
-
-        video.removeEventListener("error", handleVideoError);
-
-        cleanup();
-      };
+      return cleanup;
     }
 
     /*
@@ -437,21 +338,7 @@ const VideoPlayer = ({ streamUrl }: VideoPlayerProps) => {
       });
     });
 
-    return () => {
-      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
-
-      video.removeEventListener("canplay", handleCanPlay);
-
-      video.removeEventListener("playing", handlePlaying);
-
-      video.removeEventListener("waiting", handleWaiting);
-
-      video.removeEventListener("stalled", handleStalled);
-
-      video.removeEventListener("error", handleVideoError);
-
-      cleanup();
-    };
+    return cleanup;
   }, [streamUrl, initPlyr, cleanup]);
 
   return (

@@ -98,6 +98,7 @@ const Register = ({ onClose, onSwitch }: RegisterProps) => {
   return (
     <div className="register" role="presentation">
       <button
+        type="button"
         className="register__overlay"
         onClick={onClose}
         aria-label="Đóng hộp thoại đăng ký"
@@ -109,7 +110,12 @@ const Register = ({ onClose, onSwitch }: RegisterProps) => {
         aria-labelledby="register-title"
         aria-describedby="register-subtitle"
       >
-        <button className="register__close" onClick={onClose} aria-label="Đóng">
+        <button
+          type="button"
+          className="register__close"
+          onClick={onClose}
+          aria-label="Đóng"
+        >
           &times;
         </button>
         <h2 className="register__title" id="register-title">
@@ -242,7 +248,7 @@ const Register = ({ onClose, onSwitch }: RegisterProps) => {
           >
             <button
               type="button"
-              className="register__social-btn register__social--google"
+              className="register__social-btn register__social-btn--google"
               onClick={() =>
                 window.location.assign(buildApiUrl("/users/auth/google"))
               }
@@ -252,7 +258,7 @@ const Register = ({ onClose, onSwitch }: RegisterProps) => {
             </button>
             <button
               type="button"
-              className="register__social-btn register__social--facebook"
+              className="register__social-btn register__social-btn--facebook"
               disabled
               aria-label="Facebook chưa khả dụng"
             >

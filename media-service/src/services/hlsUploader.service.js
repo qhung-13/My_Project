@@ -11,7 +11,7 @@ import {
  * HLS → object storage/CDN sync.
  *
  * Why this exists: node-media-server + ffmpeg write `.m3u8` playlists and
- * `.ts` segments to local disk (`media/live/<streamKey>/...`). Serving
+ * `.ts` segments to local disk (`media/live/<playbackId>/...`). Serving
  * that directly from this process (as the original code did via
  * `express.static`) means:
  *   - every viewer's player has to hit this exact instance/host, so this
@@ -68,7 +68,7 @@ const uploadFile = async (localPath, mediaRoot) => {
   try {
     const body = await readFile(localPath);
     // Mirror the local path under mediaRoot as the S3 key, so
-    // `<bucket>/<streamKey>/index.m3u8` matches what buildHlsUrl() expects.
+    // `<bucket>/<playbackId>/index.m3u8` matches what buildHlsUrl() expects.
     const key = path.relative(mediaRoot, localPath).split(path.sep).join("/");
 
     await getClient().send(
@@ -77,13 +77,14 @@ const uploadFile = async (localPath, mediaRoot) => {
         Key: key,
         Body: body,
         ContentType: contentTypeFor(localPath),
-        // Playlist change constantly and must never be cached at the edge
-        // segments are immutable once written (delete_segments in ffmpeg
-        // just rotates the filename set, it doesn't overwrite in place)
+        // Each live session has its own public playbackId, so object keys do not
+        // reuse the private OBS ingest credential. Playlists still need
+        // revalidation while a broadcast is active; segments are kept
+        // revalidatable as a conservative default across CDN providers.
         CacheControl:
           path.extname(localPath) === ".m3u8"
             ? "no-cache, no-store, must-revalidate"
-            : "public, max-age=31536000, immutable",
+            : "public, max-age=0, must-revalidate",
       }),
     );
   } catch (error) {

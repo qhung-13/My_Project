@@ -7,7 +7,7 @@ export interface AuthUser {
   email: string;
   avatar: string | null;
   coins: number;
-  role: "user" | "streamer" | "admin" | string;
+  role: "user" | "stream" | "streamer" | "admin";
   displayName?: string;
   bio?: string;
   bannerImage?: string | null;
@@ -40,12 +40,17 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.isInitialized = true;
     },
+    updateCoins: (state, action: PayloadAction<number>) => {
+      if (state.user && Number.isFinite(action.payload)) {
+        state.user.coins = Math.max(0, action.payload);
+      }
+    },
     finishAuthInitialization: (state) => {
       state.isInitialized = true;
     },
   },
 });
 
-export const { setUser, clearUser, finishAuthInitialization } =
+export const { setUser, clearUser, updateCoins, finishAuthInitialization } =
   authSlice.actions;
 export default authSlice.reducer;

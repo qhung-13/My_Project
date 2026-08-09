@@ -41,9 +41,10 @@ export const coinApi = createApi({
 
     // Donate xu
     donateCoins: builder.mutation({
-      query: (data) => ({
+      query: ({ idempotencyKey, ...data }) => ({
         url: "/coins/donate",
         method: "POST",
+        headers: { "x-idempotency-key": idempotencyKey },
         body: data,
       }),
       invalidatesTags: ["Coins", "Donations"],

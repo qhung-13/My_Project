@@ -28,6 +28,7 @@ const TopUp = lazy(() => import("./pages/TopUp/TopUp"));
 const Admin = lazy(() => import("./pages/Admin/Admin"));
 const Channel = lazy(() => import("./pages/Channel/Channel"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback/AuthCallback"));
+const CreatorLive = lazy(() => import("./pages/CreatorLive/CreatorLive"));
 
 const PageFallback = () => (
   <div className="page-loading" role="status" aria-live="polite">
@@ -36,8 +37,13 @@ const PageFallback = () => (
 );
 
 const WatchLiveRoute = () => {
-  const { streamerId } = useParams<{ streamerId: string }>();
-  return <WatchLive key={streamerId} />;
+  const { streamId } = useParams<{ streamId: string }>();
+  return <WatchLive key={streamId} />;
+};
+
+const WatchVideoRoute = () => {
+  const { videoId } = useParams<{ videoId: string }>();
+  return <WatchVideo key={videoId} />;
 };
 
 const OwnChannelRoute = () => {
@@ -112,11 +118,18 @@ function App() {
           <Route path="/live" element={<Live />} />
           <Route path="/game" element={<Game />} />
           <Route path="/game/:gameId" element={<GameDetail />} />
-          <Route path="/stream/:streamerId" element={<WatchLiveRoute />} />
-          <Route path="/profile/me" element={<Profile />} />
+          <Route path="/stream/:streamId" element={<WatchLiveRoute />} />
+          <Route
+            path="/profile/me"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/profile/:userId" element={<Profile />} />
           <Route path="/channel/:userId" element={<Channel />} />
-          <Route path="/video/:videoId" element={<WatchVideo />} />
+          <Route path="/video/:videoId" element={<WatchVideoRoute />} />
           <Route path="/search" element={<Search />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
 
@@ -149,6 +162,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <OwnChannelRoute />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/creator/live"
+            element={
+              <ProtectedRoute>
+                <CreatorLive />
               </ProtectedRoute>
             }
           />

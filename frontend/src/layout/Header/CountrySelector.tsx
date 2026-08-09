@@ -20,13 +20,18 @@ const CountrySelector = ({ selectedCountry, countries, onSelect }: Props) => {
   const listId = useId();
 
   useEffect(() => {
+    const closeDropdown = () => {
+      setCountryOpen(false);
+      setSearchCountry("");
+    };
+
     const handlePointerDown = (event: PointerEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) {
-        setCountryOpen(false);
+        closeDropdown();
       }
     };
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setCountryOpen(false);
+      if (event.key === "Escape") closeDropdown();
     };
 
     document.addEventListener("pointerdown", handlePointerDown);
@@ -39,8 +44,13 @@ const CountrySelector = ({ selectedCountry, countries, onSelect }: Props) => {
 
   useEffect(() => {
     if (countryOpen) searchInputRef.current?.focus();
-    else setSearchCountry("");
   }, [countryOpen]);
+
+  const toggleCountryMenu = () => {
+    const nextOpen = !countryOpen;
+    setCountryOpen(nextOpen);
+    if (!nextOpen) setSearchCountry("");
+  };
 
   const normalizedSearch = searchCountry.trim().toLocaleLowerCase();
   const filtered = countries.filter((country) =>
@@ -52,7 +62,7 @@ const CountrySelector = ({ selectedCountry, countries, onSelect }: Props) => {
       <button
         type="button"
         className="header__country-btn"
-        onClick={() => setCountryOpen((current) => !current)}
+        onClick={toggleCountryMenu}
         aria-haspopup="listbox"
         aria-controls={listId}
         aria-expanded={countryOpen}
@@ -103,6 +113,7 @@ const CountrySelector = ({ selectedCountry, countries, onSelect }: Props) => {
                   onClick={() => {
                     onSelect(country);
                     setCountryOpen(false);
+                    setSearchCountry("");
                   }}
                 >
                   <img

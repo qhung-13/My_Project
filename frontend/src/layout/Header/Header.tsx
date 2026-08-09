@@ -48,18 +48,20 @@ const MOBILE_NAV_ITEMS = [
 ];
 
 const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
-  const [mobileMenu, setMobileMenu] = useState(false);
+  const [mobileMenuPath, setMobileMenuPath] = useState<string | null>(null);
   const [activePopup, setActivePopup] = useState<"Login" | "Register" | null>(
     null,
   );
   const [countries, setCountries] = useState<Country[]>(FALLBACK_COUNTRIES);
   const [selectedCountry, setSelectedCountry] =
     useState<Country>(DEFAULT_COUNTRY);
-  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [userMenuPath, setUserMenuPath] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showGoLive, setShowGoLive] = useState(false);
 
   const { pathname } = useLocation();
+  const mobileMenu = mobileMenuPath === pathname;
+  const showUserMenu = userMenuPath === pathname;
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const { user, isAuthenticated } = useSelector(
@@ -88,7 +90,7 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
       );
     } finally {
       dispatch(clearUser());
-      setShowUserMenu(false);
+      setUserMenuPath(null);
       navigate("/home");
     }
   };
@@ -100,11 +102,6 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
     }
     setShowGoLive(true);
   };
-
-  useEffect(() => {
-    setMobileMenu(false);
-    setShowUserMenu(false);
-  }, [pathname]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -230,7 +227,11 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
                   <button
                     type="button"
                     className="header__avatar-button"
-                    onClick={() => setShowUserMenu((current) => !current)}
+                    onClick={() =>
+                      setUserMenuPath((current) =>
+                        current === pathname ? null : pathname,
+                      )
+                    }
                     aria-label="Mở menu tài khoản"
                     aria-expanded={showUserMenu}
                   >
@@ -247,6 +248,24 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
                   </button>
                   {showUserMenu && (
                     <div className="header__user-menu" role="menu">
+                      {user?.role === "admin" && (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="header__user-menu-item"
+                          onClick={() => navigate("/admin")}
+                        >
+                          🛡️ Admin Dashboard
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="header__user-menu-item"
+                        onClick={() => navigate("/creator/live")}
+                      >
+                        🎛️ Creator Studio
+                      </button>
                       <button
                         type="button"
                         role="menuitem"
@@ -308,7 +327,11 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
             <button
               type="button"
               className="header__menu-btn"
-              onClick={() => setMobileMenu((current) => !current)}
+              onClick={() =>
+                setMobileMenuPath((current) =>
+                  current === pathname ? null : pathname,
+                )
+              }
               aria-label="Mở menu"
               aria-expanded={mobileMenu}
             >
@@ -323,7 +346,7 @@ const Header = ({ darkMode, setDarkMode }: DarkModeProps) => {
             setDarkMode={setDarkMode}
             onLogin={() => setActivePopup("Login")}
             onRegister={() => setActivePopup("Register")}
-            onClose={() => setMobileMenu(false)}
+            onClose={() => setMobileMenuPath(null)}
           />
         )}
       </header>

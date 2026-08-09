@@ -10,7 +10,8 @@
 
 .admin {
   display: flex;
-  min-height: 100vh;
+  min-height: calc(100vh - var(--header-height));
+  padding-top: var(--header-height);
   background: var(--bg-primary);
 }
 
@@ -23,9 +24,9 @@
   flex-direction: column;
   gap: 8px;
   position: fixed;
-  top: 0;
+  top: var(--header-height);
   left: 0;
-  height: 100vh;
+  height: calc(100vh - var(--header-height));
 }
 
 .admin__logo {
@@ -307,7 +308,7 @@
   .admin__sidebar {
     position: sticky;
     z-index: 20;
-    top: 0;
+    top: var(--header-height);
     width: 100%;
     height: auto;
     flex-direction: row;

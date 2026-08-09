@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router-dom";
-import { useGetLiveStreamsQuery } from "../../../../store/api/streamApi";
 import type { Stream } from "../../../../types/index";
 import { formatViewers } from "../../../../utils/format";
 import "./BrowseByGame.css";
@@ -15,11 +14,10 @@ const GAME_COLORS: Record<string, string> = {
   COD: "#1a1a2a",
 };
 
-const BrowseByGame = () => {
+const BrowseByGame = ({ streams }: { streams: Stream[] }) => {
   const navigate = useNavigate();
-  const { data } = useGetLiveStreamsQuery({ page: 1, limit: 50 });
   const gameMap = new Map<string, number>();
-  (data?.streams ?? []).forEach((stream: Stream) => {
+  streams.forEach((stream: Stream) => {
     const game = stream.category?.trim();
     if (game)
       gameMap.set(game, (gameMap.get(game) ?? 0) + Math.max(0, stream.viewers));

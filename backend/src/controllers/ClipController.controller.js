@@ -75,6 +75,7 @@ const createClip = asyncHandler(async (req, res) => {
     category: sourceVideo.category,
     tags: sourceVideo.tags,
     type: "clip",
+    sourceVideoId: sourceVideo._id,
     status: "public",
   });
   res.status(201).json(clip);

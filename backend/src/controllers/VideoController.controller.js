@@ -3,6 +3,7 @@ import Video from "../models/Video.model.js";
 import Comment from "../models/Comment.model.js";
 import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
 import destroyCloudinaryAsset from "../utils/cloudinaryAssets.js";
+import { cloudinary } from "../config/cloudinary.config.js";
 
 const VIEW_TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_VIEW_SESSIONS = 100_000;
@@ -37,27 +38,44 @@ const createVideo = asyncHandler(async (req, res) => {
   const title = String(req.body.title || "").trim();
   const description = String(req.body.description || "").trim();
   const category = String(req.body.category || "").trim();
-  const duration = Number(req.body.duration);
-  const type = req.body.type === "vod" ? "vod" : "clip";
+  const type = String(req.body.type || "vod")
+    .trim()
+    .toLowerCase();
   const videoUrl = req.file?.path;
   const videoPublicId = req.file?.filename;
 
-  if (
-    !title ||
-    !description ||
-    !category ||
-    !Number.isFinite(duration) ||
-    duration <= 0
-  ) {
+  if (!["clip", "vod"].includes(type)) {
     await destroyCloudinaryAsset(videoPublicId, "video");
     res.status(400);
-    throw new Error(
-      "Title, description, category, and a valid duration are required",
-    );
+    throw new Error("Video type must be either clip or vod");
   }
-  if (!videoUrl) {
+
+  if (!title || !description || !category) {
+    await destroyCloudinaryAsset(videoPublicId, "video");
+    res.status(400);
+    throw new Error("Title, description, and category are required");
+  }
+  if (!videoUrl || !videoPublicId) {
     res.status(400);
     throw new Error("Please upload a video");
+  }
+
+  let duration;
+  try {
+    const uploadedResource = await cloudinary.api.resource(videoPublicId, {
+      resource_type: "video",
+    });
+    duration = Number(uploadedResource.duration);
+    if (!Number.isFinite(duration) || duration <= 0) {
+      throw new Error("Cloudinary did not return a valid video duration");
+    }
+  } catch (error) {
+    await destroyCloudinaryAsset(videoPublicId, "video");
+    const metadataError = new Error(
+      `Could not verify uploaded video metadata: ${error.message}`,
+    );
+    metadataError.statusCode = 502;
+    throw metadataError;
   }
 
   try {
@@ -223,9 +241,15 @@ const deleteVideo = asyncHandler(async (req, res) => {
     throw new Error("Not authorized to delete this video");
   }
 
+  const dependentClips =
+    video.type === "vod"
+      ? await Video.find({ sourceVideoId: video._id }).select("_id")
+      : [];
+  const videoIds = [video._id, ...dependentClips.map((clip) => clip._id)];
+
   await Promise.all([
-    video.deleteOne(),
-    Comment.deleteMany({ videoId: video._id }),
+    Video.deleteMany({ _id: { $in: videoIds } }),
+    Comment.deleteMany({ videoId: { $in: videoIds } }),
   ]);
   await Promise.all([
     destroyCloudinaryAsset(video.videoPublicId, "video"),

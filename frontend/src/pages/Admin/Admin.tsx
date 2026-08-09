@@ -27,6 +27,7 @@ const Admin = () => {
     handleRoleChange,
     handleBan,
     handleDeleteVideo,
+    handleEndStream,
   } = useAdminData();
 
   return (
@@ -69,7 +70,13 @@ const Admin = () => {
             onDelete={handleDeleteVideo}
           />
         )}
-        {activeTab === "Streams" && <StreamsTab streams={streams} />}
+        {activeTab === "Streams" && (
+          <StreamsTab
+            streams={streams}
+            pendingAction={pendingAction}
+            onEndStream={handleEndStream}
+          />
+        )}
       </main>
     </div>
   );

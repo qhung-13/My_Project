@@ -17,6 +17,12 @@ const socketAuth = async (socket, next) => {
     const user = await User.findById(decoded.userId).select(
       "username displayName avatar isActive",
     );
+    if (user && !user.isActive) {
+      const error = new Error("ACCOUNT_DISABLED");
+      error.data = { code: "ACCOUNT_DISABLED" };
+      return next(error);
+    }
+
     if (user?.isActive) {
       socket.data.userId = user._id.toString();
       socket.data.username = user.displayName || user.username;

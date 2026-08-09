@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { useSelector } from "react-redux";
-import type { RootState } from "../../../store/store";
+import { useEffect, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "../../../store/store";
+import { updateCoins } from "../../../store/slices/authSlice";
 import {
   useGetCoinBalanceQuery,
   useDonateCoinsMutation,
@@ -20,16 +21,32 @@ const DonateModal = ({
   onClose: () => void;
 }) => {
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
   const [coins, setCoins] = useState(50);
   const [message, setMessage] = useState("");
   const [step, setStep] = useState<"donate" | "success">("donate");
   const [error, setError] = useState("");
+  const donationAttemptRef = useRef<{ payload: string; key: string } | null>(
+    null,
+  );
 
   const { user: authUser } = useSelector((state: RootState) => state.auth);
   const { data: balance } = useGetCoinBalanceQuery(undefined, {
     skip: !authUser,
   });
   const [donateCoins, { isLoading }] = useDonateCoinsMutation();
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isLoading) onClose();
+    };
+    document.body.classList.add("modal-open");
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.classList.remove("modal-open");
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose, isLoading]);
 
   const handleDonate = async () => {
     setError("");
@@ -45,11 +62,29 @@ const DonateModal = ({
     }
 
     try {
-      await donateCoins({
+      const normalizedMessage = message.trim();
+      const payloadFingerprint = JSON.stringify({
         toUserId: streamerId,
         coins,
-        message,
+        message: normalizedMessage,
+      });
+      let attempt = donationAttemptRef.current;
+      if (attempt?.payload !== payloadFingerprint) {
+        attempt = {
+          payload: payloadFingerprint,
+          key: crypto.randomUUID(),
+        };
+        donationAttemptRef.current = attempt;
+      }
+
+      const response = await donateCoins({
+        toUserId: streamerId,
+        coins,
+        message: normalizedMessage,
+        idempotencyKey: attempt.key,
       }).unwrap();
+      donationAttemptRef.current = null;
+      dispatch(updateCoins(Number(response.coins ?? 0)));
       setStep("success");
     } catch (err) {
       const error = err as { data?: { message?: string } };
@@ -58,16 +93,33 @@ const DonateModal = ({
   };
 
   return (
-    <div className="donate-modal">
-      <div className="donate-modal__overlay" onClick={onClose} />
-      <div className="donate-modal__card">
-        <button className="donate-modal__close" onClick={onClose}>
+    <div className="donate-modal" role="presentation">
+      <button
+        type="button"
+        className="donate-modal__overlay"
+        onClick={onClose}
+        aria-label="Đóng hộp thoại donate"
+      />
+      <div
+        className="donate-modal__card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="donate-modal-title"
+      >
+        <button
+          type="button"
+          className="donate-modal__close"
+          onClick={onClose}
+          aria-label="Đóng"
+        >
           &times;
         </button>
 
         {step === "donate" && (
           <>
-            <h2 className="donate-modal__title">💝 Donate</h2>
+            <h2 className="donate-modal__title" id="donate-modal-title">
+              💝 Donate
+            </h2>
             <p className="donate-modal__subtitle">
               Ủng hộ <strong>{streamerName}</strong>
             </p>
@@ -76,6 +128,7 @@ const DonateModal = ({
             <div className="donate-modal__balance">
               Số dư: <strong>{balance?.coins || 0} xu</strong>
               <button
+                type="button"
                 className="donate-modal__topup-link"
                 onClick={() => {
                   onClose();
@@ -92,6 +145,7 @@ const DonateModal = ({
             <div className="donate-modal__presets">
               {PRESET_COINS.map((preset) => (
                 <button
+                  type="button"
                   key={preset}
                   className={`donate-modal__preset ${coins === preset ? "donate-modal__preset--active" : ""}`}
                   onClick={() => setCoins(preset)}
@@ -132,6 +186,7 @@ const DonateModal = ({
             </div>
 
             <button
+              type="button"
               className="donate-modal__btn"
               onClick={handleDonate}
               disabled={isLoading || coins < 1}
@@ -151,7 +206,11 @@ const DonateModal = ({
             {message && (
               <p className="donate-modal__success-msg">"{message}"</p>
             )}
-            <button className="donate-modal__btn" onClick={onClose}>
+            <button
+              type="button"
+              className="donate-modal__btn"
+              onClick={onClose}
+            >
               Đóng
             </button>
           </div>

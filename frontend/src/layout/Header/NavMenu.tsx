@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useState } from "react";
 
 const NAV_ITEMS = [
@@ -10,7 +10,6 @@ const GAMES = ["Valorant", "League of Legends", "PUBG"];
 
 const NavMenu = () => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
-  const navigate = useNavigate();
 
   return (
     <nav className="header__nav">
@@ -28,17 +27,20 @@ const NavMenu = () => {
           onMouseEnter={() => setActiveMenu("games")}
           onMouseLeave={() => setActiveMenu(null)}
         >
-          <span className="header__nav-link" onClick={() => navigate("/game")}>
+          <Link className="header__nav-link" to="/game">
             Games
-          </span>
+          </Link>
           {activeMenu === "games" && (
             <div className="header__dropdown">
               <ul className="header__dropdown-list">
                 {GAMES.map((game) => (
                   <li key={game} className="header__dropdown-item">
-                    <a href="#" className="header__dropdown-link">
+                    <Link
+                      to={`/game/${encodeURIComponent(game)}`}
+                      className="header__dropdown-link"
+                    >
                       {game}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>

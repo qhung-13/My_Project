@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   useDeleteVideoMutation,
+  useEndStreamMutation,
   useGetAllStreamsQuery,
   useGetAllUsersQuery,
   useGetAllVideosQuery,
@@ -22,6 +23,7 @@ export function useAdminData() {
   const [updateUserRole] = useUpdateUserRoleMutation();
   const [toggleBanUser] = useToggleBanUserMutation();
   const [deleteVideo] = useDeleteVideoMutation();
+  const [endStream] = useEndStreamMutation();
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
 
@@ -66,6 +68,15 @@ export function useAdminData() {
     );
   };
 
+  const handleEndStream = async (id: string) => {
+    if (!window.confirm("Buộc kết thúc livestream này?")) return;
+    await runAction(
+      `end-stream:${id}`,
+      () => endStream(id).unwrap(),
+      "Không thể kết thúc livestream trên media service.",
+    );
+  };
+
   return {
     stats: statsQuery.data,
     users: usersQuery.data,
@@ -92,6 +103,7 @@ export function useAdminData() {
     handleRoleChange,
     handleBan,
     handleDeleteVideo,
+    handleEndStream,
   };
 }
 

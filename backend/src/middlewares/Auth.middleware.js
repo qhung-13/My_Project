@@ -1,6 +1,13 @@
+import { timingSafeEqual } from "node:crypto";
 import jwt from "jsonwebtoken";
 import User from "../models/User.model.js";
 import asyncHandler from "./AsyncHandler.middleware.js";
+
+const safeCompare = (provided, expected) => {
+  const left = Buffer.from(String(provided || ""));
+  const right = Buffer.from(String(expected || ""));
+  return left.length === right.length && timingSafeEqual(left, right);
+};
 
 const resolveUserFromToken = async (token) => {
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -38,7 +45,7 @@ const protectOrAgent = asyncHandler(async (req, res, next) => {
   const suppliedSecret = req.get("x-agent-secret");
   const configuredSecret = process.env.AGENT_SERVICE_SECRET;
 
-  if (configuredSecret && suppliedSecret === configuredSecret) {
+  if (configuredSecret && safeCompare(suppliedSecret, configuredSecret)) {
     req.isAgent = true;
     return next();
   }

@@ -1,26 +1,34 @@
-version: "3.8"
-
 services:
   backend:
     build: ./backend
     ports:
       - "5000:5000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
     environment:
       - NODE_ENV=production
       - MONGO_URI=mongodb://mongodb:27017/omexlive?replicaSet=rs0
       - REDIS_URL=redis://redis:6379
       - JWT_SECRET=${JWT_SECRET}
       - MEDIA_SERVICE_SECRET=${MEDIA_SERVICE_SECRET}
+      - MEDIA_PUBLISH_AUTH_SECRET=${MEDIA_PUBLISH_AUTH_SECRET}
+      - INGEST_SIGNATURE_TTL_SECONDS=${INGEST_SIGNATURE_TTL_SECONDS:-315360000}
       - AGENT_SERVICE_SECRET=${AGENT_SERVICE_SECRET}
+      - AGENT_SERVICE_URL=${AGENT_SERVICE_URL:-http://agent-service:8001}
       - CORS_ORIGINS=${CORS_ORIGINS}
       - BACKEND_PUBLIC_URL=${BACKEND_PUBLIC_URL:-http://localhost:5000}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
       - RTMP_SERVER_URL=${RTMP_SERVER_URL:-rtmp://localhost:1935/live}
       # HLS playback URL returned to the frontend — point at the CDN in
       # front of your S3 bucket if media-service has S3_BUCKET configured,
       # otherwise point at the media-service's own host:port.
       - CDN_BASE_URL=${CDN_BASE_URL}
-      - MEDIA_SERVICE_URL=${MEDIA_SERVICE_URL:-http://localhost:8000/live}
+      - MEDIA_SERVICE_URL=${MEDIA_SERVICE_URL:-http://localhost:8080/live}
+      - MEDIA_CONTROL_URL=http://media-service:8080
       - BREVO_SMTP_USER=${BREVO_SMTP_USER}
       - BREVO_SMTP_PASS=${BREVO_SMTP_PASS}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
@@ -34,7 +42,7 @@ services:
       mongo-init:
         condition: service_completed_successfully
       redis:
-        condition: service_started
+        condition: service_healthy
 
   # Split out from `backend` so a heavy ffmpeg transcode load never adds
   # latency to unrelated REST API requests, and so each can be scaled
@@ -43,12 +51,15 @@ services:
     build: ./media-service
     ports:
       - "1935:1935" # RTMP ingest (OBS / streaming software points here)
-      - "8000:8000" # local HLS HTTP fallback (used when S3_BUCKET is unset)
-      - "8080:8080" # health check
+      - "8000:8000" # NodeMediaServer HTTP endpoint
+      - "8080:8080" # health + local HLS playback
     environment:
       - MONGO_URI=mongodb://mongodb:27017/omexlive?replicaSet=rs0
       - BACKEND_INTERNAL_URL=http://backend:5000/api/v1
       - MEDIA_SERVICE_SECRET=${MEDIA_SERVICE_SECRET}
+      - MEDIA_PUBLISH_AUTH_SECRET=${MEDIA_PUBLISH_AUTH_SECRET}
+      - HLS_CLEANUP_DELAY_MS=${HLS_CLEANUP_DELAY_MS:-15000}
+      - STREAM_AUTH_SWEEP_INTERVAL_MS=${STREAM_AUTH_SWEEP_INTERVAL_MS:-2000}
       - S3_BUCKET=${S3_BUCKET}
       - S3_REGION=${S3_REGION}
       - S3_ENDPOINT=${S3_ENDPOINT}
@@ -58,9 +69,31 @@ services:
       mongo-init:
         condition: service_completed_successfully
       backend:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - ./media-service/media:/app/media
+
+  # Optional AI service. Start it with:
+  #   docker compose --profile ai up -d agent-service
+  # The main web stack remains usable without a Gemini API key.
+  agent-service:
+    profiles: ["ai"]
+    build: ./agent-service
+    ports:
+      - "8001:8001"
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GOOGLE_ADK_MODEL=${GOOGLE_ADK_MODEL:-gemini-flash-latest}
+      - NODE_BACKEND_URL=http://backend:5000
+      - AGENT_SERVICE_SECRET=${AGENT_SERVICE_SECRET}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=2)"]
+      interval: 10s
+      timeout: 4s
+      retries: 10
+    depends_on:
+      backend:
+        condition: service_healthy
 
   frontend:
     build:
@@ -71,7 +104,8 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
   mongodb:
     image: mongo:7
@@ -108,6 +142,11 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     volumes:
       - redis_data:/data
 

@@ -249,3 +249,69 @@
     gap: 10px;
   }
 }
+
+.login__forgot {
+  align-self: flex-end;
+  margin-top: -4px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.login__forgot:hover { text-decoration: underline; }
+
+.login__notice {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, #16a34a 30%, var(--border-color));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, #16a34a 9%, var(--bg-card));
+  color: var(--text-primary);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+
+/* ── Validation feedback ── */
+.login__error {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 32%, var(--border-color));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--danger) 9%, var(--bg-card));
+  color: var(--danger);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.login__social-btn--google {
+  background: #ffffff;
+  border-color: #e5e7eb;
+  color: #1f2937;
+}
+
+.login__social-btn--google:hover {
+  background: #f9fafb;
+}
+
+.login__social-btn--facebook {
+  background: #1877f2;
+  border-color: #1877f2;
+  color: #ffffff;
+}
+
+.login__social-btn--facebook:hover {
+  background: #166fe5;
+  border-color: #166fe5;
+}
+
+.login__social-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+}
