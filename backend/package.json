@@ -7,15 +7,16 @@
   "scripts": {
     "start": "node index.js",
     "backend": "nodemon index.js",
-    "build": "tsc",
+    "build": "npm run check",
     "dev": "npm run backend",
-    "test": "echo \"Info: No tests implemented yet.\" && exit 0"
+    "test": "node --test",
+    "check": "node scripts/check-syntax.js",
+    "migrate:roles": "node scripts/migrate-legacy-roles.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@google/genai": "^2.9.0",
     "@socket.io/redis-adapter": "^8.3.0",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^1.41.3",
@@ -30,7 +31,6 @@
     "mongoose": "^9.4.1",
     "multer": "^2.1.1",
     "multer-storage-cloudinary": "^4.0.0",
-    "node-media-server": "^4.2.4",
     "nodemailer": "^8.0.5",
     "nodemon": "^3.1.14",
     "passport": "^0.7.0",
