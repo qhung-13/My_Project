@@ -1,22 +1,27 @@
-import { readdir } from "node:fs/promises";
-import path from "node:path";
+import { readdirSync } from "node:fs";
+import { extname, join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const walk = async (directory) => {
-  const entries = await readdir(directory, { withFileTypes: true });
-  const files = await Promise.all(entries.map(async (entry) => {
-    if (entry.name === "node_modules") return [];
-    const fullPath = path.join(directory, entry.name);
-    return entry.isDirectory() ? walk(fullPath) : [fullPath];
-  }));
-  return files.flat();
+const roots = ["index.js", "src"];
+const files = [];
+
+const collect = (target) => {
+  if (extname(target) === ".js") {
+    files.push(target);
+    return;
+  }
+  for (const entry of readdirSync(target, { withFileTypes: true })) {
+    const nextPath = join(target, entry.name);
+    if (entry.isDirectory()) collect(nextPath);
+    else if (entry.isFile() && entry.name.endsWith(".js")) files.push(nextPath);
+  }
 };
 
-const files = [path.join(root, "index.js"), ...(await walk(path.join(root, "src")))]
-  .filter((file) => file.endsWith(".js"));
+for (const root of roots) collect(root);
 for (const file of files) {
-  const result = spawnSync(process.execPath, ["--check", file], { stdio: "inherit" });
-  if (result.status !== 0) process.exit(result.status ?? 1);
+  const result = spawnSync(process.execPath, ["--check", file], {
+    stdio: "inherit",
+  });
+  if (result.status !== 0) process.exit(result.status || 1);
 }
+console.log(`Syntax check passed (${files.length} JavaScript files).`);
