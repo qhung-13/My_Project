@@ -18,12 +18,21 @@ const validateIds = (userId, streamId, res) => {
 };
 
 const assertCanModerate = async (req, streamId, targetUserId, res) => {
-  if (req.isAgent) return;
-  const stream = await Stream.findById(streamId).select("userId");
+  const stream = await Stream.findById(streamId).select("userId isLive");
   if (!stream) {
     res.status(404);
     throw new Error("Stream not found");
   }
+  if (!stream.isLive) {
+    res.status(409);
+    throw new Error("Cannot moderate an offline stream");
+  }
+  if (stream.userId.toString() === String(targetUserId)) {
+    res.status(400);
+    throw new Error("The streamer cannot be moderated in their own stream");
+  }
+  if (req.isAgent) return;
+
   const requesterId = req.user._id.toString();
   if (stream.userId.toString() !== requesterId && req.user.role !== "admin") {
     res.status(403);
