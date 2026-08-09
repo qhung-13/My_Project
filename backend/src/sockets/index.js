@@ -46,6 +46,7 @@ const createSocketServer = (httpServer, corsOrigins) => {
   io.use(socketAuth);
 
   io.on("connection", (socket) => {
+    if (socket.data.userId) socket.join(`user:${socket.data.userId}`);
     registerStreamPresenceHandlers(io, socket);
     registerChatHandlers(io, socket);
   });

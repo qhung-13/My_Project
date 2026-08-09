@@ -342,11 +342,6 @@ const configureMediaServer = () => {
     }
   });
 
-  nms.on("prePlay", (id, StreamPath, args) => {
-    const streamPath = typeof id === "object" ? id.streamPath : StreamPath;
-    console.log("Viewer joined", streamPath);
-  });
-
   console.log(
     `[media-service] RTMP ingest on :${RTMP_PORT}, HLS HTTP on :${HTTP_PORT}`,
   );

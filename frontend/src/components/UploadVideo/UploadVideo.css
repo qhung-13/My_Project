@@ -66,8 +66,12 @@
 
 .upload-video__grid {
   display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+}
+
+.upload-video__grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .upload-video__field {
@@ -202,6 +206,17 @@
   border-color: rgba(178, 221, 255, 0.3);
 }
 
+
+@media (max-width: 820px) and (min-width: 641px) {
+  .upload-video__grid--three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .upload-video__grid--three > :last-child {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 640px) {
   .upload-video-page {
     padding: 80px 12px 24px;
@@ -213,7 +228,8 @@
     gap: 18px;
   }
 
-  .upload-video__grid {
+  .upload-video__grid,
+  .upload-video__grid--three {
     grid-template-columns: 1fr;
   }
 

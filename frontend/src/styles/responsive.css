@@ -1,83 +1,42 @@
-/* ── Global mobile fixes ── */
-@media (max-width: 768px) {
+/* Global responsive guardrails. Page-specific layout belongs beside each page. */
 
-  /* Admin sidebar — ẩn trên mobile, dùng top bar */
-  .admin {
-    flex-direction: column;
+html, body, #root {
+  width: 100%;
+  max-width: 100%;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+@media (max-width: 1023px) {
+  .light-mode,
+  .dark-mode {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
   }
 
-  .admin__sidebar {
-    width: 100%;
-    height: auto;
-    position: relative;
-    flex-direction: row;
-    flex-wrap: wrap;
-    padding: 12px;
-    gap: 4px;
-  }
-
-  .admin__content {
-    margin-left: 0;
-    padding: 16px;
-  }
-
-  .admin__table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-  }
-
-  /* Dashboard input row */
-  .dashboard__input-row {
-    flex-wrap: wrap;
-  }
-
-  .dashboard__input {
-    width: 100%;
-  }
-
-  /* TopUp packages */
-  .topup__packages {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  /* Profile stats */
-  .profile__stats {
-    gap: 12px;
-  }
-
-  /* GoLive modal */
-  .golive-modal__card {
-    padding: 20px 16px;
-  }
-
-  .golive-modal__row {
-    flex-wrap: wrap;
-  }
-
-  .golive-modal__btn {
-    flex: 1;
-    min-width: 60px;
+  .admin__table-wrap,
+  .dashboard__chart {
+    -webkit-overflow-scrolling: touch;
   }
 }
 
-@media (max-width: 480px) {
-  /* TopUp packages — 1 cột trên màn nhỏ */
+@media (max-width: 560px) {
   .topup__packages {
     grid-template-columns: 1fr;
   }
+}
 
-  /* Donate modal */
-  .donate-modal__card {
-    padding: 16px;
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
 
-  .donate-modal__presets {
-    gap: 6px;
-  }
-
-  .donate-modal__preset {
-    padding: 6px 10px;
-    font-size: 13px;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

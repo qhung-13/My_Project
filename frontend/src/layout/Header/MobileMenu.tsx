@@ -23,7 +23,9 @@ const MobileMenu = ({
   onClose,
 }: Props) => {
   const [showGoLive, setShowGoLive] = useState(false);
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated, user } = useSelector(
+    (state: RootState) => state.auth,
+  );
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
@@ -78,6 +80,26 @@ const MobileMenu = ({
 
         {isAuthenticated ? (
           <>
+            {user?.role === "admin" && (
+              <li className="mobile-menu__item">
+                <button
+                  type="button"
+                  className="mobile-menu__link"
+                  onClick={() => navigateAndClose("/admin")}
+                >
+                  🛡️ Admin Dashboard
+                </button>
+              </li>
+            )}
+            <li className="mobile-menu__item">
+              <button
+                type="button"
+                className="mobile-menu__link"
+                onClick={() => navigateAndClose("/creator/live")}
+              >
+                🎛️ Creator Studio
+              </button>
+            </li>
             <li className="mobile-menu__item">
               <button
                 type="button"
@@ -85,6 +107,24 @@ const MobileMenu = ({
                 onClick={() => navigateAndClose("/profile/me")}
               >
                 👤 Profile
+              </button>
+            </li>
+            <li className="mobile-menu__item">
+              <button
+                type="button"
+                className="mobile-menu__link"
+                onClick={() => navigateAndClose("/channel")}
+              >
+                📺 My channel
+              </button>
+            </li>
+            <li className="mobile-menu__item">
+              <button
+                type="button"
+                className="mobile-menu__link"
+                onClick={() => navigateAndClose("/topup")}
+              >
+                💰 Nạp Xu ({user?.coins ?? 0})
               </button>
             </li>
             <li className="mobile-menu__item">

@@ -60,7 +60,7 @@ const videoSchema = new mongoose.Schema(
     type: {
       type: String,
       enum: ["clip", "vod"],
-      default: "clip",
+      default: "vod",
     },
   },
   {

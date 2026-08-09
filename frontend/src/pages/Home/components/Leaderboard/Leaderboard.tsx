@@ -1,9 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  useGetLiveStreamsQuery,
-  useGetTopStreamersByHoursQuery,
-} from "../../../../store/api/streamApi";
+import { useGetTopStreamersByHoursQuery } from "../../../../store/api/streamApi";
 import { useGetTopUsersQuery } from "../../../../store/api/userApi";
 import type {
   LeaderboardItem,
@@ -22,16 +19,15 @@ const TAB_LABELS: Record<TabType, string> = {
   Hours: "Giờ phát",
 };
 
-function Leaderboard() {
+function Leaderboard({ liveStreams }: { liveStreams: Stream[] }) {
   const [activeTab, setActiveTab] = useState<TabType>("Viewers");
   const navigate = useNavigate();
-  const { data: liveResult } = useGetLiveStreamsQuery({ page: 1, limit: 12 });
   const { data: topUsers } = useGetTopUsersQuery(undefined);
   const { data: topHours } = useGetTopStreamersByHoursQuery(undefined);
 
   const currentData = useMemo<LeaderboardItem[]>(() => {
     if (activeTab === "Viewers") {
-      return (liveResult?.streams ?? [])
+      return liveStreams
         .slice(0, 5)
         .map((stream: Stream) => {
           const user = typeof stream.userId === "object" ? stream.userId : null;
@@ -67,7 +63,7 @@ function Leaderboard() {
       value: `${Math.max(0, user.totalHours).toLocaleString("vi-VN")} giờ`,
       live: false,
     }));
-  }, [activeTab, liveResult?.streams, topHours, topUsers]);
+  }, [activeTab, liveStreams, topHours, topUsers]);
 
   const top3 = currentData.slice(0, 3);
   const rest = currentData.slice(3);

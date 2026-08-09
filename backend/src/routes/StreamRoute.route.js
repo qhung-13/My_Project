@@ -5,9 +5,9 @@ import {
   streamUnpublished,
   endStream,
   getLiveStreams,
+  getCurrentStream,
   getStreamById,
   getStreamsByUser,
-  updateViewers,
   getTopStreamersByHours,
   scheduleStream,
   getScheduledStreams,
@@ -16,7 +16,7 @@ import {
   getViewerList,
   getStreamAnalytics,
 } from "../controllers/StreamController.controller.js";
-import protect from "../middlewares/Auth.middleware.js";
+import protect, { protectOrAgent } from "../middlewares/Auth.middleware.js";
 import requireMediaService from "../middlewares/MediaServiceAuth.middleware.js";
 
 const router = express.Router();
@@ -28,13 +28,13 @@ router.post("/internal/unpublish", requireMediaService, streamUnpublished);
 router.post("/start", protect, startStream);
 router.post("/end", protect, endStream);
 router.put("/live/update", protect, updateLiveStream);
+router.get("/me/current", protect, getCurrentStream);
 router.get("/user/:userId", getStreamsByUser);
-router.get("/analytics/:userId", protect, getStreamAnalytics);
+router.get("/analytics/:userId", protectOrAgent, getStreamAnalytics);
 router.post("/schedule", protect, scheduleStream);
 router.get("/scheduled", getScheduledStreams);
 router.get("/scheduled/:userId", getScheduledStreamsByUser);
 router.get("/:id", getStreamById);
-router.put("/:id/viewers", protect, updateViewers);
 router.get("/:id/viewers", getViewerList);
 
 export default router;

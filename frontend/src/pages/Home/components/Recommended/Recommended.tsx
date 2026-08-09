@@ -16,7 +16,7 @@ const formatDaysAgo = (dateString: string) => {
 
 const Recommended = () => {
   const navigate = useNavigate();
-  const { data, isLoading, isError } = useGetVideosQuery({
+  const { data, isLoading, isError, refetch } = useGetVideosQuery({
     page: 1,
     limit: 12,
   });
@@ -24,7 +24,50 @@ const Recommended = () => {
     .sort((first: Video, second: Video) => second.views - first.views)
     .slice(0, 8);
 
-  if (isLoading || isError || recommended.length === 0) return null;
+  if (isLoading) {
+    return (
+      <section className="recommended" aria-labelledby="recommended-heading">
+        <div className="recommended__header">
+          <h2 id="recommended-heading" className="recommended__title">
+            Đề xuất cho bạn
+          </h2>
+        </div>
+        <div className="recommended__state" role="status">
+          Đang tải video…
+        </div>
+      </section>
+    );
+  }
+
+  if (isError || recommended.length === 0) {
+    return (
+      <section className="recommended" aria-labelledby="recommended-heading">
+        <div className="recommended__header">
+          <h2 id="recommended-heading" className="recommended__title">
+            Đề xuất cho bạn
+          </h2>
+        </div>
+        <div
+          className="recommended__state"
+          role={isError ? "alert" : undefined}
+        >
+          <strong>
+            {isError ? "Không tải được video." : "Chưa có VOD công khai."}
+          </strong>
+          <span>
+            {isError
+              ? "Kiểm tra kết nối rồi thử lại."
+              : "Video mới sẽ xuất hiện tại đây sau khi được upload."}
+          </span>
+          {isError && (
+            <button type="button" onClick={() => void refetch()}>
+              Thử lại
+            </button>
+          )}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="recommended" aria-labelledby="recommended-heading">

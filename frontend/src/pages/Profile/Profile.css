@@ -413,7 +413,7 @@
 }
 
 .schedule-item {
-  background: white;
+  background: var(--bg-card, #fff);
   border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 14px 16px;
@@ -490,22 +490,22 @@
 }
 .dark-mode .profile__action-btn,
 .dark-mode .profile__game-tag {
-  background: var(--text-primary);
-  border-color: var(--text-primary);
-  color: var(--text-muted);
+  background: var(--bg-card);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
 }
 .dark-mode .profile__action-btn:hover {
-  background: #2a2a2a;
+  background: var(--bg-hover);
 }
 .dark-mode .vod-card__title {
   color: var(--text-primary);
 }
 .dark-mode .vod-card__thumb {
-  border-color: var(--text-primary);
+  border-color: var(--border-color);
   background: var(--bg-secondary);
 }
 .dark-mode .vod-card:hover {
-  background: var(--text-primary);
+  background: var(--bg-hover);
 }
 
 /* ============================================================
@@ -609,4 +609,24 @@
   color: var(--text-secondary);
   background: var(--bg-secondary);
   font-size: 13px;
+}
+
+
+/* --- Loading / thumbnail fallback --- */
+.profile__loading {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.vod-card__thumb-placeholder {
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 42%),
+    linear-gradient(135deg, var(--bg-hover), var(--bg-secondary));
 }

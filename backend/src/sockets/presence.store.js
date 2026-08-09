@@ -1,71 +1,177 @@
 import { getRedisDataClient } from "../config/redis.config.js";
 
 /**
- * Presence store: which users are currently watching which stream.
+ * Presence store for live viewers.
  *
- * - With REDIS_URL set: backed by a Redis Hash per stream
- *   (`stream:<id>:viewers`, field = socketId, value = JSON viewer data).
- *   This is what makes viewer-count/viewer-list correct once the backend
- *   is scaled to multiple instances, since every instance reads/writes the
- *   same Redis store instead of its own local Map.
- * - Without REDIS_URL (local/single-instance dev): falls back to an
- *   in-memory Map so `npm run dev` keeps working with zero extra setup.
- *
- * Callers always use the async API below, so swapping the backing store
- * never requires changes outside this file.
+ * Memory is always updated so a single backend keeps working even if Redis is
+ * temporarily unavailable. When Redis is healthy we also mirror presence there
+ * so multiple backend instances share the same view of the room.
  */
 const memoryStore = new Map(); // socketId -> viewer data
+const VIEWER_STALE_AFTER_MS = 180_000;
 
 const redisKeyForStream = (streamId) => `stream:${streamId}:viewers`;
-// Reverse lookup so removeViewer(socketId) doesn't need the streamId.
 const redisKeyForSocket = (socketId) => `socket:${socketId}:stream`;
 
+let lastRedisWarningAt = 0;
+const warnRedisFallback = (error) => {
+  const now = Date.now();
+  if (now - lastRedisWarningAt < 10_000) return;
+  lastRedisWarningAt = now;
+  console.warn(
+    "Presence store: Redis unavailable, using in-memory fallback:",
+    error?.message || error,
+  );
+};
+
 export const addViewer = async (socketId, data) => {
+  const viewer = { ...data, lastSeen: Date.now() };
+  memoryStore.set(socketId, viewer);
+
   const redis = getRedisDataClient();
-  if (!redis) {
-    memoryStore.set(socketId, data);
-    return;
+  if (!redis) return;
+
+  try {
+    await redis
+      .multi()
+      .hset(redisKeyForStream(data.streamId), socketId, JSON.stringify(viewer))
+      .set(redisKeyForSocket(socketId), data.streamId)
+      .exec();
+  } catch (error) {
+    warnRedisFallback(error);
+  }
+};
+
+export const refreshViewer = async (socketId) => {
+  const viewer = memoryStore.get(socketId);
+  if (!viewer) return null;
+
+  const refreshed = { ...viewer, lastSeen: Date.now() };
+  memoryStore.set(socketId, refreshed);
+
+  const redis = getRedisDataClient();
+  if (!redis) return refreshed;
+
+  try {
+    await redis.hset(
+      redisKeyForStream(refreshed.streamId),
+      socketId,
+      JSON.stringify(refreshed),
+    );
+  } catch (error) {
+    warnRedisFallback(error);
   }
 
-  const { streamId } = data;
-  await redis
-    .multi()
-    .hset(redisKeyForStream(streamId), socketId, JSON.stringify(data))
-    .set(redisKeyForSocket(socketId), streamId)
-    .exec();
+  return refreshed;
 };
 
 export const removeViewer = async (socketId) => {
+  const memoryData = memoryStore.get(socketId) ?? null;
+  memoryStore.delete(socketId);
+
   const redis = getRedisDataClient();
-  if (!redis) {
-    const data = memoryStore.get(socketId) ?? null;
-    memoryStore.delete(socketId);
-    return data;
+  if (!redis) return memoryData;
+
+  try {
+    const streamId = await redis.get(redisKeyForSocket(socketId));
+    if (!streamId) return memoryData;
+
+    const raw = await redis.hget(redisKeyForStream(streamId), socketId);
+    await redis
+      .multi()
+      .hdel(redisKeyForStream(streamId), socketId)
+      .del(redisKeyForSocket(socketId))
+      .exec();
+
+    return raw ? JSON.parse(raw) : memoryData;
+  } catch (error) {
+    warnRedisFallback(error);
+    return memoryData;
   }
-
-  const streamId = await redis.get(redisKeyForSocket(socketId));
-  if (!streamId) return null;
-
-  const raw = await redis.hget(redisKeyForStream(streamId), socketId);
-  await redis
-    .multi()
-    .hdel(redisKeyForStream(streamId), socketId)
-    .del(redisKeyForSocket(socketId))
-    .exec();
-
-  return raw ? JSON.parse(raw) : null;
 };
 
 export const getViewersForStream = async (streamId) => {
-  const redis = getRedisDataClient();
-  if (!redis) {
-    return Array.from(memoryStore.values()).filter(
-      (u) => u.streamId === streamId,
-    );
+  const merged = new Map();
+  const staleBefore = Date.now() - VIEWER_STALE_AFTER_MS;
+
+  for (const [socketId, viewer] of memoryStore.entries()) {
+    if ((viewer.lastSeen || 0) < staleBefore) {
+      memoryStore.delete(socketId);
+      continue;
+    }
+    if (viewer.streamId === streamId) merged.set(socketId, viewer);
   }
 
-  const raw = await redis.hvals(redisKeyForStream(streamId));
-  return raw.map((v) => JSON.parse(v));
+  const redis = getRedisDataClient();
+  if (redis) {
+    try {
+      const remote = await redis.hgetall(redisKeyForStream(streamId));
+      const staleSocketIds = [];
+
+      for (const [socketId, raw] of Object.entries(remote)) {
+        try {
+          const viewer = JSON.parse(raw);
+          if ((viewer?.lastSeen || 0) < staleBefore) {
+            staleSocketIds.push(socketId);
+            continue;
+          }
+          if (viewer?.streamId === streamId) merged.set(socketId, viewer);
+        } catch {
+          staleSocketIds.push(socketId);
+        }
+      }
+
+      if (staleSocketIds.length > 0) {
+        const transaction = redis.multi();
+        staleSocketIds.forEach((socketId) => {
+          transaction.hdel(redisKeyForStream(streamId), socketId);
+          transaction.del(redisKeyForSocket(socketId));
+        });
+        await transaction.exec();
+      }
+    } catch (error) {
+      warnRedisFallback(error);
+    }
+  }
+
+  // Count one authenticated account once even when the same account has
+  // several tabs open. Anonymous viewers remain connection-based because they
+  // do not have a stable account id.
+  const unique = new Map();
+  for (const [socketId, viewer] of merged.entries()) {
+    const identity = String(viewer.userId || "").startsWith("anonymous:")
+      ? `socket:${socketId}`
+      : `user:${viewer.userId}`;
+    if (!unique.has(identity)) unique.set(identity, viewer);
+  }
+
+  return [...unique.values()].map(({ lastSeen, ...viewer }) => viewer);
 };
 
-export default { addViewer, removeViewer, getViewersForStream };
+export const clearViewersForStream = async (streamId) => {
+  for (const [socketId, viewer] of memoryStore.entries()) {
+    if (viewer.streamId === streamId) memoryStore.delete(socketId);
+  }
+
+  const redis = getRedisDataClient();
+  if (!redis) return;
+
+  try {
+    const remote = await redis.hgetall(redisKeyForStream(streamId));
+    const transaction = redis.multi().del(redisKeyForStream(streamId));
+    Object.keys(remote).forEach((socketId) => {
+      transaction.del(redisKeyForSocket(socketId));
+    });
+    await transaction.exec();
+  } catch (error) {
+    warnRedisFallback(error);
+  }
+};
+
+export default {
+  addViewer,
+  refreshViewer,
+  removeViewer,
+  getViewersForStream,
+  clearViewersForStream,
+};

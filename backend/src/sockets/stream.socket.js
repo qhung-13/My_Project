@@ -1,27 +1,54 @@
+import mongoose from "mongoose";
+import Stream from "../models/Stream.model.js";
 import {
   addViewer,
+  refreshViewer,
   removeViewer,
   getViewersForStream,
 } from "./presence.store.js";
 
-const normalizeStreamId = (value) =>
-  String(value || "")
-    .trim()
-    .slice(0, 100);
+const normalizeStreamId = (value) => {
+  const streamId = String(value || "").trim();
+  return mongoose.isValidObjectId(streamId) ? streamId : "";
+};
+
+const syncViewerCount = async (streamId, count) => {
+  try {
+    await Stream.updateOne(
+      { _id: streamId, isLive: true },
+      {
+        $set: { viewers: count },
+        $max: { peakViewers: count },
+      },
+    );
+  } catch (error) {
+    console.warn("Unable to persist viewer count:", error.message);
+  }
+};
 
 const broadcastPresence = async (io, streamId) => {
   const viewers = await getViewersForStream(streamId);
-  io.to(`stream:${streamId}`).emit("viewer-count", viewers.length);
+  const count = viewers.length;
+  io.to(`stream:${streamId}`).emit("viewer-count", count);
   io.to(`stream:${streamId}`).emit("viewer-list", viewers);
+  await syncViewerCount(streamId, count);
 };
 
 const registerStreamPresenceHandlers = (io, socket) => {
   socket.on("join-stream", async (rawStreamId) => {
     try {
       const streamId = normalizeStreamId(rawStreamId);
-      if (!streamId) return;
+      if (!streamId) {
+        socket.emit("presence-error", { message: "Invalid stream id" });
+        return;
+      }
 
-      // A socket can only represent one active stream presence at a time.
+      const streamExists = await Stream.exists({ _id: streamId, isLive: true });
+      if (!streamExists) {
+        socket.emit("presence-error", { message: "Stream is not live" });
+        return;
+      }
+
       const previous = await removeViewer(socket.id);
       if (previous?.streamId && previous.streamId !== streamId) {
         socket.leave(`stream:${previous.streamId}`);
@@ -37,10 +64,18 @@ const registerStreamPresenceHandlers = (io, socket) => {
       });
       await broadcastPresence(io, streamId);
     } catch (error) {
-      console.error("join-stream failed:", error);
+      console.error("join-stream failed:", error.message || error);
       socket.emit("presence-error", {
         message: "Unable to join stream presence",
       });
+    }
+  });
+
+  socket.on("viewer-heartbeat", async () => {
+    try {
+      await refreshViewer(socket.id);
+    } catch (error) {
+      console.warn("viewer heartbeat failed:", error.message || error);
     }
   });
 
@@ -52,7 +87,7 @@ const registerStreamPresenceHandlers = (io, socket) => {
       socket.leave(`stream:${streamId}`);
       await broadcastPresence(io, streamId);
     } catch (error) {
-      console.error("leave-stream failed:", error);
+      console.error("leave-stream failed:", error.message || error);
     }
   });
 
@@ -61,7 +96,10 @@ const registerStreamPresenceHandlers = (io, socket) => {
       const removed = await removeViewer(socket.id);
       if (removed?.streamId) await broadcastPresence(io, removed.streamId);
     } catch (error) {
-      console.error("disconnect presence cleanup failed:", error);
+      console.error(
+        "disconnect presence cleanup failed:",
+        error.message || error,
+      );
     }
   });
 };

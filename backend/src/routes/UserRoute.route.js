@@ -1,3 +1,4 @@
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import express from "express";
 import passport from "passport";
 import {
@@ -17,7 +18,7 @@ import {
   getTopUsers,
   updateBanner,
 } from "../controllers/UserController.controller.js";
-import createToken from "../utils/createToken.js";
+import createToken, { getAuthCookieOptions } from "../utils/createToken.js";
 import { isGoogleOAuthConfigured } from "../config/passport.config.js";
 import protect from "../middlewares/Auth.middleware.js";
 import {
@@ -57,18 +58,23 @@ router.post("/reset-password", authLimiter, resetPassword);
 /**
  * Initiates the Google OAuth flow, requesting profile and email scopes.
  */
-router.get(
-  "/auth/google",
-  (req, res, next) => {
-    if (!isGoogleOAuthConfigured()) {
-      return res
-        .status(503)
-        .json({ message: "Google OAuth is not configured" });
-    }
-    next();
-  },
-  passport.authenticate("google", { scope: ["profile", "email"] }),
-);
+router.get("/auth/google", (req, res, next) => {
+  if (!isGoogleOAuthConfigured()) {
+    return res.status(503).json({ message: "Google OAuth is not configured" });
+  }
+
+  const state = randomBytes(24).toString("hex");
+  res.cookie("oauth_state", state, {
+    ...getAuthCookieOptions(),
+    maxAge: 10 * 60 * 1000,
+  });
+
+  return passport.authenticate("google", {
+    scope: ["profile", "email"],
+    state,
+    prompt: "select_account",
+  })(req, res, next);
+});
 
 /**
  * Handles the callback from Google after successful or failed authentication.
@@ -76,16 +82,35 @@ router.get(
  */
 router.get(
   "/auth/google/callback",
+  (req, res, next) => {
+    const expected = String(req.cookies?.oauth_state || "");
+    const received = String(req.query.state || "");
+    res.clearCookie("oauth_state", getAuthCookieOptions());
+
+    const validState =
+      expected.length > 0 &&
+      expected.length === received.length &&
+      timingSafeEqual(Buffer.from(expected), Buffer.from(received));
+
+    if (!validState) {
+      const frontendURL = (
+        process.env.FRONTEND_URL || "http://localhost:5173"
+      ).replace(/\/$/, "");
+      return res.redirect(`${frontendURL}/auth/callback?status=failed`);
+    }
+
+    next();
+  },
   passport.authenticate("google", {
     session: false,
-    failureRedirect: `${(process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "")}/home?auth=failed`,
+    failureRedirect: `${(process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "")}/auth/callback?status=failed`,
   }),
   (req, res) => {
     createToken(res, req.user._id);
     const frontendURL = (
       process.env.FRONTEND_URL || "http://localhost:5173"
     ).replace(/\/$/, "");
-    res.redirect(`${frontendURL}/auth/callback`);
+    res.redirect(`${frontendURL}/auth/callback?status=success`);
   },
 );
 

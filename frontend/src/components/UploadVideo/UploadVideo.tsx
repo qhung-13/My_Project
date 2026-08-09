@@ -1,11 +1,42 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import instance from "../../utils/axios";
+import { videoApi } from "../../store/api/videoApi";
+import type { AppDispatch } from "../../store/store";
 
 import "./UploadVideo.css";
 
 const MAX_VIDEO_SIZE = 500 * 1024 * 1024;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const SUPPORTED_VIDEO_TYPES = new Set([
+  "video/mp4",
+  "video/quicktime",
+  "video/x-msvideo",
+  "video/x-matroska",
+]);
+const SUPPORTED_VIDEO_EXTENSIONS = [".mp4", ".mov", ".avi", ".mkv"];
+const CATEGORIES = [
+  "LOL",
+  "PUBG",
+  "CS2",
+  "Valorant",
+  "Dota 2",
+  "FIFA",
+  "MLBB",
+  "COD",
+  "Other",
+];
+
+type ContentType = "vod" | "clip";
+
+const isSupportedVideo = (file: File) => {
+  if (SUPPORTED_VIDEO_TYPES.has(file.type)) return true;
+  const lowerName = file.name.toLowerCase();
+  return SUPPORTED_VIDEO_EXTENSIONS.some((extension) =>
+    lowerName.endsWith(extension),
+  );
+};
 
 const getVideoDuration = (file: File): Promise<number> =>
   new Promise((resolve, reject) => {
@@ -51,12 +82,14 @@ const getApiErrorMessage = (error: unknown, fallback: string) => {
 
 const UploadVideo = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
 
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("LOL");
+  const [contentType, setContentType] = useState<ContentType>("vod");
+  const [category, setCategory] = useState("Other");
   const [tags, setTags] = useState("");
   const [uploadedVideoId, setUploadedVideoId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -64,8 +97,8 @@ const UploadVideo = () => {
 
   const validateFiles = () => {
     if (!uploadedVideoId && !videoFile) return "Please choose a video";
-    if (videoFile && !videoFile.type.startsWith("video/"))
-      return "Please choose a valid video file";
+    if (videoFile && !isSupportedVideo(videoFile))
+      return "Supported video formats are MP4, MOV, AVI, and MKV";
     if (videoFile && videoFile.size > MAX_VIDEO_SIZE)
       return "Video must be 500 MB or smaller";
     if (thumbnail && !thumbnail.type.startsWith("image/"))
@@ -106,7 +139,7 @@ const UploadVideo = () => {
         formData.append("category", category.trim());
         formData.append("tags", tags);
         formData.append("duration", String(duration));
-        formData.append("type", "clip");
+        formData.append("type", contentType);
 
         const response = await instance.post<{ _id: string }>(
           "/videos",
@@ -123,6 +156,10 @@ const UploadVideo = () => {
         await instance.put(`/videos/${videoId}`, thumbnailData);
       }
 
+      // Uploads use Axios so RTK Query cannot infer that its cached video
+      // lists are stale. Invalidate explicitly before returning to Profile so
+      // the newly uploaded VOD/clip is visible without a hard refresh.
+      dispatch(videoApi.util.invalidateTags(["Video"]));
       navigate("/profile/me", { replace: true });
     } catch (uploadError) {
       const fallback = videoId
@@ -140,7 +177,10 @@ const UploadVideo = () => {
         <div className="upload-video__heading">
           <p className="upload-video__eyebrow">Creator Studio</p>
           <h1>Upload a video</h1>
-          <p>Share a clip with a clear title, description, and thumbnail.</p>
+          <p>
+            Publish a full VOD or a short clip with clear metadata and a strong
+            thumbnail.
+          </p>
         </div>
 
         {error && (
@@ -164,7 +204,7 @@ const UploadVideo = () => {
             id="upload-video-file"
             className="upload-video__file-input"
             type="file"
-            accept="video/*"
+            accept=".mp4,.mov,.avi,.mkv,video/mp4,video/quicktime,video/x-msvideo,video/x-matroska"
             disabled={loading || Boolean(uploadedVideoId)}
             required={!uploadedVideoId}
             onChange={(event) => {
@@ -176,8 +216,7 @@ const UploadVideo = () => {
           <span className="upload-video__hint">
             {uploadedVideoId
               ? "Video already uploaded"
-              : videoFile?.name ||
-                "MP4, WebM, or another browser-supported format · max 500 MB"}
+              : videoFile?.name || "MP4, MOV, AVI, or MKV · max 500 MB"}
           </span>
         </div>
 
@@ -218,7 +257,25 @@ const UploadVideo = () => {
           </span>
         </div>
 
-        <div className="upload-video__grid">
+        <div className="upload-video__grid upload-video__grid--three">
+          <div className="upload-video__field">
+            <label className="upload-video__label" htmlFor="upload-video-type">
+              Content type
+            </label>
+            <select
+              id="upload-video-type"
+              className="upload-video__select"
+              value={contentType}
+              disabled={Boolean(uploadedVideoId)}
+              onChange={(event) =>
+                setContentType(event.target.value as ContentType)
+              }
+            >
+              <option value="vod">Full video (VOD)</option>
+              <option value="clip">Short clip</option>
+            </select>
+          </div>
+
           <div className="upload-video__field">
             <label
               className="upload-video__label"
@@ -232,8 +289,11 @@ const UploadVideo = () => {
               value={category}
               onChange={(event) => setCategory(event.target.value)}
             >
-              <option value="LOL">League of Legends</option>
-              <option value="PUBG">PUBG</option>
+              {CATEGORIES.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -266,7 +326,7 @@ const UploadVideo = () => {
             id="upload-thumbnail-file"
             className="upload-video__file-input"
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp"
             disabled={loading}
             onChange={(event) => {
               setThumbnail(event.target.files?.[0] || null);

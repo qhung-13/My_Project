@@ -16,7 +16,9 @@ const baseUser = {
 
 const renderWithAuth = (
   authState: {
-    user: (typeof baseUser & { role: string }) | null;
+    user:
+      | (typeof baseUser & { role: "admin" | "stream" | "streamer" | "user" })
+      | null;
     isAuthenticated: boolean;
     isInitialized?: boolean;
   },

@@ -15,7 +15,7 @@
 
 .clip-creator__card {
   position: relative;
-  background: white;
+  background: var(--bg-card, #fff);
   border-radius: 16px;
   padding: 28px;
   width: 90%;

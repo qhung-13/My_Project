@@ -39,7 +39,7 @@ describe("buildHlsUrl", () => {
   test("falls back to localhost default when nothing configured", () => {
     assert.equal(
       buildHlsUrl("abc123"),
-      "http://localhost:8000/live/abc123/index.m3u8",
+      "http://localhost:8080/live/abc123/index.m3u8",
     );
   });
 

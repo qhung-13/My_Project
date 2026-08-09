@@ -7,6 +7,9 @@ import {
 } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import type { AppDispatch } from "../../store/store";
+import { updateCoins } from "../../store/slices/authSlice";
 import {
   useConfirmTopUpMutation,
   useCreateTopUpMutation,
@@ -31,7 +34,7 @@ const TopUpCheckoutForm = ({
 }: {
   coins: number;
   paymentIntentId: string;
-  onSuccess: () => Promise<void>;
+  onSuccess: (newBalance: number) => Promise<void>;
 }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -58,8 +61,8 @@ const TopUpCheckoutForm = ({
     }
 
     try {
-      await confirmTopUp(paymentIntentId).unwrap();
-      await onSuccess();
+      const response = await confirmTopUp(paymentIntentId).unwrap();
+      await onSuccess(Number(response.coins ?? 0));
     } catch (requestError) {
       setError(getApiError(requestError, "Không thể xác nhận giao dịch"));
     } finally {
@@ -91,6 +94,7 @@ const TopUpCheckoutForm = ({
 
 const TopUp = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
   const [selectedPackage, setSelectedPackage] = useState<number | null>(null);
   const [clientSecret, setClientSecret] = useState("");
   const [paymentIntentId, setPaymentIntentId] = useState("");
@@ -128,7 +132,8 @@ const TopUp = () => {
     }
   };
 
-  const handleSuccess = async () => {
+  const handleSuccess = async (newBalance: number) => {
+    dispatch(updateCoins(newBalance));
     await refetch();
     setStep("success");
   };

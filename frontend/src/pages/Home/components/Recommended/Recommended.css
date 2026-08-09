@@ -159,7 +159,7 @@
 }
 
 .dark-mode .rec-card__thumb {
-  border-color: var(--text-primary);
+  border-color: var(--border-color);
   background: var(--bg-secondary);
 }
 
@@ -172,7 +172,7 @@
 }
 
 .dark-mode .rec-card:hover {
-  background: var(--text-primary); 
+  background: var(--bg-hover);
 }
 
 /* ============================================================
@@ -293,4 +293,31 @@
 .recommended__more:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--accent) 42%, transparent);
   outline-offset: 3px;
+}
+
+.recommended__state {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  margin: 0 16px;
+  padding: 26px 18px;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  text-align: center;
+}
+.recommended__state strong { color: var(--text-primary); }
+.recommended__state span { font-size: 13px; }
+.recommended__state button {
+  margin-top: 8px;
+  padding: 0 15px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-weight: 700;
+}
+@media (min-width: 1024px) {
+  .recommended__state { margin-left: 0; margin-right: 0; }
 }

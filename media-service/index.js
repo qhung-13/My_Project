@@ -40,7 +40,7 @@ app.use(
         res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
       } else if (ext === ".ts") {
         res.setHeader("Content-Type", "video/MP2T");
-        res.setHeader("Cache-Control", "public, max-age=30");
+        res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
       }
     },
   }),

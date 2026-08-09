@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import {
   getTimeoutRemainingSeconds,
   isUserBanned,
@@ -5,18 +6,28 @@ import {
 
 const CHAT_WINDOW_MS = 5_000;
 const CHAT_LIMIT = 6;
+const REACTION_WINDOW_MS = 3_000;
+const REACTION_LIMIT = 12;
+const ALLOWED_REACTIONS = new Set(["❤️", "🔥", "😂", "👏", "😍", "😮", "💰"]);
+
+const normalizeStreamId = (value) => {
+  const streamId = String(value || "").trim();
+  return mongoose.isValidObjectId(streamId) ? streamId : "";
+};
+
+const isJoinedToStream = (socket, streamId) =>
+  socket.rooms.has(`stream:${streamId}`);
 
 const registerChatHandlers = (io, socket) => {
   const recentMessages = [];
+  const recentReactions = [];
 
   socket.on("chat-message", async (payload = {}) => {
-    const streamId = String(payload.streamId || "")
-      .trim()
-      .slice(0, 100);
+    const streamId = normalizeStreamId(payload.streamId);
     const message = String(payload.message || "")
       .trim()
       .slice(0, 500);
-    if (!streamId || !message) return;
+    if (!streamId || !message || !isJoinedToStream(socket, streamId)) return;
 
     const now = Date.now();
     while (recentMessages.length && recentMessages[0] <= now - CHAT_WINDOW_MS) {
@@ -65,13 +76,26 @@ const registerChatHandlers = (io, socket) => {
   });
 
   socket.on("send-reaction", (payload = {}) => {
-    const streamId = String(payload.streamId || "")
-      .trim()
-      .slice(0, 100);
-    const reaction = String(payload.reaction || "")
-      .trim()
-      .slice(0, 16);
-    if (!streamId || !reaction) return;
+    const streamId = normalizeStreamId(payload.streamId);
+    const reaction = String(payload.reaction || "").trim();
+    if (
+      !streamId ||
+      !ALLOWED_REACTIONS.has(reaction) ||
+      !isJoinedToStream(socket, streamId)
+    ) {
+      return;
+    }
+
+    const now = Date.now();
+    while (
+      recentReactions.length &&
+      recentReactions[0] <= now - REACTION_WINDOW_MS
+    ) {
+      recentReactions.shift();
+    }
+    if (recentReactions.length >= REACTION_LIMIT) return;
+    recentReactions.push(now);
+
     io.to(`stream:${streamId}`).emit("reaction-received", {
       reaction,
       userId: socket.data.userId || socket.id,

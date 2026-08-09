@@ -5,12 +5,28 @@ import { formatViewers, generateColor } from "../../utils/format";
 import type { Stream } from "../../types/index";
 import "./GameDetail.css";
 
+const decodeCategory = (value?: string) => {
+  if (!value) return "Danh mục";
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+};
+
 const GameDetail = () => {
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
-  const gameName = gameId ? decodeURIComponent(gameId) : "Danh mục";
+  const gameName = decodeCategory(gameId);
   const { data, isLoading, isError, isFetching, refetch } =
-    useGetLiveStreamsQuery({ page: 1, limit: 50 });
+    useGetLiveStreamsQuery(
+      { page: 1, limit: 50 },
+      {
+        pollingInterval: 10_000,
+        refetchOnFocus: true,
+        refetchOnReconnect: true,
+      },
+    );
 
   const streams = (data?.streams ?? []).filter(
     (stream: Stream) =>

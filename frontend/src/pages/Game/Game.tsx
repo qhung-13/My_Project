@@ -21,7 +21,14 @@ const Game = () => {
   const [sortMode, setSortMode] = useState<SortMode>("viewers");
   const navigate = useNavigate();
   const { data, isLoading, isError, refetch, isFetching } =
-    useGetLiveStreamsQuery({ page: 1, limit: 50 });
+    useGetLiveStreamsQuery(
+      { page: 1, limit: 50 },
+      {
+        pollingInterval: 10_000,
+        refetchOnFocus: true,
+        refetchOnReconnect: true,
+      },
+    );
 
   const games = useMemo(() => {
     const summaries = new Map<string, GameSummary>();

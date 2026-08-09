@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   useGetStreamKeyQuery,
   useResetStreamKeyMutation,
@@ -25,6 +26,7 @@ const CATEGORIES = [
 ];
 
 const GoLiveModal = ({ onClose }: { onClose: () => void }) => {
+  const navigate = useNavigate();
   const cardRef = useRef<HTMLElement>(null);
   const feedbackTimerRef = useRef<number | null>(null);
   const [showKey, setShowKey] = useState(false);
@@ -114,9 +116,8 @@ const GoLiveModal = ({ onClose }: { onClose: () => void }) => {
           .filter(Boolean),
       }).unwrap();
       setSetupSaved(true);
-      showTemporaryFeedback(
-        "Đã lưu thông tin. Bạn có thể bắt đầu stream từ OBS.",
-      );
+      onClose();
+      navigate("/creator/live");
     } catch (requestError) {
       const apiError = requestError as { data?: { message?: string } };
       setError(apiError.data?.message || "Không thể lưu thông tin livestream.");

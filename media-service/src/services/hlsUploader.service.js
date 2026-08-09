@@ -77,13 +77,15 @@ const uploadFile = async (localPath, mediaRoot) => {
         Key: key,
         Body: body,
         ContentType: contentTypeFor(localPath),
-        // Playlist change constantly and must never be cached at the edge
-        // segments are immutable once written (delete_segments in ffmpeg
-        // just rotates the filename set, it doesn't overwrite in place)
+        // Stream keys are intentionally persistent, so a later broadcast can
+        // reuse segment names such as 720p/index0.ts. Marking those objects
+        // immutable for a year would let a CDN serve frames from an older
+        // broadcast. Revalidation keeps CDN/object-storage deployments
+        // correct until HLS paths are eventually moved to per-session ids.
         CacheControl:
           path.extname(localPath) === ".m3u8"
             ? "no-cache, no-store, must-revalidate"
-            : "public, max-age=31536000, immutable",
+            : "public, max-age=0, must-revalidate",
       }),
     );
   } catch (error) {

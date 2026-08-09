@@ -89,9 +89,6 @@ const WatchVideo = () => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    hasViewed.current = false;
-    setActionError("");
-    setCommentText("");
   }, [videoId]);
 
   useEffect(() => {
@@ -207,8 +204,8 @@ const WatchVideo = () => {
   }
 
   return (
-    <div className="watch-live">
-      <div className="watch-live__video">
+    <div className="watch-video">
+      <div className="watch-video__stage">
         <video
           src={video.videoUrl}
           poster={video.thumbnailUrl || undefined}
@@ -220,11 +217,11 @@ const WatchVideo = () => {
         />
       </div>
 
-      <div className="watch-live__info">
-        <div className="info-header">
+      <div className="watch-video__info">
+        <div className="watch-video__info-header">
           <button
             type="button"
-            className="info-avatar watch-video__avatar-button"
+            className="watch-video__info-avatar watch-video__avatar-button"
             onClick={() => uploaderId && navigate(`/channel/${uploaderId}`)}
             disabled={!uploaderId}
             aria-label={`Mở kênh của ${uploaderName}`}
@@ -235,9 +232,9 @@ const WatchVideo = () => {
               uploaderName.slice(0, 2).toUpperCase()
             )}
           </button>
-          <div className="info-details">
-            <h1 className="info-title">{video.title}</h1>
-            <p className="info-meta">
+          <div className="watch-video__info-details">
+            <h1 className="watch-video__title">{video.title}</h1>
+            <p className="watch-video__meta">
               {uploaderName} · {video.category} · {video.views.toLocaleString()}{" "}
               lượt xem
             </p>
@@ -250,10 +247,10 @@ const WatchVideo = () => {
           </p>
         )}
 
-        <div className="info-actions">
+        <div className="watch-video__actions">
           <button
             type="button"
-            className="btn-follow"
+            className="watch-video__follow"
             onClick={handleFollow}
             disabled={isOwnVideo || isFollowing || isUnfollowing}
             title={isOwnVideo ? "Bạn không thể theo dõi chính mình" : undefined}
@@ -262,7 +259,7 @@ const WatchVideo = () => {
           </button>
           <button
             type="button"
-            className={`btn-follow ${isLiked ? "btn-follow--active" : ""}`}
+            className={`watch-video__follow ${isLiked ? "watch-video__follow--active" : ""}`}
             onClick={handleLike}
             disabled={isLiking || isUnliking}
             aria-pressed={isLiked}
@@ -272,7 +269,7 @@ const WatchVideo = () => {
           </button>
           <button
             type="button"
-            className={`btn-follow ${isDisliked ? "btn-follow--active" : ""}`}
+            className={`watch-video__follow ${isDisliked ? "watch-video__follow--active" : ""}`}
             onClick={handleDislike}
             disabled={isDisliking || isUndisliking}
             aria-pressed={isDisliked}
@@ -282,7 +279,7 @@ const WatchVideo = () => {
           </button>
           <button
             type="button"
-            className="btn-follow"
+            className="watch-video__follow"
             onClick={() => {
               if (requireAuthentication()) setShowClipCreator(true);
             }}
@@ -292,35 +289,35 @@ const WatchVideo = () => {
         </div>
       </div>
 
-      <div className="watch-live__interactive">
+      <div className="watch-video__interactive">
         <section
-          className={`chat-panel ${isCommentOpen ? "chat-panel--open" : ""}`}
+          className={`watch-video__comments ${isCommentOpen ? "watch-video__comments--open" : ""}`}
         >
           <button
             type="button"
-            className="chat-panel__tab"
+            className="watch-video__comments-tab"
             onClick={() => setIsCommentOpen((current) => !current)}
             aria-expanded={isCommentOpen}
           >
-            <span className="chat-panel__tab-left">
+            <span className="watch-video__comments-tab-left">
               <MessageSquare size={14} aria-hidden="true" />
               <span>Bình luận ({comments.length})</span>
               {!isCommentOpen && (
-                <span className="chat-panel__hint">
+                <span className="watch-video__comments-hint">
                   · Hãy để lại bình luận!
                 </span>
               )}
             </span>
             <span
-              className={`chat-panel__arrow ${isCommentOpen ? "chat-panel__arrow--up" : ""}`}
+              className={`watch-video__comments-arrow ${isCommentOpen ? "watch-video__comments-arrow--up" : ""}`}
               aria-hidden="true"
             >
               ↑
             </span>
           </button>
 
-          <div className="chat-panel__content">
-            <div className="chat-panel__messages" aria-live="polite">
+          <div className="watch-video__comments-content">
+            <div className="watch-video__comments-list" aria-live="polite">
               {areCommentsLoading ? (
                 <p className="watch-video__comment-state">
                   Đang tải bình luận...
@@ -331,8 +328,8 @@ const WatchVideo = () => {
                 </p>
               ) : comments.length > 0 ? (
                 comments.map((comment) => (
-                  <article className="chat-msg" key={comment._id}>
-                    <div className="chat-msg__avatar">
+                  <article className="watch-video__comment" key={comment._id}>
+                    <div className="watch-video__comment-avatar">
                       {comment.userId?.avatar ? (
                         <img
                           src={comment.userId.avatar}
@@ -349,13 +346,16 @@ const WatchVideo = () => {
                           .toUpperCase()
                       )}
                     </div>
-                    <div className="chat-msg__body">
-                      <span className="chat-msg__user">
+                    <div className="watch-video__comment-body">
+                      <span className="watch-video__comment-user">
                         {comment.userId?.displayName ||
                           comment.userId?.username ||
                           "Người dùng"}
                       </span>
-                      <span className="chat-msg__text"> {comment.content}</span>
+                      <span className="watch-video__comment-text">
+                        {" "}
+                        {comment.content}
+                      </span>
                       {(authUser?._id === comment.userId?._id ||
                         authUser?.role === "admin") && (
                         <button
@@ -378,7 +378,7 @@ const WatchVideo = () => {
 
             {authUser ? (
               <form
-                className="chat-panel__input"
+                className="watch-video__comments-input"
                 onSubmit={(event) => {
                   event.preventDefault();
                   void handleComment();
@@ -397,7 +397,7 @@ const WatchVideo = () => {
                 />
                 <button
                   type="submit"
-                  className="chat-panel__send"
+                  className="watch-video__comments-send"
                   disabled={!commentText.trim() || isCreatingComment}
                   aria-label="Gửi bình luận"
                 >
@@ -413,30 +413,32 @@ const WatchVideo = () => {
         </section>
 
         <section
-          className={`suggested ${isCommentOpen ? "suggested--hidden-mobile" : ""}`}
+          className={`watch-video__suggested ${isCommentOpen ? "watch-video__suggested--hidden-mobile" : ""}`}
         >
-          <h2 className="suggested__title">Video khác</h2>
-          <div className="suggested__list">
+          <h2 className="watch-video__suggested-title">Video khác</h2>
+          <div className="watch-video__suggested-list">
             {suggestedVideos.map((item: Video) => (
               <button
                 type="button"
-                className="suggested-card"
+                className="watch-video__suggested-card"
                 key={item._id}
                 onClick={() => navigate(`/video/${item._id}`)}
               >
-                <div className="suggested-card__thumb">
+                <div className="watch-video__suggested-thumb">
                   {item.thumbnailUrl ? (
                     <img src={item.thumbnailUrl} alt="" loading="lazy" />
                   ) : (
                     <span>{item.category}</span>
                   )}
-                  <span className="suggested-card__duration">
+                  <span className="watch-video__suggested-duration">
                     {formatDuration(item.duration)}
                   </span>
                 </div>
-                <div className="suggested-card__info">
-                  <span className="suggested-card__title">{item.title}</span>
-                  <span className="suggested-card__streamer">
+                <div className="watch-video__suggested-info">
+                  <span className="watch-video__suggested-card-title">
+                    {item.title}
+                  </span>
+                  <span className="watch-video__suggested-streamer">
                     {typeof item.userId === "object"
                       ? item.userId.displayName || item.userId.username
                       : "Unknown"}

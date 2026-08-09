@@ -36,7 +36,7 @@ import useStreamModeration from "./hooks/useStreamModeration";
 // stream, wire the pieces together, and render layout.
 // ============================================================
 const WatchLive = () => {
-  const { streamerId: id } = useParams<{ streamerId: string }>();
+  const { streamId: id } = useParams<{ streamId: string }>();
   const navigate = useNavigate();
 
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -86,7 +86,7 @@ const WatchLive = () => {
   } = useStreamModeration(id);
 
   // Remounting on navigation between streams is handled by giving this
-  // component a `key={streamerId}` at the route level (see App.tsx), so we
+  // component a `key={streamId}` at the route level (see App.tsx), so we
   // only need to handle scroll position here — no manual state resets.
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -156,6 +156,31 @@ const WatchLive = () => {
     );
   }
 
+  if (!currentStream.isLive) {
+    return (
+      <main className="watch-live__ended" aria-labelledby="stream-ended-title">
+        <span className="watch-live__ended-badge">OFFLINE</span>
+        <h1 id="stream-ended-title">Livestream đã kết thúc</h1>
+        <p>
+          Phiên phát này không còn trực tiếp. Bạn có thể khám phá các kênh đang
+          live khác.
+        </p>
+        <div className="watch-live__ended-actions">
+          <button type="button" onClick={() => navigate("/live")}>
+            Xem livestream khác
+          </button>
+          <button
+            type="button"
+            className="is-secondary"
+            onClick={() => navigate("/home")}
+          >
+            Về trang chủ
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   const streamerName =
     typeof currentStream.userId === "object"
       ? currentStream.userId.displayName || currentStream.userId.username
@@ -219,6 +244,7 @@ const WatchLive = () => {
           isOpen={showViewerList}
           onClose={() => setShowViewerList(false)}
         />
+        <ReactionBar onReact={sendReaction} floatingReactions={reactions} />
       </div>
 
       <StreamInfoBar
@@ -263,8 +289,6 @@ const WatchLive = () => {
       </div>
 
       <DonationAlerts alerts={donationAlerts} />
-
-      <ReactionBar onReact={sendReaction} floatingReactions={reactions} />
 
       {isDonateModalOpen && streamerId && (
         <DonateModal

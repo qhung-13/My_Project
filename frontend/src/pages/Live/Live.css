@@ -272,16 +272,16 @@
 /* --- Dark Mode --- */
 .dark-mode .live-page__title { color: var(--text-primary); }
 
-.dark-mode .live-pill { border-color: var(--text-primary); color: var(--text-muted); background: var(--text-primary); }
-.dark-mode .live-pill:hover { background: #2a2a2a; border-color: var(--text-secondary); }
+.dark-mode .live-pill { border-color: var(--border-color); color: var(--text-secondary); background: var(--bg-card); }
+.dark-mode .live-pill:hover { background: var(--bg-hover); border-color: var(--border-hover); }
 .dark-mode .live-pill--active { background: var(--accent); color: white; border-color: var(--accent); }
 
-.dark-mode .game-pill { border-color: var(--text-primary); color: var(--text-muted); background: var(--text-primary); }
-.dark-mode .game-pill:hover { background: #2a2a2a; border-color: var(--text-secondary); }
-.dark-mode .game-pill--active { background: var(--text-primary); color: var(--text-primary); border-color: var(--text-primary); }
+.dark-mode .game-pill { border-color: var(--border-color); color: var(--text-secondary); background: var(--bg-card); }
+.dark-mode .game-pill:hover { background: var(--bg-hover); border-color: var(--border-hover); }
+.dark-mode .game-pill--active { background: var(--cyan-light); color: var(--cyan); border-color: color-mix(in srgb, var(--cyan) 35%, var(--border-color)); }
 
-.dark-mode .live-card { background: #141418; border-color: var(--bg-card); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-.dark-mode .live-card:hover { background: #1f1f23; border-color: var(--bg-hover); box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
+.dark-mode .live-card { background: var(--bg-card); border-color: var(--border-color); box-shadow: var(--shadow); }
+.dark-mode .live-card:hover { background: var(--bg-hover); border-color: var(--border-hover); box-shadow: var(--shadow-lg); }
 .dark-mode .live-card__title { color: var(--text-muted); }
 .dark-mode .live-card__name { color: var(--text-primary); }
 .dark-mode .live-card__game { color: var(--text-muted); }

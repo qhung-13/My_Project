@@ -21,6 +21,9 @@ export const streamApi = createApi({
     getStreamById: builder.query({
       query: (id) => `/streams/${id}`,
     }),
+    getCurrentStream: builder.query({
+      query: () => "/streams/me/current",
+    }),
     getStreamsByUser: builder.query<
       PaginatedStreams,
       { userId: string; page?: number; limit?: number }
@@ -97,6 +100,7 @@ export const streamApi = createApi({
 export const {
   useGetLiveStreamsQuery,
   useGetStreamByIdQuery,
+  useGetCurrentStreamQuery,
   useGetStreamsByUserQuery,
   useGetTopStreamersByHoursQuery,
   usePrepareStreamMutation,
