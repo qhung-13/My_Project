@@ -96,7 +96,36 @@ const toggleBanUser = asyncHandler(async (req, res) => {
   }
 
   user.isActive = !user.isActive;
+
+  const activeStreams = !user.isActive
+    ? await Stream.find({ userId: user._id, isLive: true }).select("_id")
+    : [];
+
+  if (!user.isActive) user.isLive = false;
   await user.save();
+
+  if (!user.isActive && activeStreams.length > 0) {
+    const endedAt = new Date();
+    await Stream.updateMany(
+      { _id: { $in: activeStreams.map((stream) => stream._id) } },
+      { $set: { isLive: false, viewers: 0, endedAt } },
+    );
+
+    const io = req.app.get("io");
+    for (const stream of activeStreams) {
+      io?.to(`stream:${stream._id}`).emit("stream-ended", {
+        streamId: stream._id,
+        endedAt,
+      });
+    }
+  }
+
+  if (!user.isActive) {
+    // Existing JWTs are rejected by HTTP middleware on the next request;
+    // disconnect current sockets immediately so a banned account cannot keep
+    // chatting from an already-open realtime connection.
+    req.app.get("io")?.in(`user:${user._id}`).disconnectSockets(true);
+  }
 
   res.status(200).json({
     message: user.isActive ? "User unbanned" : "User banned",
