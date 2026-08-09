@@ -13,15 +13,16 @@ const configurePassport = () => {
     return;
   }
 
-  const backendOrigin = (
-    process.env.BACKEND_PUBLIC_URL || "http://localhost:5000"
-  ).replace(/\/$/, "");
   passport.use(
     new GoogleStrategy(
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: `${backendOrigin}/api/v1/users/auth/google/callback`,
+        // A relative callback is resolved from the actual request origin. This
+        // keeps local, Render and any future backend domain on one code path.
+        // Google Console still needs each real callback URL allow-listed.
+        callbackURL: "/api/v1/users/auth/google/callback",
+        proxy: true,
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
