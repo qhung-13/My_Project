@@ -38,9 +38,17 @@ const createVideo = asyncHandler(async (req, res) => {
   const description = String(req.body.description || "").trim();
   const category = String(req.body.category || "").trim();
   const duration = Number(req.body.duration);
-  const type = req.body.type === "vod" ? "vod" : "clip";
+  const type = String(req.body.type || "vod")
+    .trim()
+    .toLowerCase();
   const videoUrl = req.file?.path;
   const videoPublicId = req.file?.filename;
+
+  if (!["clip", "vod"].includes(type)) {
+    await destroyCloudinaryAsset(videoPublicId, "video");
+    res.status(400);
+    throw new Error("Video type must be either clip or vod");
+  }
 
   if (
     !title ||
