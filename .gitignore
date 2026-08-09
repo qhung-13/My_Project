@@ -1,21 +1,38 @@
-# Ignore environment variables
+# Local secrets / environment overrides
 .env
 backend/.env
+frontend/.env
+media-service/.env
+agent-service/.env
 
-# Ignore dependencies
+# Dependencies
 node_modules/
 backend/node_modules/
 frontend/node_modules/
+media-service/node_modules/
 
-# Ignore build folders
+# Build and runtime output
 frontend/dist/
-frontend/.env.development
 backend/media/
+media-service/media/
 media/
+coverage/
 
+# Python
 agent-service/venv/
+agent-service/.venv/
 agent-service/__pycache__/
-agent-service/*.pyc
-agent-service/.env
+agent-service/**/*.pyc
 
-media-service/.env.example
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Keep checked-in templates
+!.env.example
+!backend/.env.example
+!frontend/.env.example
+!media-service/.env.example
+!agent-service/.env.example
