@@ -1,5 +1,6 @@
 import { randomInt } from "node:crypto";
 import { v4 as uuidv4 } from "uuid";
+import { buildObsStreamKey } from "../utils/ingestCredential.js";
 import User from "../models/User.model.js";
 import Otp from "../models/Otp.model.js";
 import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
@@ -373,7 +374,7 @@ const getRtmpServerUrl = () =>
   );
 
 const getStreamKey = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id);
+  const user = await User.findById(req.user._id).select("+streamKey");
   if (!user) {
     res.status(404);
     throw new Error("User not found");
@@ -382,14 +383,16 @@ const getStreamKey = asyncHandler(async (req, res) => {
     user.streamKey = uuidv4();
     await user.save();
   }
+  const credential = buildObsStreamKey(user.streamKey);
   res.status(200).json({
-    streamKey: user.streamKey,
+    streamKey: credential.streamKey,
+    streamKeyExpiresAt: credential.expiresAt,
     rtmpServerUrl: getRtmpServerUrl(),
   });
 });
 
 const resetStreamKey = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id);
+  const user = await User.findById(req.user._id).select("+streamKey");
   if (!user) {
     res.status(404);
     throw new Error("User not found");
@@ -403,8 +406,10 @@ const resetStreamKey = asyncHandler(async (req, res) => {
 
   user.streamKey = uuidv4();
   await user.save();
+  const credential = buildObsStreamKey(user.streamKey);
   res.status(200).json({
-    streamKey: user.streamKey,
+    streamKey: credential.streamKey,
+    streamKeyExpiresAt: credential.expiresAt,
     rtmpServerUrl: getRtmpServerUrl(),
   });
 });

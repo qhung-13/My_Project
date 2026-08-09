@@ -14,7 +14,10 @@ services:
       - REDIS_URL=redis://redis:6379
       - JWT_SECRET=${JWT_SECRET}
       - MEDIA_SERVICE_SECRET=${MEDIA_SERVICE_SECRET}
+      - MEDIA_PUBLISH_AUTH_SECRET=${MEDIA_PUBLISH_AUTH_SECRET}
+      - INGEST_SIGNATURE_TTL_SECONDS=${INGEST_SIGNATURE_TTL_SECONDS:-315360000}
       - AGENT_SERVICE_SECRET=${AGENT_SERVICE_SECRET}
+      - AGENT_SERVICE_URL=${AGENT_SERVICE_URL:-http://agent-service:8001}
       - CORS_ORIGINS=${CORS_ORIGINS}
       - BACKEND_PUBLIC_URL=${BACKEND_PUBLIC_URL:-http://localhost:5000}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
@@ -25,6 +28,7 @@ services:
       # otherwise point at the media-service's own host:port.
       - CDN_BASE_URL=${CDN_BASE_URL}
       - MEDIA_SERVICE_URL=${MEDIA_SERVICE_URL:-http://localhost:8080/live}
+      - MEDIA_CONTROL_URL=http://media-service:8080
       - BREVO_SMTP_USER=${BREVO_SMTP_USER}
       - BREVO_SMTP_PASS=${BREVO_SMTP_PASS}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
@@ -53,7 +57,9 @@ services:
       - MONGO_URI=mongodb://mongodb:27017/omexlive?replicaSet=rs0
       - BACKEND_INTERNAL_URL=http://backend:5000/api/v1
       - MEDIA_SERVICE_SECRET=${MEDIA_SERVICE_SECRET}
+      - MEDIA_PUBLISH_AUTH_SECRET=${MEDIA_PUBLISH_AUTH_SECRET}
       - HLS_CLEANUP_DELAY_MS=${HLS_CLEANUP_DELAY_MS:-15000}
+      - STREAM_AUTH_SWEEP_INTERVAL_MS=${STREAM_AUTH_SWEEP_INTERVAL_MS:-2000}
       - S3_BUCKET=${S3_BUCKET}
       - S3_REGION=${S3_REGION}
       - S3_ENDPOINT=${S3_ENDPOINT}
@@ -66,6 +72,28 @@ services:
         condition: service_healthy
     volumes:
       - ./media-service/media:/app/media
+
+  # Optional AI service. Start it with:
+  #   docker compose --profile ai up -d agent-service
+  # The main web stack remains usable without a Gemini API key.
+  agent-service:
+    profiles: ["ai"]
+    build: ./agent-service
+    ports:
+      - "8001:8001"
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GOOGLE_ADK_MODEL=${GOOGLE_ADK_MODEL:-gemini-flash-latest}
+      - NODE_BACKEND_URL=http://backend:5000
+      - AGENT_SERVICE_SECRET=${AGENT_SERVICE_SECRET}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=2)"]
+      interval: 10s
+      timeout: 4s
+      retries: 10
+    depends_on:
+      backend:
+        condition: service_healthy
 
   frontend:
     build:

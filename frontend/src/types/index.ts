@@ -7,7 +7,8 @@ export interface Video {
         displayName?: string;
         avatar?: string | null;
       }
-    | string; // Có thể là object (populated) hoặc string (id)
+    | string
+    | null; // populated user can be null if the account was deleted
   title: string;
   description: string;
   videoUrl: string;
@@ -32,7 +33,7 @@ export interface Comment {
     username: string;
     displayName?: string;
     avatar?: string | null;
-  };
+  } | null;
   content: string;
   likesCount: number;
   createdAt: string;
@@ -72,12 +73,11 @@ export interface StreamUser {
 
 export interface Stream {
   _id: string;
-  userId: StreamUser | string;
+  userId: StreamUser | string | null;
   title: string;
   description?: string;
   category: string;
   tags?: string[];
-  streamKey?: string;
   hlsUrl?: string | null;
   thumbnailUrl?: string | null;
   isLive: boolean;

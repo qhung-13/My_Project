@@ -66,10 +66,13 @@ const WatchVideo = () => {
     isError: boolean;
   };
 
-  const uploaderId =
-    typeof video?.userId === "object" ? video.userId._id : video?.userId;
   const uploaderPopulated =
-    typeof video?.userId === "object" ? video.userId : null;
+    typeof video?.userId === "object" && video.userId !== null
+      ? video.userId
+      : null;
+  const uploaderId =
+    uploaderPopulated?._id ||
+    (typeof video?.userId === "string" ? video.userId : undefined);
   const { data: uploaderData } = useGetUserByIdQuery(uploaderId!, {
     skip: !uploaderId,
   });
@@ -439,7 +442,7 @@ const WatchVideo = () => {
                     {item.title}
                   </span>
                   <span className="watch-video__suggested-streamer">
-                    {typeof item.userId === "object"
+                    {typeof item.userId === "object" && item.userId !== null
                       ? item.userId.displayName || item.userId.username
                       : "Unknown"}
                   </span>

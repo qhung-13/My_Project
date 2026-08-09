@@ -8,6 +8,7 @@ import {
 } from "../../utils/format";
 import { Play } from "lucide-react";
 import type { Video, Stream } from "../../types/index";
+import { getStreamUser } from "../../utils/streamUser";
 import "./Search.css";
 
 const ALL_CATEGORIES = [
@@ -38,8 +39,10 @@ const Search = () => {
       (stream: Stream) =>
         stream.title?.toLowerCase().includes(q.toLowerCase()) ||
         stream.category?.toLowerCase().includes(q.toLowerCase()) ||
-        (typeof stream.userId === "object" &&
-          stream.userId?.username?.toLowerCase().includes(q.toLowerCase())),
+        (getStreamUser(stream.userId)
+          ?.username?.toLowerCase()
+          .includes(q.toLowerCase()) ??
+          false),
     )
     .slice(0, 6);
 
@@ -96,10 +99,9 @@ const Search = () => {
           <h3 className="search-section__title">Streams đang live</h3>
           <div className="search-streams">
             {relatedStreams.map((stream: Stream) => {
+              const streamUser = getStreamUser(stream.userId);
               const name =
-                typeof stream.userId === "object"
-                  ? stream.userId?.displayName || stream.userId?.username
-                  : "Unknown";
+                streamUser?.displayName || streamUser?.username || "Unknown";
               return (
                 <button
                   type="button"
@@ -133,10 +135,9 @@ const Search = () => {
                       className="search-stream-card__avatar"
                       style={{ background: generateColor(name || "") }}
                     >
-                      {typeof stream.userId === "object" &&
-                      stream.userId?.avatar ? (
+                      {streamUser?.avatar ? (
                         <img
-                          src={stream.userId.avatar}
+                          src={streamUser.avatar}
                           alt=""
                           style={{
                             width: "100%",

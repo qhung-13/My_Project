@@ -2,6 +2,7 @@ import { Play } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Stream } from "../../../../types/index";
 import { formatViewers, generateColor } from "../../../../utils/format";
+import { getStreamUser } from "../../../../utils/streamUser";
 import "./LiveNow.css";
 
 interface LiveNowProps {
@@ -75,9 +76,9 @@ const LiveNow = ({ streams, isLoading, isError, onRetry }: LiveNowProps) => {
 
       <div className="live-now__scroll">
         {streams.map((stream: Stream) => {
-          const user = typeof stream.userId !== "string" ? stream.userId : null;
+          const streamUser = getStreamUser(stream.userId);
           const streamerName =
-            user?.displayName || user?.username || "Streamer";
+            streamUser?.displayName || streamUser?.username || "Streamer";
           return (
             <button
               type="button"
@@ -89,7 +90,7 @@ const LiveNow = ({ streams, isLoading, isError, onRetry }: LiveNowProps) => {
               <span
                 className="stream-card__thumb"
                 style={{
-                  background: generateColor(user?.username || ""),
+                  background: generateColor(streamUser?.username || ""),
                 }}
               >
                 {stream.thumbnailUrl && (
@@ -110,8 +111,8 @@ const LiveNow = ({ streams, isLoading, isError, onRetry }: LiveNowProps) => {
                     className="stream-card__avatar"
                     style={{ background: generateColor(streamerName) }}
                   >
-                    {user?.avatar ? (
-                      <img src={user.avatar} alt="" loading="lazy" />
+                    {streamUser?.avatar ? (
+                      <img src={streamUser.avatar} alt="" loading="lazy" />
                     ) : (
                       streamerName.slice(0, 2).toUpperCase()
                     )}

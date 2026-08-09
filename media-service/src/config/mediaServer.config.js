@@ -3,13 +3,32 @@ import { mkdirSync, writeFileSync } from "fs";
 import { rm } from "fs/promises";
 import { spawn } from "child_process";
 import path from "path";
-import User from "../model/User.model.js";
 import { startHlsUploader } from "../services/hlsUploader.service.js";
+import {
+  getStreamKeyOwner,
+  startStreamKeyRegistry,
+  stopStreamKeyRegistry,
+} from "../services/streamKeyRegistry.service.js";
 import { extractStreamKey } from "../utils/streamPath.js";
+import {
+  releasePublisherReservation,
+  tryReservePublisher,
+} from "../utils/publisherReservation.js";
 
-const ffmpegProcesses = new Map();
-const hlsCleanupTimers = new Map();
+const ffmpegProcesses = new Map(); // streamPath -> ChildProcess
+const activeStreams = new Map(); // streamPath -> { streamKey, playbackId }
+const publisherSessions = new Map(); // streamPath -> NMS session/id
+const reservedPublishPaths = new Map(); // streamPath -> authorized publisher session
+const forcedTerminationPaths = new Set();
+const hlsCleanupTimers = new Map(); // playbackId -> timer
+
 const HLS_CLEANUP_DELAY_MS = Number(process.env.HLS_CLEANUP_DELAY_MS || 15_000);
+const STREAM_AUTH_SWEEP_INTERVAL_MS = Number(
+  process.env.STREAM_AUTH_SWEEP_INTERVAL_MS || 2_000,
+);
+const MEDIA_HEARTBEAT_INTERVAL_MS = Number(
+  process.env.MEDIA_HEARTBEAT_INTERVAL_MS || 5_000,
+);
 const MEDIA_ROOT = path.resolve("./media");
 const HTTP_PORT = Number(process.env.MEDIA_HTTP_PORT || 8000);
 const RTMP_PORT = Number(process.env.MEDIA_RTMP_PORT || 1935);
@@ -17,55 +36,42 @@ const BACKEND_INTERNAL_URL = (
   process.env.BACKEND_INTERNAL_URL || "http://localhost:5000/api/v1"
 ).replace(/\/+$/, "");
 
-const getHlsFolderPath = (streamKey) =>
-  path.join(MEDIA_ROOT, "live", streamKey);
+const getHlsFolderPath = (playbackId) =>
+  path.join(MEDIA_ROOT, "live", playbackId);
 
-const cancelScheduledCleanup = (streamKey) => {
-  const timer = hlsCleanupTimers.get(streamKey);
-
+const cancelScheduledCleanup = (playbackId) => {
+  const timer = hlsCleanupTimers.get(playbackId);
   if (!timer) return;
-
   clearTimeout(timer);
-  hlsCleanupTimers.delete(streamKey);
-
-  console.log(`[media-service] Cancelled pending HLS cleanup for ${streamKey}`);
+  hlsCleanupTimers.delete(playbackId);
 };
 
-const removeHlsFolder = async (streamKey) => {
-  const folderPath = getHlsFolderPath(streamKey);
-
-  await rm(folderPath, {
-    recursive: true,
-    force: true,
-  });
-
+const removeHlsFolder = async (playbackId) => {
+  if (!playbackId) return;
+  const folderPath = getHlsFolderPath(playbackId);
+  await rm(folderPath, { recursive: true, force: true });
   console.log(`[media-service] Removed HLS folder: ${folderPath}`);
 };
 
-const scheduleHlsCleanup = (streamKey) => {
-  cancelScheduledCleanup(streamKey);
+const scheduleHlsCleanup = (playbackId) => {
+  if (!playbackId) return;
+  cancelScheduledCleanup(playbackId);
 
   const timer = setTimeout(() => {
-    hlsCleanupTimers.delete(streamKey);
-
-    void removeHlsFolder(streamKey).catch((error) => {
+    hlsCleanupTimers.delete(playbackId);
+    void removeHlsFolder(playbackId).catch((error) => {
       console.error(
-        `[media-service] Failed to clean HLS folder for ${streamKey}:`,
+        `[media-service] Failed to clean HLS folder for ${playbackId}:`,
         error.message,
       );
     });
   }, HLS_CLEANUP_DELAY_MS);
 
   timer.unref?.();
-
-  hlsCleanupTimers.set(streamKey, timer);
-
-  console.log(
-    `[media-service] HLS cleanup scheduled for ${streamKey} in ${HLS_CLEANUP_DELAY_MS}ms`,
-  );
+  hlsCleanupTimers.set(playbackId, timer);
 };
 
-const notifyBackend = async (event, streamKey) => {
+const notifyBackend = async (event, streamKey, extraBody = {}) => {
   const response = await fetch(
     `${BACKEND_INTERNAL_URL}/streams/internal/${event}`,
     {
@@ -74,7 +80,7 @@ const notifyBackend = async (event, streamKey) => {
         "content-type": "application/json",
         "x-media-service-secret": process.env.MEDIA_SERVICE_SECRET,
       },
-      body: JSON.stringify({ streamKey }),
+      body: JSON.stringify({ streamKey, ...extraBody }),
       signal: AbortSignal.timeout(5_000),
     },
   );
@@ -85,6 +91,7 @@ const notifyBackend = async (event, streamKey) => {
       payload.message || `Backend returned HTTP ${response.status}`,
     );
   }
+
   return response.json();
 };
 
@@ -102,86 +109,173 @@ const config = {
     mediaroot: MEDIA_ROOT,
     allow_origin: "*",
   },
+  // NodeMediaServer v4 performs this check synchronously inside
+  // BroadcastServer.postPublish *before* assigning the publisher. This is the
+  // hard gate that prevents arbitrary/guessed RTMP paths from briefly owning a
+  // broadcast. The per-user registry below remains the revocation layer.
+  auth: {
+    publish: true,
+    secret: process.env.MEDIA_PUBLISH_AUTH_SECRET,
+  },
 };
 
-const configureMediaServer = () => {
+const configureMediaServer = async () => {
+  // NodeMediaServer v4 event callbacks are synchronous, but `prePublish` is a
+  // notification hook rather than a cancellable authorization hook. The hard
+  // publish gate is NMS native signed publish auth (config.auth.publish); this
+  // in-memory registry is the per-user authorization/revocation layer and must
+  // therefore stay synchronous inside the event callbacks.
+  await startStreamKeyRegistry();
+
   const nms = new NodeMediaServer(config);
   nms.run();
 
-  const rejectSession = (sessionId) => {
-    if (
-      sessionId &&
-      typeof sessionId === "object" &&
-      typeof sessionId.reject === "function"
-    ) {
-      sessionId.reject();
-      return;
+  const closeSession = (session, reason) => {
+    if (session && typeof session.close === "function") {
+      console.warn(`[media-service] Closing RTMP session: ${reason}`);
+      session.close();
+      return true;
     }
-    nms.getSession?.(sessionId)?.reject?.();
+
+    console.error(
+      `[media-service] Could not close RTMP session (${reason}); session.close() is unavailable`,
+    );
+    return false;
   };
 
   startHlsUploader(path.join(MEDIA_ROOT, "live"));
 
-  nms.on("prePublish", async (id, StreamPath, args) => {
-    const streamPath = typeof id === "object" ? id.streamPath : StreamPath;
-    const streamKey = extractStreamKey(streamPath);
-    console.log("Stream started:", streamPath);
+  // Defense in depth for bans/key revocation: even if the backend control-plane
+  // request cannot reach this process, the registry refresh removes the old
+  // key and this sweep closes any publisher that is no longer authorized.
+  const authorizationSweep = setInterval(() => {
+    for (const [streamPath, sessionRef] of reservedPublishPaths) {
+      const streamKey = extractStreamKey(streamPath);
+      if (streamKey && getStreamKeyOwner(streamKey)) continue;
+      closeSession(sessionRef, "stream credential was revoked");
+    }
+  }, STREAM_AUTH_SWEEP_INTERVAL_MS);
+  authorizationSweep.unref?.();
 
-    if (!streamPath || !streamKey) {
-      console.warn("Rejected malformed stream path:", streamPath);
-      rejectSession(id);
+  let heartbeatInFlight = false;
+
+  const mediaHeartbeatTimer = setInterval(() => {
+    if (heartbeatInFlight || activeStreams.size === 0) {
       return;
     }
-    const user = await User.findOne({ streamKey });
-    if (!user) {
-      console.log("Invalid stream key:", streamKey);
-      rejectSession(id);
-      return;
-    }
-    console.log(`Valid stream key for user: ${user.username || user._id}`);
-    cancelScheduledCleanup(streamKey);
 
+    heartbeatInFlight = true;
+    
+    const streams = Array.from(activeStreams.values());
+
+    void Promise.allSettled(
+      streams.map(({ streamKey, playbackId }) =>
+        notifyBackend("heartbeat", streamKey, {
+          playbackId,
+        }),
+      ),
+    )
+      .then((results) => {
+        const failed = results.filter((result) => result.status === "rejected");
+
+        if (failed.length > 0) {
+          console.warn(
+            `[media-service] ${failed.length}/${results.length} stream heartbeat(s) failed`,
+          );
+        }
+      })
+      .finally(() => {
+        heartbeatInFlight = false;
+      });
+  }, MEDIA_HEARTBEAT_INTERVAL_MS);
+
+  mediaHeartbeatTimer.unref?.();
+
+  const stopFfmpeg = (streamPath) => {
+    const ffmpeg = ffmpegProcesses.get(streamPath);
+    if (!ffmpeg) return;
+    ffmpegProcesses.delete(streamPath);
+    if (!ffmpeg.killed) ffmpeg.kill("SIGTERM");
+  };
+
+  const releaseReservation = (streamPath, sessionRef) => {
+    releasePublisherReservation(reservedPublishPaths, streamPath, sessionRef);
+    if (publisherSessions.get(streamPath) === sessionRef) {
+      publisherSessions.delete(streamPath);
+    }
+  };
+
+  const startTranscode = async (streamPath, streamKey, sessionRef) => {
+    let backendPayload;
     try {
-      await notifyBackend("publish", streamKey);
+      backendPayload = await notifyBackend("publish", streamKey);
     } catch (error) {
       console.error(
         `[media-service] Could not register live stream: ${error.message}`,
       );
-      rejectSession(id);
+      releaseReservation(streamPath, sessionRef);
+      closeSession(sessionRef, "backend rejected publish");
       return;
     }
 
-    const folderPath = path.join(MEDIA_ROOT, "live", streamKey);
+    const playbackId = String(backendPayload?.playbackId || "").trim();
+    if (!/^[a-zA-Z0-9-]{16,128}$/.test(playbackId)) {
+      console.error("[media-service] Backend returned an invalid playbackId");
+      releaseReservation(streamPath, sessionRef);
+      closeSession(sessionRef, "invalid playback id");
+      await notifyBackend("unpublish", streamKey).catch(() => {});
+      return;
+    }
+
+    // OBS may have disconnected while the backend call was in flight.
+    if (
+      reservedPublishPaths.get(streamPath) !== sessionRef ||
+      forcedTerminationPaths.has(streamPath)
+    ) {
+      if (!forcedTerminationPaths.has(streamPath)) {
+        await notifyBackend("unpublish", streamKey).catch(() => {});
+      }
+      scheduleHlsCleanup(playbackId);
+      return;
+    }
+
+    activeStreams.set(streamPath, { streamKey, playbackId });
+    cancelScheduledCleanup(playbackId);
+
+    const folderPath = getHlsFolderPath(playbackId);
     try {
-      await removeHlsFolder(streamKey);
+      await removeHlsFolder(playbackId);
+      mkdirSync(path.join(folderPath, "1080p"), { recursive: true });
+      mkdirSync(path.join(folderPath, "720p"), { recursive: true });
+      mkdirSync(path.join(folderPath, "480p"), { recursive: true });
     } catch (error) {
       console.error(
-        `[media-service] Failed to reset old HLS files for ${streamKey}:`,
+        `[media-service] Failed to prepare HLS files for ${playbackId}:`,
         error.message,
       );
-
+      activeStreams.delete(streamPath);
+      releaseReservation(streamPath, sessionRef);
+      closeSession(sessionRef, "HLS directory setup failed");
       await notifyBackend("unpublish", streamKey).catch(() => {});
-      rejectSession(id);
       return;
     }
-    mkdirSync(folderPath, { recursive: true });
-    mkdirSync(`${folderPath}/1080p`, { recursive: true });
-    mkdirSync(`${folderPath}/720p`, { recursive: true });
-    mkdirSync(`${folderPath}/480p`, { recursive: true });
 
     const masterPlaylist = `#EXTM3U
-#EXT-X-STREAM-INF:BANDWIDTH=5000000,RESOLUTION=1920x1080
+#EXT-X-VERSION:3
+#EXT-X-STREAM-INF:BANDWIDTH=5192000,RESOLUTION=1920x1080,CODECS="avc1.64002A,mp4a.40.2"
 1080p/index.m3u8
-#EXT-X-STREAM-INF:BANDWIDTH=2500000,RESOLUTION=1280x720
+#EXT-X-STREAM-INF:BANDWIDTH=2628000,RESOLUTION=1280x720,CODECS="avc1.640020,mp4a.40.2"
 720p/index.m3u8
-#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=854x480
+#EXT-X-STREAM-INF:BANDWIDTH=1096000,RESOLUTION=854x480,CODECS="avc1.64001F,mp4a.40.2"
 480p/index.m3u8`;
 
-    writeFileSync(`${folderPath}/index.m3u8`, masterPlaylist);
-    console.log("Master playlist created at:", `${folderPath}/index.m3u8`);
+    writeFileSync(path.join(folderPath, "index.m3u8"), masterPlaylist);
+    console.log(
+      "Master playlist created at:",
+      path.join(folderPath, "index.m3u8"),
+    );
 
-    const existingProcess = ffmpegProcesses.get(streamPath);
-    if (existingProcess) existingProcess.kill("SIGTERM");
+    stopFfmpeg(streamPath);
 
     const ffmpeg = spawn("ffmpeg", [
       "-hide_banner",
@@ -190,13 +284,15 @@ const configureMediaServer = () => {
       "-i",
       `rtmp://localhost:${RTMP_PORT}${streamPath}`,
 
-      // ── 1080p ──
+      // 1080p
       "-map",
       "0:v",
       "-map",
       "0:a?",
       "-c:v",
       "libx264",
+      "-pix_fmt",
+      "yuv420p",
       "-preset",
       "veryfast",
       "-b:v",
@@ -214,16 +310,18 @@ const configureMediaServer = () => {
       "-hls_list_size",
       "3",
       "-hls_flags",
-      "delete_segments",
-      `${folderPath}/1080p/index.m3u8`,
+      "delete_segments+independent_segments",
+      path.join(folderPath, "1080p/index.m3u8"),
 
-      // ── 720p ──
+      // 720p
       "-map",
       "0:v",
       "-map",
       "0:a?",
       "-c:v",
       "libx264",
+      "-pix_fmt",
+      "yuv420p",
       "-preset",
       "veryfast",
       "-b:v",
@@ -241,16 +339,18 @@ const configureMediaServer = () => {
       "-hls_list_size",
       "3",
       "-hls_flags",
-      "delete_segments",
-      `${folderPath}/720p/index.m3u8`,
+      "delete_segments+independent_segments",
+      path.join(folderPath, "720p/index.m3u8"),
 
-      // ── 480p ──
+      // 480p
       "-map",
       "0:v",
       "-map",
       "0:a?",
       "-c:v",
       "libx264",
+      "-pix_fmt",
+      "yuv420p",
       "-preset",
       "veryfast",
       "-b:v",
@@ -268,98 +368,161 @@ const configureMediaServer = () => {
       "-hls_list_size",
       "3",
       "-hls_flags",
-      "delete_segments",
-      `${folderPath}/480p/index.m3u8`,
+      "delete_segments+independent_segments",
+      path.join(folderPath, "480p/index.m3u8"),
     ]);
 
     ffmpeg.stderr.on("data", (data) => {
-      console.warn(`[ffmpeg ${streamKey}]`, data.toString().trim());
+      const message = data.toString().trim();
+      if (message) console.warn(`[ffmpeg ${playbackId}]`, message);
     });
 
     ffmpeg.on("error", (error) => {
-      console.error(`[ffmpeg ${streamKey}] failed to start:`, error.message);
+      console.error(`[ffmpeg ${playbackId}] failed to start:`, error.message);
       ffmpegProcesses.delete(streamPath);
-      void notifyBackend("unpublish", streamKey).catch((notifyError) =>
-        console.error(
-          "[media-service] Failed to roll back stream state:",
-          notifyError.message,
-        ),
-      );
+      closeSession(sessionRef, "ffmpeg failed to start");
     });
 
     ffmpeg.on("close", (code, signal) => {
-      console.log("ffmpeg closed:", { code, signal });
-      ffmpegProcesses.delete(streamPath);
-      if (typeof code === "number" && code !== 0) {
-        void notifyBackend("unpublish", streamKey).catch((notifyError) =>
-          console.error(
-            "[media-service] Failed to mark failed transcode offline:",
-            notifyError.message,
-          ),
-        );
+      console.log("ffmpeg closed:", { playbackId, code, signal });
+      if (ffmpegProcesses.get(streamPath) === ffmpeg) {
+        ffmpegProcesses.delete(streamPath);
+      }
+
+      if (
+        typeof code === "number" &&
+        code !== 0 &&
+        !forcedTerminationPaths.has(streamPath)
+      ) {
+        // Stop ingest as well. `donePublish` owns the single backend
+        // unpublish transition, avoiding duplicate/racing state changes.
+        closeSession(sessionRef, "ffmpeg exited unexpectedly");
       }
     });
 
     ffmpegProcesses.set(streamPath, ffmpeg);
-    console.log("ffmpeg started for:", streamPath);
-  });
+    console.log("ffmpeg started for:", streamPath, "->", playbackId);
+  };
 
-  nms.on("donePublish", async (id, StreamPath, args) => {
-    const streamPath = typeof id === "object" ? id.streamPath : StreamPath;
-
-    console.log("Stream ended:", streamPath);
-
+  nms.on("prePublish", (session) => {
+    const streamPath = session?.streamPath;
     const streamKey = extractStreamKey(streamPath);
 
-    if (!streamKey) {
-      console.warn(
-        "[media-service] Could not extract stream key during donePublish:",
-        streamPath,
-      );
+    // NodeMediaServer v4 emits prePublish *before* its native signature check.
+    // Never reserve a path here: a client with an unsigned/expired credential
+    // could otherwise leave an application-level reservation behind even
+    // though NMS rejects the publish immediately afterwards.
+    if (!streamPath || !streamKey) {
+      closeSession(session, "malformed stream path");
       return;
     }
 
-    const ffmpeg = ffmpegProcesses.get(streamPath);
+    if (!getStreamKeyOwner(streamKey)) {
+      console.warn("[media-service] Invalid or inactive stream key");
+      closeSession(session, "invalid stream key");
+    }
+  });
 
-    if (ffmpeg) {
-      ffmpeg.kill("SIGTERM");
-      ffmpegProcesses.delete(streamPath);
-
-      console.log("ffmpeg stopped for:", streamPath);
+  nms.on("postPublish", (session) => {
+    const streamPath = session?.streamPath;
+    const streamKey = extractStreamKey(streamPath);
+    if (!streamPath || !streamKey) {
+      closeSession(session, "publish path was malformed");
+      return;
     }
 
-    try {
-      await notifyBackend("unpublish", streamKey);
+    // postPublish is emitted only after NMS native publish authentication has
+    // succeeded. Re-check the live registry here so a signed credential that
+    // was revoked/rotated cannot start transcoding.
+    const owner = getStreamKeyOwner(streamKey);
+    if (!owner) {
+      closeSession(session, "stream credential is no longer active");
+      return;
+    }
 
-      console.log(`[media-service] Backend marked ${streamKey} offline`);
-    } catch (error) {
+    // NMS emits postPublish before it performs its own duplicate-publisher
+    // assignment check. Track the exact session object so a second publisher
+    // can never piggyback on the first publisher's reservation.
+    if (!tryReservePublisher(reservedPublishPaths, streamPath, session)) {
+      closeSession(session, "duplicate publisher");
+      return;
+    }
+    publisherSessions.set(streamPath, session);
+    console.log(`Valid signed stream credential for user: ${owner.username}`);
+    void startTranscode(streamPath, streamKey, session);
+  });
+
+  nms.on("donePublish", (session) => {
+    const streamPath = session?.streamPath;
+    const streamKey = extractStreamKey(streamPath);
+    const active = activeStreams.get(streamPath);
+    const forced = forcedTerminationPaths.has(streamPath);
+
+    releaseReservation(streamPath, session);
+    forcedTerminationPaths.delete(streamPath);
+    stopFfmpeg(streamPath);
+    activeStreams.delete(streamPath);
+
+    if (active?.playbackId) scheduleHlsCleanup(active.playbackId);
+
+    if (!streamKey || forced) return;
+
+    void notifyBackend("unpublish", streamKey).catch((error) => {
       console.error(
         "[media-service] Failed to mark stream offline:",
         error.message,
       );
-    } finally {
-      scheduleHlsCleanup(streamKey);
-    }
+    });
   });
 
+  const terminateByStreamKey = async (streamKey) => {
+    const streamPath = `/live/${streamKey}`;
+    const hadPublisher =
+      reservedPublishPaths.has(streamPath) || activeStreams.has(streamPath);
+    const active = activeStreams.get(streamPath);
+
+    forcedTerminationPaths.add(streamPath);
+    reservedPublishPaths.delete(streamPath);
+    stopFfmpeg(streamPath);
+    if (active?.playbackId) scheduleHlsCleanup(active.playbackId);
+
+    const sessionRef = publisherSessions.get(streamPath);
+    const closed = sessionRef
+      ? closeSession(sessionRef, "terminated by backend control plane")
+      : false;
+
+    if (!hadPublisher) forcedTerminationPaths.delete(streamPath);
+
+    return {
+      terminated: hadPublisher,
+      sessionClosed: closed,
+      playbackId: active?.playbackId || null,
+    };
+  };
+
   console.log(
-    `[media-service] RTMP ingest on :${RTMP_PORT}, HLS HTTP on :${HTTP_PORT}`,
+    `[media-service] RTMP ingest on :${RTMP_PORT}, NMS HTTP on :${HTTP_PORT}`,
   );
 
   return {
-    stop: () => {
+    terminateByStreamKey,
+    stop: async () => {
       for (const process of ffmpegProcesses.values()) {
-        process.kill("SIGTERM");
+        if (!process.killed) process.kill("SIGTERM");
       }
-
       ffmpegProcesses.clear();
 
-      for (const timer of hlsCleanupTimers.values()) {
-        clearTimeout(timer);
-      }
+      clearInterval(authorizationSweep);
+      clearInterval(mediaHeartbeatTimer);
 
+      for (const timer of hlsCleanupTimers.values()) clearTimeout(timer);
       hlsCleanupTimers.clear();
+      activeStreams.clear();
+      publisherSessions.clear();
+      reservedPublishPaths.clear();
+      forcedTerminationPaths.clear();
 
+      await stopStreamKeyRegistry();
       nms.stop?.();
     },
   };

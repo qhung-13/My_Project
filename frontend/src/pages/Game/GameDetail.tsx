@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useGetLiveStreamsQuery } from "../../store/api/streamApi";
 import { formatViewers, generateColor } from "../../utils/format";
 import type { Stream } from "../../types/index";
+import { getStreamUser } from "../../utils/streamUser";
 import "./GameDetail.css";
 
 const decodeCategory = (value?: string) => {
@@ -68,12 +69,10 @@ const GameDetail = () => {
       ) : streams.length > 0 ? (
         <div className="game-detail__grid">
           {streams.map((stream: Stream) => {
+            const streamUser = getStreamUser(stream.userId);
             const name =
-              typeof stream.userId === "object"
-                ? stream.userId?.displayName || stream.userId?.username
-                : "Unknown";
-            const avatar =
-              typeof stream.userId === "object" ? stream.userId.avatar : null;
+              streamUser?.displayName || streamUser?.username || "Unknown";
+            const avatar = streamUser?.avatar ?? null;
 
             return (
               <button

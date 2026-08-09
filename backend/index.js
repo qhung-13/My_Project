@@ -25,6 +25,9 @@ import {
 import createSocketServer from "./src/sockets/index.js";
 import { closeRedisClients } from "./src/config/redis.config.js";
 
+// Service
+import startStreamLivenessMonitor from "./src/service/streamLiveness.service.js";
+
 // Routes
 import userRoute from "./src/routes/UserRoute.route.js";
 import videoRoute from "./src/routes/VideoRoute.route.js";
@@ -121,10 +124,11 @@ app.get("/health", (_req, res) => {
 // ==========================================
 // Socket.IO (see ./src/sockets for handlers)
 // ==========================================
-const io = createSocketServer(httpServer, allowedOrigins);
-// Controllers (stream lifecycle, donations, moderation) publish realtime
-// events through req.app.get("io"). Keep a single shared Socket.IO instance.
-app.set("io", io);
+// Initialized after MongoDB/Redis health checks in start(). Routes can be
+// mounted before this because the HTTP server does not listen until startup
+// completes.
+let io = null;
+let stopStreamLivenessMonitor = null;
 
 // ==========================================
 // API Routes
@@ -197,6 +201,9 @@ app.use((err, req, res, next) => {
 const start = async () => {
   try {
     await connectDB();
+    io = await createSocketServer(httpServer, allowedOrigins);
+    app.set("io", io);
+    stopStreamLivenessMonitor = startStreamLivenessMonitor(io);
 
     httpServer.listen(port, () => {
       console.log(`Server is running on port ${port}...`);
@@ -224,10 +231,16 @@ const shutdown = async (signal) => {
   }, 5000);
 
   try {
+    stopStreamLivenessMonitor?.();
+    stopStreamLivenessMonitor = null;
     // Socket.IO owns the underlying HTTP server, so closing it drains both
     // realtime sockets and HTTP connections without racing two close calls.
-    await new Promise((resolve) => io.close(() => resolve()));
-    console.log("Socket.IO and HTTP server closed.");
+    if (io) {
+      await new Promise((resolve) => io.close(() => resolve()));
+      console.log("Socket.IO and HTTP server closed.");
+    } else {
+      await new Promise((resolve) => httpServer.close(() => resolve()));
+    }
 
     await closeRedisClients();
 

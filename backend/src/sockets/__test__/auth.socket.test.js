@@ -33,6 +33,28 @@ describe("socketAuth", () => {
     });
   });
 
+  test("rejects a valid JWT for a globally disabled account", (t, done) => {
+    t.mock.method(User, "findById", () => ({
+      select: async () => ({
+        _id: { toString: () => "user-1" },
+        username: "banned-viewer",
+        displayName: "Banned Viewer",
+        avatar: null,
+        isActive: false,
+      }),
+    }));
+    const token = jwt.sign({ userId: "user-1" }, process.env.JWT_SECRET);
+    const socket = makeSocket(`jwt=${token}`);
+
+    socketAuth(socket, (error) => {
+      assert.ok(error);
+      assert.equal(error.message, "ACCOUNT_DISABLED");
+      assert.equal(error.data?.code, "ACCOUNT_DISABLED");
+      assert.equal(socket.data.isAuthenticated, false);
+      done();
+    });
+  });
+
   test("treats missing cookie as anonymous, still calls next()", (t, done) => {
     const socket = makeSocket(undefined);
 

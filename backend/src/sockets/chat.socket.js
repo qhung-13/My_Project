@@ -29,6 +29,17 @@ const registerChatHandlers = (io, socket) => {
       .slice(0, 500);
     if (!streamId || !message || !isJoinedToStream(socket, streamId)) return;
 
+    // Guests may watch/react, but chat requires an authenticated account.
+    // This prevents a banned user from simply clearing the auth cookie and
+    // reconnecting anonymously to bypass account moderation.
+    if (!socket.data.isAuthenticated || !socket.data.userId) {
+      socket.emit("chat-blocked", {
+        reason: "authentication-required",
+        message: "Đăng nhập để tham gia trò chuyện.",
+      });
+      return;
+    }
+
     const now = Date.now();
     while (recentMessages.length && recentMessages[0] <= now - CHAT_WINDOW_MS) {
       recentMessages.shift();

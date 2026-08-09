@@ -56,6 +56,16 @@ export const adminApi = createApi({
       query: () => "/admin/streams",
       providesTags: ["AdminStreams"],
     }),
+    endStream: builder.mutation<
+      { message: string; idempotent?: boolean },
+      string
+    >({
+      query: (id) => ({
+        url: `/admin/streams/${id}/end`,
+        method: "PUT",
+      }),
+      invalidatesTags: ["AdminStreams", "AdminStats"],
+    }),
   }),
 });
 
@@ -67,4 +77,5 @@ export const {
   useGetAllVideosQuery,
   useDeleteVideoMutation,
   useGetAllStreamsQuery,
+  useEndStreamMutation,
 } = adminApi;

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { formatViewers } from "../../utils/format";
+import { getStreamUser } from "../../utils/streamUser";
 import "./WatchLive.css";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -92,10 +93,12 @@ const WatchLive = () => {
     window.scrollTo(0, 0);
   }, [id]);
 
+  const populatedStreamer = getStreamUser(currentStream?.userId);
   const streamerId =
-    typeof currentStream?.userId === "object"
-      ? currentStream.userId._id
-      : currentStream?.userId;
+    populatedStreamer?._id ||
+    (typeof currentStream?.userId === "string"
+      ? currentStream.userId
+      : undefined);
 
   const { data: streamerData } = useGetUserByIdQuery(streamerId!, {
     skip: !streamerId,
@@ -125,6 +128,10 @@ const WatchLive = () => {
   };
 
   const handleSendMessage = () => {
+    if (!authUser) {
+      setActionMessage("Vui lòng đăng nhập để tham gia chat.");
+      return;
+    }
     sendMessage(inputMessage);
     setInputMessage("");
   };
@@ -181,15 +188,10 @@ const WatchLive = () => {
     );
   }
 
+  const currentStreamUser = getStreamUser(currentStream.userId);
   const streamerName =
-    typeof currentStream.userId === "object"
-      ? currentStream.userId.displayName || currentStream.userId.username
-      : "Unknown";
-
-  const streamerAvatar =
-    typeof currentStream.userId === "object"
-      ? currentStream.userId.avatar
-      : null;
+    currentStreamUser?.displayName || currentStreamUser?.username || "Unknown";
+  const streamerAvatar = currentStreamUser?.avatar ?? null;
 
   const isOwnStream = streamerId === authUser?._id;
 
@@ -272,6 +274,7 @@ const WatchLive = () => {
           onInputChange={setInputMessage}
           onSend={handleSendMessage}
           isStreamer={isOwnStream}
+          isAuthenticated={Boolean(authUser)}
           currentUserId={authUser?._id}
           selectedUser={selectedUser}
           onSelectUser={selectUser}

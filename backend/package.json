@@ -11,7 +11,8 @@
     "dev": "npm run backend",
     "test": "node --test",
     "check": "node scripts/check-syntax.js",
-    "migrate:roles": "node scripts/migrate-legacy-roles.js"
+    "migrate:roles": "node scripts/migrate-legacy-roles.js",
+    "migrate:stream-security": "node scripts/migrate-stream-security.js"
   },
   "keywords": [],
   "author": "",

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store/store";
 import { updateCoins } from "../../../store/slices/authSlice";
@@ -26,6 +26,9 @@ const DonateModal = ({
   const [message, setMessage] = useState("");
   const [step, setStep] = useState<"donate" | "success">("donate");
   const [error, setError] = useState("");
+  const donationAttemptRef = useRef<{ payload: string; key: string } | null>(
+    null,
+  );
 
   const { user: authUser } = useSelector((state: RootState) => state.auth);
   const { data: balance } = useGetCoinBalanceQuery(undefined, {
@@ -59,11 +62,28 @@ const DonateModal = ({
     }
 
     try {
+      const normalizedMessage = message.trim();
+      const payloadFingerprint = JSON.stringify({
+        toUserId: streamerId,
+        coins,
+        message: normalizedMessage,
+      });
+      let attempt = donationAttemptRef.current;
+      if (attempt?.payload !== payloadFingerprint) {
+        attempt = {
+          payload: payloadFingerprint,
+          key: crypto.randomUUID(),
+        };
+        donationAttemptRef.current = attempt;
+      }
+
       const response = await donateCoins({
         toUserId: streamerId,
         coins,
-        message,
+        message: normalizedMessage,
+        idempotencyKey: attempt.key,
       }).unwrap();
+      donationAttemptRef.current = null;
       dispatch(updateCoins(Number(response.coins ?? 0)));
       setStep("success");
     } catch (err) {

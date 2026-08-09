@@ -19,7 +19,17 @@ const streamSchema = new mongoose.Schema(
     },
     category: { type: String, required: true },
     tags: [{ type: String }],
+    // Legacy ingest credential. Kept temporarily so old documents can be
+    // migrated, but never selected by normal queries or exposed publicly.
     streamKey: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    // Public, per-live-session playback identifier. This MUST be different
+    // from the OBS ingest key so viewers can never recover publish credentials
+    // from an HLS URL.
+    playbackId: {
       type: String,
       default: null,
     },
@@ -31,6 +41,11 @@ const streamSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    lastMediaHeartbeatAt: {
+      type: Date,
+      default: null,
+    },
+
     viewers: {
       type: Number,
       default: 0,
@@ -59,9 +74,19 @@ const streamSchema = new mongoose.Schema(
   },
 );
 
-streamSchema.index({ isLive: 1, viewers: -1 });
+streamSchema.index(
+  { playbackId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { playbackId: { $type: "string" } },
+  },
+);
+streamSchema.index({
+  isLive: 1,
+  lastMediaHeartbeatAt: 1,
+  viewers: -1,
+});
 streamSchema.index({ userId: 1 });
-streamSchema.index({ streamKey: 1, createdAt: -1 });
 streamSchema.index({ createdAt: -1 });
 
 const Stream = mongoose.model("Stream", streamSchema);

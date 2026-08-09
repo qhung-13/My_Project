@@ -7,6 +7,8 @@ import {
   KeyRound,
   Radio,
   RefreshCw,
+  Send,
+  Sparkles,
   Settings2,
   Users,
 } from "lucide-react";
@@ -20,6 +22,7 @@ import {
 import {
   useGetCurrentStreamQuery,
   useGetStreamAnalyticsQuery,
+  useAskCreatorCoachMutation,
 } from "../../store/api/streamApi";
 import type { Stream } from "../../types/index";
 import VideoPlayer from "../WatchLive/VideoPlayer/VideoPlayer";
@@ -64,6 +67,11 @@ const CreatorLive = () => {
   const [showKey, setShowKey] = useState(false);
   const [copied, setCopied] = useState<"server" | "key" | null>(null);
   const [actionError, setActionError] = useState("");
+  const [coachQuestion, setCoachQuestion] = useState(
+    "Dựa trên dữ liệu hiện tại, mình nên cải thiện lịch live và nội dung thế nào?",
+  );
+  const [coachAnswer, setCoachAnswer] = useState("");
+  const [coachError, setCoachError] = useState("");
   const copyTimerRef = useRef<number | null>(null);
 
   const {
@@ -97,6 +105,8 @@ const CreatorLive = () => {
 
   const [resetStreamKey, { isLoading: isResettingKey }] =
     useResetStreamKeyMutation();
+  const [askCreatorCoach, { isLoading: isCoachLoading }] =
+    useAskCreatorCoachMutation();
 
   const stream = currentData?.stream ?? null;
   const isLive = Boolean(stream?.isLive);
@@ -138,6 +148,22 @@ const CreatorLive = () => {
       const apiError = error as { data?: { message?: string } };
       setActionError(
         apiError.data?.message || "Không thể tạo stream key mới lúc này.",
+      );
+    }
+  };
+
+  const handleAskCoach = async () => {
+    const message = coachQuestion.trim();
+    if (!message) return;
+    setCoachError("");
+    try {
+      const response = await askCreatorCoach({ message }).unwrap();
+      setCoachAnswer(response.answer);
+    } catch (error) {
+      const apiError = error as { data?: { message?: string } };
+      setCoachError(
+        apiError.data?.message ||
+          "Creator Coach chưa sẵn sàng. Hãy kiểm tra agent-service và GOOGLE_API_KEY.",
       );
     }
   };
@@ -365,6 +391,49 @@ const CreatorLive = () => {
                 <strong>{analytics?.totalCoinsReceived ?? 0}</strong>
               </div>
             </div>
+          </section>
+
+          <section className="creator-live__coach-card">
+            <div className="creator-live__section-heading creator-live__section-heading--compact">
+              <div>
+                <span>AI insights</span>
+                <h2>Creator Coach</h2>
+              </div>
+              <Sparkles size={20} aria-hidden="true" />
+            </div>
+            <p className="creator-live__muted">
+              Coach chỉ đọc analytics của tài khoản hiện tại và không có quyền
+              moderation hay thay đổi dữ liệu.
+            </p>
+            <label className="creator-live__coach-field">
+              <span>Câu hỏi</span>
+              <textarea
+                value={coachQuestion}
+                onChange={(event) => setCoachQuestion(event.target.value)}
+                maxLength={1000}
+                rows={3}
+                placeholder="Ví dụ: Mình nên live khung giờ nào?"
+              />
+            </label>
+            <button
+              type="button"
+              className="creator-live__coach-submit"
+              onClick={() => void handleAskCoach()}
+              disabled={isCoachLoading || !coachQuestion.trim()}
+            >
+              <Send size={16} aria-hidden="true" />
+              {isCoachLoading ? "Đang phân tích…" : "Hỏi Creator Coach"}
+            </button>
+            {coachError && (
+              <p className="creator-live__coach-error" role="alert">
+                {coachError}
+              </p>
+            )}
+            {coachAnswer && (
+              <div className="creator-live__coach-answer" aria-live="polite">
+                {coachAnswer}
+              </div>
+            )}
           </section>
         </aside>
       </div>

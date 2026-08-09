@@ -16,6 +16,7 @@ interface ChatPanelProps {
   onInputChange: (value: string) => void;
   onSend: () => void;
   isStreamer: boolean;
+  isAuthenticated: boolean;
   currentUserId?: string;
   selectedUser: SelectedUser | null;
   onSelectUser: (user: SelectedUser) => void;
@@ -34,6 +35,7 @@ const ChatPanel = ({
   onInputChange,
   onSend,
   isStreamer,
+  isAuthenticated,
   currentUserId,
   selectedUser,
   onSelectUser,
@@ -178,20 +180,22 @@ const ChatPanel = ({
             id="live-chat-message"
             type="text"
             placeholder={
-              isBlocked
-                ? "Bạn hiện không thể nhắn tin"
-                : "Hãy nói điều gì đó..."
+              !isAuthenticated
+                ? "Đăng nhập để tham gia trò chuyện"
+                : isBlocked
+                  ? "Bạn hiện không thể nhắn tin"
+                  : "Hãy nói điều gì đó..."
             }
             value={inputMessage}
             onChange={(event) => onInputChange(event.target.value)}
             maxLength={500}
-            disabled={isBlocked}
+            disabled={isBlocked || !isAuthenticated}
             autoComplete="off"
           />
           <button
             type="submit"
             className="chat-panel__send"
-            disabled={isBlocked || !inputMessage.trim()}
+            disabled={!isAuthenticated || isBlocked || !inputMessage.trim()}
             aria-label="Gửi tin nhắn"
           >
             <Send size={14} aria-hidden="true" />

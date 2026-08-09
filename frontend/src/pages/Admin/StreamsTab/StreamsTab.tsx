@@ -3,6 +3,8 @@ import { formatViewers } from "../../../utils/format";
 
 interface StreamsTabProps {
   streams: AdminStream[] | undefined;
+  pendingAction: string | null;
+  onEndStream: (id: string) => void;
 }
 
 const safeDate = (value: string) => {
@@ -10,7 +12,11 @@ const safeDate = (value: string) => {
   return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString("vi-VN");
 };
 
-const StreamsTab = ({ streams }: StreamsTabProps) => (
+const StreamsTab = ({
+  streams,
+  pendingAction,
+  onEndStream,
+}: StreamsTabProps) => (
   <section>
     <h2 className="admin__title">Streams ({streams?.length ?? 0})</h2>
     <div className="admin__table-wrap">
@@ -23,6 +29,7 @@ const StreamsTab = ({ streams }: StreamsTabProps) => (
             <th>Viewers</th>
             <th>Status</th>
             <th>Started</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
@@ -40,11 +47,27 @@ const StreamsTab = ({ streams }: StreamsTabProps) => (
                 </span>
               </td>
               <td>{safeDate(stream.createdAt)}</td>
+              <td>
+                {stream.isLive ? (
+                  <button
+                    type="button"
+                    className="admin__btn admin__btn--danger"
+                    disabled={pendingAction === `end-stream:${stream._id}`}
+                    onClick={() => onEndStream(stream._id)}
+                  >
+                    {pendingAction === `end-stream:${stream._id}`
+                      ? "Đang dừng..."
+                      : "End stream"}
+                  </button>
+                ) : (
+                  "—"
+                )}
+              </td>
             </tr>
           ))}
           {streams?.length === 0 && (
             <tr>
-              <td colSpan={6} className="admin__empty">
+              <td colSpan={7} className="admin__empty">
                 Không có stream.
               </td>
             </tr>

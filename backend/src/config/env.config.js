@@ -1,4 +1,9 @@
-const REQUIRED_ENV_VARS = ["MONGO_URI", "JWT_SECRET", "MEDIA_SERVICE_SECRET"];
+const REQUIRED_ENV_VARS = [
+  "MONGO_URI",
+  "JWT_SECRET",
+  "MEDIA_SERVICE_SECRET",
+  "MEDIA_PUBLISH_AUTH_SECRET",
+];
 
 export const assertRequiredEnv = () => {
   const missing = REQUIRED_ENV_VARS.filter((key) => !process.env[key]?.trim());
@@ -12,6 +17,11 @@ export const assertRequiredEnv = () => {
   }
   if (process.env.MEDIA_SERVICE_SECRET?.length < 32) {
     throw new Error("MEDIA_SERVICE_SECRET must contain at least 32 characters");
+  }
+  if (process.env.MEDIA_PUBLISH_AUTH_SECRET?.length < 32) {
+    throw new Error(
+      "MEDIA_PUBLISH_AUTH_SECRET must contain at least 32 characters",
+    );
   }
   if (
     process.env.AGENT_SERVICE_SECRET &&

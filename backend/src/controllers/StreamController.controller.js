@@ -2,14 +2,16 @@ import mongoose from "mongoose";
 import { v4 as uuidv4 } from "uuid";
 import Stream from "../models/Stream.model.js";
 import User from "../models/User.model.js";
-import Donation from "../models/Donation.model.js";
 import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
 import { createNotification } from "./NotificationController.controller.js";
 import {
   clearViewersForStream,
   getViewersForStream,
 } from "../sockets/presence.store.js";
-import buildHlsUrl from "../utils/hlsUrl.js";
+import terminateMediaStream from "../utils/mediaControl.js";
+import serializePublicStream from "../utils/streamPayload.js";
+import buildStreamAnalytics from "../utils/streamAnalytics.js";
+import { getFreshLiveQuery } from "../utils/streamLiveness.js";
 
 const clampPagination = (query) => {
   const page = Math.max(1, Number.parseInt(query.page, 10) || 1);
@@ -27,13 +29,7 @@ const cleanTags = (tags) => {
     .map((tag) => tag.slice(0, 30));
 };
 
-const serializeStream = (stream) => {
-  const object = stream.toObject ? stream.toObject() : stream;
-  return {
-    ...object,
-    hlsUrl: object.isLive ? buildHlsUrl(object.streamKey) : null,
-  };
-};
+const serializeStream = serializePublicStream;
 
 const startStream = asyncHandler(async (req, res) => {
   const title = String(req.body.title || "").trim();
@@ -52,7 +48,7 @@ const startStream = asyncHandler(async (req, res) => {
     throw new Error("You are already streaming");
   }
 
-  const user = await User.findById(userId);
+  const user = await User.findById(userId).select("+streamKey");
   if (!user || !user.isActive) {
     res.status(404);
     throw new Error("User not found");
@@ -66,7 +62,6 @@ const startStream = asyncHandler(async (req, res) => {
   // service promotes this draft only after OBS has successfully published.
   let stream = await Stream.findOne({
     userId,
-    streamKey: user.streamKey,
     isLive: false,
     isScheduled: false,
     startedAt: null,
@@ -78,7 +73,6 @@ const startStream = asyncHandler(async (req, res) => {
     description: description.slice(0, 1000),
     category: category.slice(0, 60),
     tags: cleanTags(req.body.tags),
-    streamKey: user.streamKey,
     isLive: false,
     isScheduled: false,
     startedAt: null,
@@ -126,17 +120,25 @@ const streamPublished = asyncHandler(async (req, res) => {
     throw new Error("Streamer not found");
   }
 
-  const alreadyLive = await Stream.findOne({ userId: user._id, isLive: true });
+  const alreadyLive = await Stream.findOne({
+    userId: user._id,
+    ...getFreshLiveQuery(),
+  });
   if (alreadyLive) {
-    return res
-      .status(200)
-      .json({ stream: serializeStream(alreadyLive), idempotent: true });
+    if (!alreadyLive.playbackId) {
+      alreadyLive.playbackId = uuidv4();
+      await alreadyLive.save();
+    }
+    return res.status(200).json({
+      stream: serializeStream(alreadyLive),
+      playbackId: alreadyLive.playbackId,
+      idempotent: true,
+    });
   }
 
   const now = new Date();
   let stream = await Stream.findOne({
     userId: user._id,
-    streamKey,
     isLive: false,
     isScheduled: false,
     startedAt: null,
@@ -149,15 +151,18 @@ const streamPublished = asyncHandler(async (req, res) => {
       title: `${user.displayName || user.username}'s live stream`,
       description: "",
       category: "Other",
-      streamKey,
+      playbackId: uuidv4(),
       isLive: true,
       startedAt: now,
+      lastMediaHeartbeatAt: now,
     });
   } else {
     stream.isLive = true;
+    stream.playbackId = uuidv4();
     stream.startedAt = now;
     stream.endedAt = null;
     stream.viewers = 0;
+    stream.lastMediaHeartbeatAt = now;
     await stream.save();
   }
 
@@ -167,16 +172,24 @@ const streamPublished = asyncHandler(async (req, res) => {
 
   await notifyFollowersStreamStarted(user, stream);
   req.app.get("io")?.emit("stream-started", serializeStream(stream));
-  return res.status(200).json({ stream: serializeStream(stream) });
+  // playbackId is returned only to the authenticated media-service callback.
+  // Public stream APIs receive only the derived hlsUrl.
+  return res.status(200).json({
+    stream: serializeStream(stream),
+    playbackId: stream.playbackId,
+  });
 });
 
 const finishStream = async ({ stream, userId, io }) => {
   stream.isLive = false;
   stream.viewers = 0;
   stream.endedAt = new Date();
+  stream.lastMediaHeartbeatAt = null;
   await stream.save();
   await clearViewersForStream(stream._id.toString());
   await User.findByIdAndUpdate(userId, { isLive: false });
+  io?.to(`stream:${stream._id}`).emit("viewer-count", 0);
+  io?.to(`stream:${stream._id}`).emit("viewer-list", []);
   io?.to(`stream:${stream._id}`).emit("stream-ended", {
     streamId: stream._id,
     endedAt: stream.endedAt,
@@ -207,11 +220,66 @@ const streamUnpublished = asyncHandler(async (req, res) => {
   return res.status(200).json({ message: "Stream ended successfully" });
 });
 
+const streamHeartbeat = asyncHandler(async (req, res) => {
+  const streamKey = String(req.body.streamKey || "").trim();
+
+  const playbackId = String(req.body.playbackId || "").trim();
+
+  if (!/^[a-zA-Z0-9-]{16,128}$/.test(streamKey)) {
+    res.status(400);
+    throw new Error("Invalid stream key");
+  }
+
+  if (!/^[a-zA-Z0-9-]{16,128}$/.test(playbackId)) {
+    res.status(400);
+    throw new Error("Invalid playback id");
+  }
+
+  const user = await User.findOne({
+    streamKey,
+    isActive: true,
+  }).select("_id");
+
+  if (!user) {
+    res.status(404);
+    throw new Error("Streamer credential is no longer active");
+  }
+
+  const result = await Stream.updateOne(
+    {
+      userId: user._id,
+      playbackId,
+      isLive: true,
+    },
+    {
+      $set: {
+        lastMediaHeartbeatAt: new Date(),
+      },
+    },
+  );
+
+  if (result.matchedCount === 0) {
+    return res.status(409).json({
+      message: "No matching active stream session",
+    });
+  }
+
+  return res.status(204).end();
+});
+
 const endStream = asyncHandler(async (req, res) => {
   const stream = await Stream.findOne({ userId: req.user._id, isLive: true });
   if (!stream) {
     res.status(404);
     throw new Error("No active stream found");
+  }
+
+  const user = await User.findById(req.user._id).select("+streamKey");
+  if (user?.streamKey) {
+    // Stop ingest/transcoding first. The media endpoint suppresses its normal
+    // unpublish callback so this request remains the single owner of the DB
+    // transition to offline.
+    await terminateMediaStream(user.streamKey);
   }
 
   await finishStream({ stream, userId: req.user._id, io: req.app.get("io") });
@@ -243,13 +311,14 @@ const getCurrentStream = asyncHandler(async (req, res) => {
 
 const getLiveStreams = asyncHandler(async (req, res) => {
   const { page, limit, skip } = clampPagination(req.query);
+  const liveFilter = getFreshLiveQuery();
   const [streams, total] = await Promise.all([
-    Stream.find({ isLive: true })
+    Stream.find(liveFilter)
       .populate("userId", "username displayName avatar")
       .sort({ viewers: -1, startedAt: -1 })
       .skip(skip)
       .limit(limit),
-    Stream.countDocuments({ isLive: true }),
+    Stream.countDocuments(liveFilter),
   ]);
 
   const totalPages = Math.ceil(total / limit);
@@ -439,78 +508,14 @@ const getStreamAnalytics = asyncHandler(async (req, res) => {
     throw new Error("Not authorized to view these analytics");
   }
 
-  const streams = await Stream.find({ userId })
-    .sort({ createdAt: -1 })
-    .limit(100);
-  const completedStreams = streams.filter(
-    (stream) => stream.startedAt && stream.endedAt,
-  );
-  const totalHours = completedStreams.reduce(
-    (sum, stream) =>
-      sum + Math.max(0, (stream.endedAt - stream.startedAt) / 3_600_000),
-    0,
-  );
-  const avgViewers = streams.length
-    ? Math.round(
-        streams.reduce((sum, stream) => sum + (stream.peakViewers || 0), 0) /
-          streams.length,
-      )
-    : 0;
-  const peakViewers = streams.reduce(
-    (max, stream) => Math.max(max, stream.peakViewers || 0),
-    0,
-  );
-  const viewerHistory = streams
-    .slice(0, 10)
-    .reverse()
-    .map((stream) => ({
-      date: new Date(stream.startedAt || stream.createdAt).toLocaleDateString(
-        "vi-VN",
-      ),
-      viewers: stream.peakViewers || 0,
-      duration:
-        stream.startedAt && stream.endedAt
-          ? Math.round(
-              Math.max(0, (stream.endedAt - stream.startedAt) / 60_000),
-            )
-          : 0,
-    }));
-  const donationTotals = await Donation.aggregate([
-    {
-      $match: {
-        toUserId: new mongoose.Types.ObjectId(userId),
-        status: "completed",
-      },
-    },
-    { $group: { _id: null, total: { $sum: "$coins" } } },
-  ]);
-
-  res.status(200).json({
-    totalStreams: streams.length,
-    totalHours: Math.round(totalHours * 10) / 10,
-    avgViewers,
-    peakViewers,
-    totalCoinsReceived: donationTotals[0]?.total || 0,
-    viewerHistory,
-    // Raw, bounded history for the trusted scheduler agent. Keeping this
-    // in the same response avoids a second analytics endpoint while the
-    // browser dashboard can simply ignore the extra property.
-    streams: streams.map((stream) => ({
-      _id: stream._id,
-      title: stream.title,
-      category: stream.category,
-      startedAt: stream.startedAt || stream.createdAt,
-      endedAt: stream.endedAt || null,
-      peakViewers: stream.peakViewers || 0,
-      viewers: stream.viewers || 0,
-    })),
-  });
+  res.status(200).json(await buildStreamAnalytics(userId));
 });
 
 export {
   startStream,
   streamPublished,
   streamUnpublished,
+  streamHeartbeat,
   endStream,
   getLiveStreams,
   getCurrentStream,

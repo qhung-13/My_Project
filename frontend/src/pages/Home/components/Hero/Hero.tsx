@@ -2,6 +2,7 @@ import { Play } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Stream } from "../../../../types/index";
 import { formatViewers } from "../../../../utils/format";
+import { getStreamUser } from "../../../../utils/streamUser";
 import "./Hero.css";
 
 const Hero = ({ streams }: { streams: Stream[] }) => {
@@ -10,10 +11,9 @@ const Hero = ({ streams }: { streams: Stream[] }) => {
 
   if (!featuredStream) return null;
 
-  const user =
-    typeof featuredStream.userId !== "string" ? featuredStream.userId : null;
-
-  const streamerName = user?.displayName || user?.username || "Streamer";
+  const streamUser = getStreamUser(featuredStream.userId);
+  const streamerName =
+    streamUser?.displayName || streamUser?.username || "Streamer";
 
   return (
     <section className="hero" aria-label="Livestream nổi bật">
@@ -38,8 +38,8 @@ const Hero = ({ streams }: { streams: Stream[] }) => {
         <span className="hero__overlay">
           <span className="hero__streamer">
             <span className="hero__avatar">
-              {user?.avatar ? (
-                <img src={user.avatar} alt="" />
+              {streamUser?.avatar ? (
+                <img src={streamUser.avatar} alt="" />
               ) : (
                 streamerName.slice(0, 2).toUpperCase()
               )}

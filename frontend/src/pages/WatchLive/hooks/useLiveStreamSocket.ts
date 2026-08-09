@@ -122,7 +122,7 @@ export function useLiveStreamSocket(
       retryAfterSeconds,
       message,
     }: {
-      reason?: "rate-limit" | "timeout" | "ban";
+      reason?: "rate-limit" | "timeout" | "ban" | "authentication-required";
       retryAfterSeconds?: number;
       message: string;
     }) => {

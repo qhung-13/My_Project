@@ -173,6 +173,12 @@ const donateCoins = asyncHandler(async (req, res) => {
     .trim()
     .slice(0, 200);
   const fromUserId = req.user._id;
+  const idempotencyKey = String(req.get("x-idempotency-key") || "").trim();
+
+  if (!/^[A-Za-z0-9._:-]{16,128}$/.test(idempotencyKey)) {
+    res.status(400);
+    throw new Error("A valid idempotency key is required");
+  }
 
   if (!mongoose.isValidObjectId(toUserId)) {
     res.status(400);
@@ -185,6 +191,28 @@ const donateCoins = asyncHandler(async (req, res) => {
   if (fromUserId.toString() === toUserId) {
     res.status(400);
     throw new Error("Cannot donate to yourself");
+  }
+
+  const existingDonation = await Donation.findOne({
+    fromUserId,
+    idempotencyKey,
+  });
+  if (existingDonation) {
+    if (
+      existingDonation.toUserId.toString() !== toUserId ||
+      existingDonation.coins !== coins ||
+      existingDonation.message !== message
+    ) {
+      res.status(409);
+      throw new Error("Idempotency key was already used for another donation");
+    }
+
+    const currentSender = await User.findById(fromUserId).select("coins");
+    return res.status(200).json({
+      message: "Donation already completed",
+      coins: currentSender?.coins ?? 0,
+      idempotent: true,
+    });
   }
 
   const session = await mongoose.startSession();
@@ -221,10 +249,43 @@ const donateCoins = asyncHandler(async (req, res) => {
       );
 
       [donation] = await Donation.create(
-        [{ fromUserId, toUserId, coins, message, status: "completed" }],
+        [
+          {
+            fromUserId,
+            toUserId,
+            coins,
+            message,
+            status: "completed",
+            idempotencyKey,
+          },
+        ],
         { session },
       );
     });
+  } catch (error) {
+    if (error?.code === 11000) {
+      const duplicate = await Donation.findOne({ fromUserId, idempotencyKey });
+      if (duplicate) {
+        if (
+          duplicate.toUserId.toString() !== toUserId ||
+          duplicate.coins !== coins ||
+          duplicate.message !== message
+        ) {
+          res.status(409);
+          throw new Error(
+            "Idempotency key was already used for another donation",
+          );
+        }
+
+        const currentSender = await User.findById(fromUserId).select("coins");
+        return res.status(200).json({
+          message: "Donation already completed",
+          coins: currentSender?.coins ?? 0,
+          idempotent: true,
+        });
+      }
+    }
+    throw error;
   } finally {
     await session.endSession();
   }
@@ -271,6 +332,7 @@ const donateCoins = asyncHandler(async (req, res) => {
     message: "Donation successful",
     coins: sender.coins,
     receiver: receiver.displayName || receiver.username,
+    idempotent: false,
   });
 });
 

@@ -14,7 +14,7 @@ describe("buildHlsUrl", () => {
     process.env = { ...originalEnv };
   });
 
-  test("returns null when streamKey is missing", () => {
+  test("returns null when playbackId is missing", () => {
     assert.equal(buildHlsUrl(""), null);
     assert.equal(buildHlsUrl(undefined), null);
   });

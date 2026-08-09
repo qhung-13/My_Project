@@ -94,6 +94,13 @@ export const streamApi = createApi({
     getStreamAnalytics: builder.query({
       query: (userId) => `/streams/analytics/${userId}`,
     }),
+    askCreatorCoach: builder.mutation<{ answer: string }, { message: string }>({
+      query: ({ message }) => ({
+        url: "/streams/creator-coach",
+        method: "POST",
+        body: { message },
+      }),
+    }),
   }),
 });
 
@@ -113,4 +120,5 @@ export const {
   useGetScheduledStreamsByUserQuery,
   useUpdateLiveStreamMutation,
   useGetStreamAnalyticsQuery,
+  useAskCreatorCoachMutation,
 } = streamApi;

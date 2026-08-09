@@ -1,6 +1,5 @@
 /**
- * Builds the public playback URL (HLS master manifest) for a given stream
- * key.
+ * Builds the public playback URL (HLS master manifest) for a given public playback session id.
  *
  * Previously the frontend hardcoded `http://localhost:5000/live/...` itself
  * (see VideoPlayer.tsx before this change), which only worked for local dev
@@ -15,8 +14,8 @@
  *    service's own HTTP server (useful for local dev / self-hosted setups
  *    without a CDN).
  */
-export const buildHlsUrl = (streamKey) => {
-  if (!streamKey) return null;
+export const buildHlsUrl = (playbackId) => {
+  if (!playbackId) return null;
 
   const base = (
     process.env.CDN_BASE_URL ||
@@ -24,7 +23,7 @@ export const buildHlsUrl = (streamKey) => {
     "http://localhost:8080/live"
   ).replace(/\/+$/, "");
 
-  return `${base}/${streamKey}/index.m3u8`;
+  return `${base}/${playbackId}/index.m3u8`;
 };
 
 export default buildHlsUrl;

@@ -113,8 +113,11 @@ const userSchema = new mongoose.Schema(
     streamKey: {
       type: String,
       unique: true,
-      sparse: true, // Allowing null, just unique when have valuable
+      sparse: true,
       default: null,
+      // OBS ingest credentials are private by default. Endpoints that need to
+      // reveal/use the key must opt in with `.select("+streamKey")`.
+      select: false,
     },
 
     isLive: {
