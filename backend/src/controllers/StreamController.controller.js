@@ -5,7 +5,10 @@ import User from "../models/User.model.js";
 import Donation from "../models/Donation.model.js";
 import asyncHandler from "../middlewares/AsyncHandler.middleware.js";
 import { createNotification } from "./NotificationController.controller.js";
-import { getViewersForStream } from "../sockets/presence.store.js";
+import {
+  clearViewersForStream,
+  getViewersForStream,
+} from "../sockets/presence.store.js";
 import buildHlsUrl from "../utils/hlsUrl.js";
 
 const clampPagination = (query) => {
@@ -104,7 +107,7 @@ const notifyFollowersStreamStarted = async (user, stream) => {
         fromUserId: user._id,
         type: "stream_live",
         message: `${user.displayName || user.username} is live: ${stream.title}`,
-        link: `/watch/${stream._id}`,
+        link: `/stream/${stream._id}`,
       }),
     ),
   );
@@ -172,6 +175,7 @@ const finishStream = async ({ stream, userId, io }) => {
   stream.viewers = 0;
   stream.endedAt = new Date();
   await stream.save();
+  await clearViewersForStream(stream._id.toString());
   await User.findByIdAndUpdate(userId, { isLive: false });
   io?.to(`stream:${stream._id}`).emit("stream-ended", {
     streamId: stream._id,
@@ -212,6 +216,29 @@ const endStream = asyncHandler(async (req, res) => {
 
   await finishStream({ stream, userId: req.user._id, io: req.app.get("io") });
   res.status(200).json({ message: "Stream ended successfully" });
+});
+
+const getCurrentStream = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const stream = await Stream.findOne({
+    userId,
+    $or: [
+      { isLive: true },
+      {
+        isLive: false,
+        isScheduled: false,
+        startedAt: null,
+        endedAt: null,
+      },
+    ],
+  })
+    .sort({ isLive: -1, createdAt: -1 })
+    .populate("userId", "username displayName avatar");
+
+  res.status(200).json({
+    stream: stream ? serializeStream(stream) : null,
+  });
 });
 
 const getLiveStreams = asyncHandler(async (req, res) => {
@@ -256,34 +283,6 @@ const getStreamsByUser = asyncHandler(async (req, res) => {
     streams: streams.map(serializeStream),
     pagination: { page, limit, total, totalPages, hasMore: page < totalPages },
   });
-});
-
-const updateViewers = asyncHandler(async (req, res) => {
-  const viewers = Number(req.body.viewers);
-  if (!Number.isInteger(viewers) || viewers < 0 || viewers > 1_000_000) {
-    res.status(400);
-    throw new Error("Viewer count must be a non-negative integer");
-  }
-
-  const stream = await Stream.findById(req.params.id);
-  if (!stream) {
-    res.status(404);
-    throw new Error("Stream not found");
-  }
-  if (
-    stream.userId.toString() !== req.user._id.toString() &&
-    req.user.role !== "admin"
-  ) {
-    res.status(403);
-    throw new Error("Not authorized to update this stream");
-  }
-
-  stream.viewers = viewers;
-  stream.peakViewers = Math.max(stream.peakViewers || 0, viewers);
-  await stream.save();
-  res
-    .status(200)
-    .json({ viewers: stream.viewers, peakViewers: stream.peakViewers });
 });
 
 const getTopStreamersByHours = asyncHandler(async (req, res) => {
@@ -431,7 +430,11 @@ const getStreamAnalytics = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error("Invalid user id");
   }
-  if (userId !== req.user._id.toString() && req.user.role !== "admin") {
+  if (
+    !req.isAgent &&
+    userId !== req.user?._id?.toString() &&
+    req.user?.role !== "admin"
+  ) {
     res.status(403);
     throw new Error("Not authorized to view these analytics");
   }
@@ -489,6 +492,18 @@ const getStreamAnalytics = asyncHandler(async (req, res) => {
     peakViewers,
     totalCoinsReceived: donationTotals[0]?.total || 0,
     viewerHistory,
+    // Raw, bounded history for the trusted scheduler agent. Keeping this
+    // in the same response avoids a second analytics endpoint while the
+    // browser dashboard can simply ignore the extra property.
+    streams: streams.map((stream) => ({
+      _id: stream._id,
+      title: stream.title,
+      category: stream.category,
+      startedAt: stream.startedAt || stream.createdAt,
+      endedAt: stream.endedAt || null,
+      peakViewers: stream.peakViewers || 0,
+      viewers: stream.viewers || 0,
+    })),
   });
 });
 
@@ -498,9 +513,9 @@ export {
   streamUnpublished,
   endStream,
   getLiveStreams,
+  getCurrentStream,
   getStreamById,
   getStreamsByUser,
-  updateViewers,
   getTopStreamersByHours,
   scheduleStream,
   getScheduledStreams,
