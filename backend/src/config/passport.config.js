@@ -1,6 +1,14 @@
 import passport from "passport";
+import "dotenv/config";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import User from "../models/User.model.js";
+
+const backendPublicUrl = (
+  process.env.BACKEND_PUBLIC_URL ||
+  `http://localhost:${process.env.PORT || 5000}`
+).replace(/\/+$/, "");
+
+const googleCallbackUrl = `${backendPublicUrl}/api/v1/users/auth/google/callback`;
 
 export const isGoogleOAuthConfigured = () =>
   Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
@@ -18,10 +26,7 @@ const configurePassport = () => {
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        // A relative callback is resolved from the actual request origin. This
-        // keeps local, Render and any future backend domain on one code path.
-        // Google Console still needs each real callback URL allow-listed.
-        callbackURL: "/api/v1/users/auth/google/callback",
+        callbackURL: googleCallbackUrl,
         proxy: true,
       },
       async (accessToken, refreshToken, profile, done) => {
