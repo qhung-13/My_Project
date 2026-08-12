@@ -10,8 +10,6 @@ const backendPublicUrl = (
 
 const googleCallbackUrl = `${backendPublicUrl}/api/v1/users/auth/google/callback`;
 
-console.log("[OAuth] Google callback:", googleCallbackUrl);
-
 export const isGoogleOAuthConfigured = () =>
   Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 
